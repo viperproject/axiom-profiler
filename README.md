@@ -1,2 +1,3 @@
-# z3-axiom-profiler
-Z3 Axiom Profiler
+# Z3 Axiom Profiler
+
+Fork with the goal to improve visualization and accessibility of this tool.
