@@ -133,10 +133,19 @@ namespace Z3AxiomProfiler
 
     public void Load()
     {
-      if (config.codeBplFileInfo == null && config.z3LogFile != null)
-        workingDirectory = new FileInfo(config.z3LogFile).DirectoryName;
-      else
-        workingDirectory = config.codeBplFileInfo.DirectoryName;
+        if (!string.IsNullOrEmpty(config.z3LogFile))
+        {
+            workingDirectory = new FileInfo(config.z3LogFile).DirectoryName;
+        }
+        else if (config.codeBplFileInfo != null)
+        {
+            workingDirectory = config.codeBplFileInfo.DirectoryName;
+        }
+        else
+        {
+            workingDirectory = new FileInfo(config.z3InputFile).DirectoryName;
+        }
+                
       statusUpdate(0, 0);
 
       if (task == LoaderTask.LoaderTaskBoogie)

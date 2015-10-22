@@ -97,7 +97,7 @@ namespace Z3AxiomProfiler
         }
         openFileDialog.Filter = "Z3 files (*.z3;*.smt;*.sx;*.smp;*.simplif;*.dimacs) |*.z3;*.smt;*.sx;*.smp;*.simplif;*.dimacs| " +
                                 "Z3 native files (*.z3) |*.z3| " +
-                                "SMT-LIB files (*.smt) |*.smt| " +
+                                "SMT-LIB files (*.smt;*.smt2) |*.smt;*.smt2| " +
                                 "Simplify files (*.sx;*.smp;*.simplify) |*.sx;*.smp;*.simplify| " +
                                 "DIMACS files (*.dimacs) |*.dimacs| " +
                                 "All files (*.*) |*.*";
