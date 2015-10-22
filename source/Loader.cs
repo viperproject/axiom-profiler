@@ -257,7 +257,7 @@ namespace Z3AxiomProfiler
             z3options = z3options ?? "";
             z3options = "NNF.SK_HACK=true SMT.QI.EAGER_THRESHOLD=10000 SMT.PHASE_SELECTION=0 SMT.RESTART_STRATEGY=0 SMT.RESTART_FACTOR=1.5 " + z3options;
             string z3Log = outputFile;
-            string arguments = String.Format("\"{0}\" {1} TRACE=true TRACE_FILE_NAME=\"'{2}'\" /T:{3}", proverLog, z3options, z3Log.Replace("\\", "\\\\"), timeOut);
+            string arguments = String.Format("{0} TRACE=true TRACE_FILE_NAME=\"{1}\" /T:{2} \"{3}\"", z3options, z3Log.Replace("\\", "\\\\"), timeOut, proverLog);
             Process process = createLoaderProcess("z3.exe", arguments);
 
             if (isCancelled)
