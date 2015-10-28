@@ -19,6 +19,7 @@ namespace Z3AxiomProfiler
         readonly Control ctrl;
         public string SearchText = "";
         SearchTree searchTree;
+        readonly Dictionary<TreeNode, Common> expanded = new Dictionary<TreeNode, Common>();
 
         public Z3AxiomProfiler()
           : this(false, null)
@@ -368,16 +369,12 @@ namespace Z3AxiomProfiler
             model.rootScope = root;
 
             var fInfo = parameterConfiguration.preludeBplFileInfo;
-            GraphVizualization.DumpGraph(model, fInfo == null ? "<unknown>" : fInfo.FullName);
+            GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
 
-            List<Quantifier> quantByCnfls = new List<Quantifier>();
-            foreach (var q in model.quantifiers.Values)
-            {
-                if (q.GeneratedConflicts > 0) quantByCnfls.Add(q);
-            }
-            quantByCnfls.Sort(delegate (Quantifier q1, Quantifier q2) { return q2.GeneratedConflicts.CompareTo(q1.GeneratedConflicts); });
+            List<Quantifier> quantByCnfls = model.quantifiers.Values.Where(q => q.GeneratedConflicts > 0).ToList();
+            quantByCnfls.Sort((q1, q2) => q2.GeneratedConflicts.CompareTo(q1.GeneratedConflicts));
             if (quantByCnfls.Count > 0)
-                AddTopNode(Common.Callback("Quant. by last conflict", delegate () { return quantByCnfls; }));
+                AddTopNode(Common.Callback("Quant. by last conflict", () => quantByCnfls));
 
             AddTopNode(root);
 
@@ -394,7 +391,7 @@ namespace Z3AxiomProfiler
             return z3AxiomTree.Nodes.Add(makeNode(cfl));
         }
 
-        Dictionary<TreeNode, Common> expanded = new Dictionary<TreeNode, Common>();
+
 
         void HandleExpand(object sender, TreeViewCancelEventArgs args)
         {
@@ -420,7 +417,7 @@ namespace Z3AxiomProfiler
 
         internal string ToolTipProcessor(string tip)
         {
-            string tt = tip; //.Trim();
+            string tt = tip;
             if (tt.Length > 80)
             {
                 // This is too long. Try to truncate the string...
