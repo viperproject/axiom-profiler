@@ -84,7 +84,6 @@ namespace Z3AxiomProfiler
                     }
                 }
             }
-
             pictureBox1.Height = ImageHeight;
             pictureBox1.Width = ImageWidth;
             pictureBox1.Image = bmp;
@@ -115,22 +114,25 @@ namespace Z3AxiomProfiler
 
         private void legendToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            /*
-            if ((result == null) || (result.legend == null) || (result.legend.Count == 0))
+            if (quantifiers == null || quantifierColorSorting == null)
+            {
                 return;
+            }
             String legend = "";
             int index = 0;
-            foreach (FormulaEntry f in result.legend)
+            foreach (Quantifier q in quantifierColorSorting)
             {
                 if (colors.Count > index)
                 {
-                    legend += String.Format("({0}) ", colors[index].Name);
+                    legend += $"{colors[index]}: {q.PrintName}, Cost: {q.Cost}\n";
                 }
-                legend += String.Format("**{0}** [{1}] {2}\n", f.frequency, f.identifier, f.formula);
+                else
+                {
+                    break;
+                }
                 index++;
             }
             MessageBox.Show(legend);
-            */
         }
 
 
