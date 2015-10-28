@@ -25,7 +25,7 @@ namespace Z3AxiomProfiler
     private List<Literal> cnflResolveLits = new List<Literal>();
     private Instantiation lastInst = null;
     private Term decideClause = null;
-    private Term[] EmptyTerms = new Term[0];
+    private static readonly Term[] EmptyTerms = new Term[0];
     private Dictionary<string, List<string>> boogieFiles = new Dictionary<string, List<string>>();
     private Dictionary<string, string> shortnameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     private Dictionary<int, Literal> literalById = new Dictionary<int, Literal>();
@@ -496,7 +496,6 @@ namespace Z3AxiomProfiler
               System.Console.WriteLine("fingerprint not found {0} {1}", words[0], words[1]);
               break;
             }
-            // model.fingerprints.Remove(words[1]);
             if (inst.LineNo != 0) {
               var tmp = new Instantiation();
               inst.CopyTo(tmp);

@@ -649,14 +649,6 @@ namespace Z3AxiomProfiler.QuantifierModel
     public int UsefulInstances;
     public int GeneratedConflicts;
 
-    //public override void Expand(MainForm f, TreeNodeCollection coll)
-    //{
-    //    foreach (Instantiation i in Instances)
-    //    {
-    //        coll.Add(f.MakeNode(i));
-    //    }
-    //}
-
     public override string ToString()
     {
       if (PrintName == null) PrintName = Qid;
@@ -696,18 +688,10 @@ namespace Z3AxiomProfiler.QuantifierModel
       Common[] theCommons = new Common[] {
       };
 
-      /*
-      if (Instances.Count < 20) {
-        List<Instantiation> sortedInstantiationList = Instances;
-        sortedInstantiationList.Sort(delegate(Instantiation i1, Instantiation i2) { return i2.Depth.CompareTo(i1.Depth); });
-        return ConvertIEnumerable<Common,Instantiation>(sortedInstantiationList);
-      } else { */
-
       if (BodyTerm == null)
         BodyTerm = new Term("?", new Term[] { });
 
         return new Common[] {
-          //new LabelNode("Real cost " + RealCost),
           Callback("REAL COST", delegate() { return new Common[] { new LabelNode(RealCost + "") }; }),
           BodyTerm,
           TheMost("DEEP", delegate(Instantiation i1, Instantiation i2) { return i2.Depth.CompareTo(i1.Depth); }),
@@ -755,7 +739,6 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
       get
       {
-        //return RealCost;
         return CrudeCost + Instances.Count;
       }
     }
@@ -782,35 +765,6 @@ namespace Z3AxiomProfiler.QuantifierModel
     int depth;
     int wdepth = -1;
 
-    //void HandleParms(string pref, Term[] args, TreeNodeCollection coll)
-    //{
-    //    for (int i = 0; i < args.Length; ++i)
-    //    {
-    //        TreeNode nested = args[i].ToNestedNode();
-    //        TreeNode[] children;
-    //        if (nested.Nodes.Count == 0)
-    //            children = new TreeNode[] { };
-    //        else
-    //            children = new TreeNode[] { nested };
-    //        coll.Add(new TreeNode(pref + "  " + args[i].Stats + "  " +
-    //                              args[i].ToString(),
-    //                              children));
-    //    }
-    //}
-
-    //public override void Expand(MainForm f, TreeNodeCollection coll)
-    //{
-    //    TreeNode info = new TreeNode("INFO");
-    //    coll.Add(info);
-    //    HandleParms("BIND", Bindings, info.Nodes);
-    //    HandleParms("BLAME", Responsible, info.Nodes);
-    //    foreach (Term t in Responsible)
-    //    {
-    //        if (t.Responsible != null)
-    //            coll.Add(f.MakeNode(t.Responsible));
-    //    }
-    //}
-
     public void CopyTo(Instantiation inst)
     {
       inst.Quant = Quant;
@@ -825,7 +779,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         if (depth == 0)
         {
           int max = 0;
-          //depth = 1;
           foreach (Term t in Responsible)
           {
             if (t.Responsible != null)
@@ -945,16 +898,6 @@ namespace Z3AxiomProfiler.QuantifierModel
       Depth = t.Depth;
       Responsible = t.Responsible;
     }
-
-    //public TreeNode ToNestedNode()
-    //{
-    //    if (Depth < 5)
-    //        return new TreeNode(ToString());
-    //    TreeNode[] children = new TreeNode[Args.Length];
-    //    for (int i = 0; i < Args.Length; ++i)
-    //        children[i] = Args[i].ToNestedNode();
-    //    return new TreeNode(Desc, children);
-    //}
 
     public string Sig
     {
@@ -1150,7 +1093,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public override IEnumerable<Common> Children()
     {
-      //yield return new LabelNode(AsCString(true));
       foreach (Term t in Args) {
         yield return t;
       }
@@ -1233,7 +1175,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public override IEnumerable<Common> Children()
     {
-      //foreach (var e in base.Children()) yield return e;
       foreach (var e in Results) yield return e;
     }
 
@@ -1389,8 +1330,6 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
       if (Quant.Weight == 0)
         return 0x888888;
-      //if (UseCount > 0)
-      //  return 0x008800;
       else
         return base.ForeColor();
     }
