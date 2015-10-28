@@ -20,11 +20,6 @@ namespace Z3AxiomProfiler
       runningZ3.Text = String.Format("Running Z3");
     }
 
-    private void processLoaderOutput(string line)
-    {
-      //processor.ParseSingleLine(line);
-    }
-
     private void LoadingProgressForm_Load(object sender, EventArgs e)
     {
       backgroundWorker1.RunWorkerAsync();
@@ -33,7 +28,6 @@ namespace Z3AxiomProfiler
     private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
     {
       loader.statusUpdate += this.loaderProgressChanged;
-      //loader.lineOutput += this.processLoaderOutput;
       loader.Load();
       
     }
