@@ -528,7 +528,7 @@ namespace Z3AxiomProfiler
                         int gen = int.Parse(words[2]);
                         if (lastInst != null && t.Responsible != lastInst)
                         {
-                            // make a copy of the term, if we were going to override the Responsible field
+                            // make a copy of the term, since we are overriding the Responsible field
                             t = new Term(t);
                             model.terms[words[1]] = t;
                         }
@@ -568,7 +568,7 @@ namespace Z3AxiomProfiler
                         Instantiation inst;
                         if (!model.fingerprints.TryGetValue(words[1], out inst))
                         {
-                            System.Console.WriteLine("fingerprint not found {0} {1}", words[0], words[1]);
+                            Console.WriteLine("fingerprint not found {0} {1}", words[0], words[1]);
                             break;
                         }
                         if (inst.LineNo != 0)

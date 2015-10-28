@@ -47,7 +47,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         // TODO: dict with partitions(?)
         public Dictionary<string, Partition> modelPartsByName = new Dictionary<string, Partition>();
 
-        // TODO: no idea what this is for.
+        // TODO: no idea what this is for. Also misleading name probably.
         public List<Common> models = new List<Common>();
 
         // TODO: some structure for proof mode(?)
@@ -355,7 +355,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
                 else
                 {
-                    //if (!IsV1Part(fs.Name))
                     realFuns.Add(fs);
                 }
             }
@@ -376,7 +375,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public abstract class Common
     {
-        //public abstract void Expand(MainForm f, TreeNodeCollection coll);
         public virtual string ToolTip() { return ToString(); }
         public abstract IEnumerable<Common> Children();
         public virtual bool HasChildren() { return true; }
@@ -386,20 +384,20 @@ namespace Z3AxiomProfiler.QuantifierModel
         public static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
           where S : T
         {
-            foreach (var y in x) yield return y;
+            return x.Select(y => (T) y);
         }
 
         public static CallbackNode Callback<T>(string name, MyFunc<IEnumerable<T>> fn)
           where T : Common
         {
-            return new CallbackNode(name, delegate () { return ConvertIEnumerable<Common, T>(fn()); });
+            return new CallbackNode(name, () => ConvertIEnumerable<Common, T>(fn()));
         }
 
         public static CallbackNode CallbackExp<T>(string name, IEnumerable<T> iter)
           where T : Common
         {
             List<T> cache = new List<T>(iter);
-            var res = new CallbackNode(name + " [" + cache.Count + "]", delegate () { return ConvertIEnumerable<Common, T>(cache); });
+            var res = new CallbackNode(name + " [" + cache.Count + "]", () => ConvertIEnumerable<Common, T>(cache));
             if (cache.Count <= 3)
                 res.autoExpand = true;
             return res;
