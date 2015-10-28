@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -290,8 +291,14 @@ namespace Z3AxiomProfiler
             line = SanitizeInputLine(line);
             string[] words = line.Split(sep, StringSplitOptions.RemoveEmptyEntries);
 
-            if (ParseProofStep(words)) return;
-            if (ParseModelLine(words)) return;
+            if (ParseProofStep(words))
+            {
+                return;
+            }
+            if (ParseModelLine(words))
+            {
+                return;
+            }
             ParseTraceLine(line, words);
         }
 
@@ -449,22 +456,21 @@ namespace Z3AxiomProfiler
         {
             if (a1.Length != a2.Length)
                 throw new System.ArgumentException();
-            for (int i = 0; i < a1.Length; ++i)
-                if (!pred(a1[i], a2[i])) return false;
-            return true;
+            return !a1.Where((t, i) => !pred(t, a2[i])).Any();
         }
 
         private string[] StripGeneration(string[] words, out int x)
         {
             x = -1;
-            if (words.Length > 3 && words[words.Length - 2] == ";")
+            if (words.Length <= 3 || words[words.Length - 2] != ";")
             {
-                string[] copy = new string[words.Length - 2];
-                Array.Copy(words, copy, copy.Length);
-                x = int.Parse(words[words.Length - 1]);
-                return copy;
+                return words;
             }
-            return words;
+
+            string[] copy = new string[words.Length - 2];
+            Array.Copy(words, copy, copy.Length);
+            x = int.Parse(words[words.Length - 1]);
+            return copy;
         }
 
         internal static Term Negate(Term a)
@@ -492,14 +498,6 @@ namespace Z3AxiomProfiler
                 case "[mk-quant]":
                     {
                         Term[] args = GetArgs(3, words);
-
-                        /*
-                          if (words[2] == "not" && args[0].Name == "or") {
-                            words[2] = "And";
-                            args = NegateAll(args[0].Args);
-                          } 
-                         */
-
                         Term t = new Term("FORALL" + words[1], args);
                         model.terms[words[1]] = t;
 
@@ -519,14 +517,6 @@ namespace Z3AxiomProfiler
                 case "[mk-app]":
                     {
                         Term[] args = GetArgs(3, words);
-
-                        /*
-                          if (words[2] == "not" && args[0].Name == "or") {
-                            words[2] = "And";
-                            args = NegateAll(args[0].Args);
-                          } 
-                         */
-
                         Term t = new Term(words[2], args);
                         model.terms[words[1]] = t;
                     }
@@ -739,8 +729,10 @@ namespace Z3AxiomProfiler
                 case "[mk-bool-var]":
                     {
                         int generation;
-
-                        if (words.Length < 3) break;
+                        if (words.Length < 3)
+                        {
+                            break;
+                        }
                         words = StripGeneration(words, out generation);
                         Term[] args = GetArgs(3, words);
                         Term t;
@@ -793,7 +785,6 @@ namespace Z3AxiomProfiler
                         }
                         if (inst.Quant != null)
                         {
-                            //Console.WriteLine("multi inst");
                             break;
                         }
                         inst.Quant = CreateQuantifier(words[1], words[1]);
