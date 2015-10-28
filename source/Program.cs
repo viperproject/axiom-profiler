@@ -39,20 +39,6 @@ namespace Z3AxiomProfiler
                 parseErrorCommandLineArguments(error_msg);
             }
         }
-
-      /*
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        static extern bool AttachConsole(int dwProcessId);
-        private const int ATTACH_PARENT_PROCESS = -1;
-
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        public static extern bool AllocConsole();
-
-        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
-        public static extern bool FreeConsole();
-       */
       
         /// <summary>
         /// The main entry point for the application.
