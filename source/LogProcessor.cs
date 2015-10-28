@@ -33,10 +33,9 @@ namespace Z3AxiomProfiler
         private int cnflCount;
         private ResolutionLiteral currResRoot, currResNode;
         private bool _modelInState = false;
+        private readonly bool skipDecisions;
 
-
-        public Model model = new Model();
-        public bool skipDecisions = false;
+        public readonly Model model = new Model();
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
@@ -473,12 +472,13 @@ namespace Z3AxiomProfiler
             return copy;
         }
 
-        internal static Term Negate(Term a)
+        private static Term Negate(Term a)
         {
             if (a.Name == "not")
+            {
                 return a.Args[0];
-            else
-                return new Term("not", new Term[] { a });
+            }
+            return new Term("not", new Term[] { a });
         }
 
         internal static Term[] NegateAll(Term[] oargs)

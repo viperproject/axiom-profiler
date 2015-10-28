@@ -187,17 +187,16 @@ namespace Z3AxiomProfiler
                 while ((l = rd.ReadLine()) != null)
                 {
                     processor.ParseSingleLine(l);
-                    if (l != null)
-                        curPos += l.Length + 2;
-                    if (fi.Length != 0)
+                    curPos += l.Length + 2;
+
+                    if (fi.Length == 0) continue;
+
+                    lineNo++;
+                    int perc = (int)(curPos * 999 / fi.Length);
+                    if (oldperc != perc)
                     {
-                        lineNo++;
-                        int perc = (int)(curPos * 999 / fi.Length);
-                        if (oldperc != perc)
-                        {
-                            statusUpdate(perc, 2);
-                            oldperc = perc;
-                        }
+                        statusUpdate(perc, 2);
+                        oldperc = perc;
                     }
                 }
                 processor.ComputeCost();
@@ -232,8 +231,8 @@ namespace Z3AxiomProfiler
             string bplFilesString = String.Format("\"{0}\" \"{1}\"", (preludeBplFile == null) ? "" : preludeBplFile.FullName, codeBplFile);
             boogieOptions = boogieOptions ?? "";
             string z3Log = Path.ChangeExtension(config.codeBplFileInfo.FullName, "z3log");
-            string arguments = String.Format(" {0} {1} /proc:{2} /z3opt:TRACE=true /z3opt:TRACE_FILE_NAME=\"'{3}'\" /z3opt:/T:{4}",
-                              bplFilesString, boogieOptions, functionName, z3Log.Replace("\\", "\\\\"), timeOut);
+            string arguments =
+                $" {bplFilesString} {boogieOptions} /proc:{functionName} /z3opt:TRACE=true /z3opt:TRACE_FILE_NAME=\"'{z3Log.Replace("\\", "\\\\")}'\" /z3opt:/T:{timeOut}";
             Process process = createLoaderProcess("boogie.exe", arguments);
             if (isCancelled)
                 return;
@@ -244,7 +243,8 @@ namespace Z3AxiomProfiler
 
             if (process.ExitCode != 0)
             {
-                throw new Exception(String.Format("Boogie exited with error code {0}. Aborting generation process.\n{1} {2}", process.ExitCode, output, error));
+                throw new Exception(
+                    $"Boogie exited with error code {process.ExitCode}. Aborting generation process.\n{output} {error}");
             }
 
             currentProcess = null;
@@ -257,7 +257,8 @@ namespace Z3AxiomProfiler
             z3options = z3options ?? "";
             z3options = "NNF.SK_HACK=true SMT.QI.EAGER_THRESHOLD=10000 SMT.PHASE_SELECTION=0 SMT.RESTART_STRATEGY=0 SMT.RESTART_FACTOR=1.5 " + z3options;
             string z3Log = outputFile;
-            string arguments = String.Format("{0} TRACE=true TRACE_FILE_NAME=\"{1}\" /T:{2} \"{3}\"", z3options, z3Log.Replace("\\", "\\\\"), timeOut, proverLog);
+            string arguments =
+                $"{z3options} TRACE=true TRACE_FILE_NAME=\"{z3Log.Replace("\\", "\\\\")}\" /T:{timeOut} \"{proverLog}\"";
             Process process = createLoaderProcess("z3.exe", arguments);
 
             if (isCancelled)
@@ -279,7 +280,8 @@ namespace Z3AxiomProfiler
                 }
                 else
                 {
-                    throw new Exception(String.Format("Z3 exited with error code {0}. Aborting generation process.\n{1} {2}", process.ExitCode, output, error));
+                    throw new Exception(
+                        $"Z3 exited with error code {process.ExitCode}. Aborting generation process.\n{output} {error}");
                 }
             }
 

@@ -44,8 +44,7 @@ namespace Z3AxiomProfiler
                 {
                     Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
 
-                    if ((parameterConfiguration.z3LogFile != null) &&
-                        (parameterConfiguration.z3LogFile != ""))
+                    if (!string.IsNullOrEmpty(parameterConfiguration.z3LogFile))
                     {
                         task = Loader.LoaderTask.LoaderTaskParse;
                     }

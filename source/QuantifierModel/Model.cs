@@ -28,10 +28,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         // cares about c: option.
         public Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
 
-        // TODO: specific instantiations?
+        // TODO: obsolete
+        // List of instantiated quanitfierts. Can be generated from 'instances' list (inst.quant).
         public List<Quantifier> quantifierInstantiations = new List<Quantifier>(); // TODO: use instances instead, as they have more info
 
-        // TODO: specific instantiations? Difference to above? 
+        // Specific quantifier instantiations.
         public List<Instantiation> instances = new List<Instantiation>();
 
         // list of conflicts.
