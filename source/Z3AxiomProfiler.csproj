@@ -116,9 +116,8 @@
       <DependentUpon>LoadZ3LogForm.cs</DependentUpon>
     </Compile>
     <Compile Include="LogProcessor.cs" />
-    <Compile Include="Model\Model.cs" />
-    <Compile Include="Model\NewModel.cs" />
     <Compile Include="Plotting.cs" />
+    <Compile Include="QuantifierModel\Model.cs" />
     <Compile Include="SearchBox.cs">
       <SubType>Form</SubType>
     </Compile>
