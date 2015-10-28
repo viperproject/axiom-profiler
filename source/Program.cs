@@ -47,11 +47,6 @@ namespace Z3AxiomProfiler
         [STAThread]
         static void Main(string[] args)
         {
-            //AllocConsole();
-            //Console.OpenStandardOutput();
-            //Console.OpenStandardError();
-            //AttachConsole(ATTACH_PARENT_PROCESS);
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Z3AxiomProfiler f = new Z3AxiomProfiler();

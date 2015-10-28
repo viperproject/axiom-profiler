@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -64,6 +65,10 @@ namespace Z3AxiomProfiler.QuantifierModel
         // Literal to mark a scope as done (popped out of existence(?)).
         internal static Literal MarkerLiteral = new Literal();
 
+        // TODO: Find out, what these do!
+        private readonly Dictionary<Instantiation, ImportantInstantiation> importants = new Dictionary<Instantiation, ImportantInstantiation>();
+        private readonly Dictionary<ProofRule, bool> visitedRules = new Dictionary<ProofRule, bool>();
+
         public Model()
         {
             MarkerLiteral.Id = -13;
@@ -73,12 +78,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public List<Quantifier> GetQuantifiersSortedByInstantiations()
         {
-            List<Quantifier> qList = new List<Quantifier>();
-            foreach (Quantifier q in quantifiers.Values)
-            {
-                qList.Add(q);
-            }
-            qList.Sort(delegate (Quantifier q1, Quantifier q2) { return q2.Cost.CompareTo(q1.Cost); });
+            List<Quantifier> qList = quantifiers.Values.ToList();
+            qList.Sort((q1, q2) => q2.Cost.CompareTo(q1.Cost));
             return qList;
         }
 
@@ -103,9 +104,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             Debug.Assert(n <= scopes.Count - 1);
 
-            Scope cur = new Scope();
-            cur.lev = -(scopes.Count - n - 1);
-            cur.Conflict = cnfl;
+            Scope cur = new Scope
+            {
+                lev = -(scopes.Count - n - 1),
+                Conflict = cnfl
+            };
             for (int i = scopes.Count - 1; i >= scopes.Count - n; --i)
             {
                 if (scopes[i].Scope != null)
@@ -192,9 +195,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                 ComputeMaxDepth(ch);
             q.CurDepth--;
         }
-
-        private Dictionary<Instantiation, ImportantInstantiation> importants = new Dictionary<Instantiation, ImportantInstantiation>();
-        private Dictionary<ProofRule, bool> visitedRules = new Dictionary<ProofRule, bool>();
 
         private void CollectInsts(ProofRule prf)
         {

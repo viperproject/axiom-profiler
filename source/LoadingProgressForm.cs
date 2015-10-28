@@ -11,7 +11,7 @@ namespace Z3AxiomProfiler
 {
   public partial class LoadingProgressForm : Form
   {
-    private Loader loader;
+    private readonly Loader loader;
     
     public LoadingProgressForm(Loader loader)
     {
@@ -29,7 +29,6 @@ namespace Z3AxiomProfiler
     {
       loader.statusUpdate += this.loaderProgressChanged;
       loader.Load();
-      
     }
 
     private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)

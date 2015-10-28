@@ -283,6 +283,7 @@ namespace Z3AxiomProfiler
             if (beginCheckSeen > checkToConsider && checkToConsider > 0)
             {
                 // ignore all lines after the current check number.
+                // TODO: implement a way to stop comepletely instead of skipping.
                 return;
             }
 
