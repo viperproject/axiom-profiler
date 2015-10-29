@@ -425,6 +425,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public virtual bool HasChildren() { return true; }
         public virtual bool AutoExpand() { return false; }
         public virtual int ForeColor() { return 0x000000; }
+        public abstract String OneLinePrettyPrint();
 
         public static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
           where S : T
@@ -467,6 +468,12 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.ForeColor();
         }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"ForwardingNode: Name={name}, Fwd=[{Fwd.OneLinePrettyPrint()}]";
+        }
+
         public override bool HasChildren()
         {
             return Fwd.HasChildren();
@@ -504,6 +511,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return false;
         }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"LabelNode: name={name}";
+        }
     }
 
     public delegate T MyFunc<out T>();
@@ -533,6 +545,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override bool AutoExpand()
         {
             return autoExpand;
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"CallbackNode: name={name}, callback={callback}";
         }
     }
 
@@ -767,6 +784,11 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return c;
             }
         }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Scope: level={level}";
+        }
     }
 
 
@@ -844,6 +866,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (Weight == 0)
                 return 0x000088;
             return base.ForeColor();
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Quantifier: Qid={Qid}, max depth={MaxDepth}, body term=[{BodyTerm.OneLinePrettyPrint()}]";
         }
 
         private double InstanceCost(Instantiation inst, int lev)
@@ -998,19 +1025,24 @@ namespace Z3AxiomProfiler.QuantifierModel
                         yield return t.Responsible;
                     }
                 }
-                yield return Callback("BLAME", delegate () { return sortedResponsibleList; });
+                yield return Callback("BLAME", () => sortedResponsibleList);
             }
 
             if (Bindings.Length > 0)
             {
-                yield return Callback("BIND", delegate () { return Bindings; });
+                yield return Callback("BIND", () => Bindings);
             }
 
             if (Dependants.Count > 0)
             {
                 Dependants.Sort(delegate (Instantiation i1, Instantiation i2) { return i2.Cost.CompareTo(i1.Cost); });
-                yield return Callback("YIELDS", delegate () { return Dependants; });
+                yield return Callback("YIELDS", () => Dependants);
             }
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Instantiation: depth={depth}, quantifier=[{Quant.OneLinePrettyPrint()}]";
         }
     }
 
@@ -1248,6 +1280,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             return (Args.Length > 0) && (Size > 3);
         }
 
+        public override string OneLinePrettyPrint()
+        {
+            return $"Term: name={Name}, args=[{Args}]";
+        }
+
         public override IEnumerable<Common> Children()
         {
             foreach (Term t in Args)
@@ -1328,6 +1365,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (Clause != null)
                 return 0x995555;
             else return base.ForeColor();
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Literal: id={Id}, term=[{Term.OneLinePrettyPrint()}]";
         }
     }
 
@@ -1437,6 +1479,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             foreach (var l in Literals)
                 yield return l;
         }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Conflict: id={Id}, line number={LineNo}";
+        }
     }
 
 
@@ -1456,6 +1503,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             yield return Consequent;
             foreach (var p in Premises)
                 yield return p;
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return $"Proofrule: name={Name}, consequent=[{Consequent.OneLinePrettyPrint()}]";
         }
     }
 
@@ -1636,6 +1688,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             else
                 return DisplayName + " [" + Apps.Count + "]";
         }
+
+        public override string OneLinePrettyPrint()
+        {
+            return "Function symbol";
+        }
     }
 
     public class FunApp : Common
@@ -1708,6 +1765,11 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (ffs.Apps.Count > 0)
                     yield return ffs;
             }
+        }
+
+        public override string OneLinePrettyPrint()
+        {
+            return "Function application";
         }
     }
 

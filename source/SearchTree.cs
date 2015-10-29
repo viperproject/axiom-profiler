@@ -115,8 +115,6 @@ namespace Z3AxiomProfiler
         private void PaintTree(object sender, PaintEventArgs e)
         {
             var root = model.rootScope;
-            //while (root.ChildrenScopes.Count == 1)
-            //  root = root.ChildrenScopes[0];
 
             closestsScope = null;
             closestsDistance = 50;
@@ -125,8 +123,6 @@ namespace Z3AxiomProfiler
             radius = root.RecurisveInstanceDepth - root.OwnInstanceCount;
             var r = gfx.ClipBounds;
             gfx.FillRectangle(Brushes.White, r);
-            //r = new RectangleF(0, 0, pictureBox1.Width, pictureBox1.Height);
-            //gfx.Clip = new Region(r);
 
             middle = new PointF(0, 0);
 

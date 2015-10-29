@@ -595,6 +595,71 @@ namespace Z3AxiomProfiler
             {
                 searchTree.SelectScope((Scope)c);
             }
+            List<Common> longestList = CollectLongestResponsibleChain(c);
+            PrettyPrintLongestList(longestList);
+        }
+
+        private void PrettyPrintLongestList(List<Common> list)
+        {
+            Console.WriteLine("--------------------------------------------------------------------------------------------");
+            foreach (var common in list)
+            {
+                Console.WriteLine(common.OneLinePrettyPrint());
+            }
+            Console.WriteLine("--------------------------------------------------------------------------------------------");
+        }
+
+        private List<Common> CollectLongestResponsibleChain(Common c)
+        {
+            Stack<Common> trackingStack = new Stack<Common>();
+            Stack<Common> resultStack = new Stack<Common>();
+            Dictionary<Common, int> visited = new Dictionary<Common, int>();
+            List<Common> longest = new List<Common>();
+
+            trackingStack.Push(c);
+            int depth = 0;
+            while (trackingStack.Count > 0)
+            {
+                Common current = trackingStack.Peek();
+                if (visited.ContainsKey(current))
+                {
+                    depth--;
+                    //already visited do not visit again
+                    trackingStack.Pop();
+
+                    visited.Remove(current);
+                    if (resultStack.Count > longest.Count)
+                    {
+                        longest = resultStack.ToList();
+                    }
+                    resultStack.Pop();
+                }
+                else
+                {
+                    depth++;
+                    visited[current] = 1;
+                    resultStack.Push(current);
+
+                    if (current is Quantifier)
+                    {
+                        Quantifier quant = (Quantifier)current;
+                        foreach (Instantiation inst in quant.Instances)
+                        {
+                            trackingStack.Push(inst);
+                        }
+                    }
+                    else if (current is Instantiation)
+                    {
+                        Instantiation inst = (Instantiation)current;
+                        foreach (Instantiation dependenInst in inst.Dependants)
+                        {
+                            trackingStack.Push(dependenInst);
+                        }
+                    }
+                }
+            }
+
+            return longest;
         }
 
         void Search()
