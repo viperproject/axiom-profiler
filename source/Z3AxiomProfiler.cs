@@ -343,7 +343,7 @@ namespace Z3AxiomProfiler
             foreach (var c in model.models)
                 AddTopNode(c);
 
-            model.PopScopes(model.scopes.Count - 1, null);
+            model.PopScopes(model.scopes.Count - 1, null, 0);
 
             var rootSD = model.scopes[0];
             Scope root = rootSD.Scope;

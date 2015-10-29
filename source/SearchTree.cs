@@ -122,7 +122,7 @@ namespace Z3AxiomProfiler
             closestsDistance = 50;
 
             gfx = e.Graphics;
-            radius = root.RecInstanceDepth - root.OwnInstanceCount;
+            radius = root.RecurisveInstanceDepth - root.OwnInstanceCount;
             var r = gfx.ClipBounds;
             gfx.FillRectangle(Brushes.White, r);
             //r = new RectangleF(0, 0, pictureBox1.Width, pictureBox1.Height);

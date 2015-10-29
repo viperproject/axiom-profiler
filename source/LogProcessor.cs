@@ -649,21 +649,22 @@ namespace Z3AxiomProfiler
                 case "[push]":
                     if (!interestedInCurrentCheck) break;
                     if (!skipDecisions)
-                        model.PushScope();
+                        model.PushScope(beginCheckSeen);
                     break;
 
                 case "[pop]":
                     if (!interestedInCurrentCheck) break;
                     if (skipDecisions || words.Length < 2) break;
-                    model.PopScopes(int.Parse(words[1]), curConfl);
+                    model.PopScopes(int.Parse(words[1]), curConfl, beginCheckSeen);
                     curConfl = null;
                     break;
 
                 case "[begin-check]":
+                    // saves and stores away the per check data.
+                    model.NewCheck(beginCheckSeen);
+
                     beginCheckSeen++;
                     interestedInCurrentCheck = checkToConsider == 0 || checkToConsider == beginCheckSeen;
-                    // saves and stores away the per check data.
-                    model.NewCheck();
                     break;
 
                 case "[query-done]":

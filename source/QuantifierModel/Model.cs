@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Permissions;
 using System.Text;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -44,7 +45,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         // TODO: dict with partitions(?)
         public Dictionary<string, Partition> modelPartsByName = new Dictionary<string, Partition>();
 
-        // TODO: no idea what this is for. Also misleading name probably.
         // Representation of the internal prover model.
         public List<Common> models = new List<Common>();
 
@@ -73,11 +73,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public Model()
         {
-            PushScope();
+            PushScope(0);
         }
 
-        public void NewCheck()
+        public void NewCheck(int oldCheckNo)
         {
+            //PopAllScopesWithCheckNo(oldCheckNo);
             // save state and make a 'clean' model.
             FingerprintsPerCheck.Add(fingerprints);
             fingerprints = new Dictionary<string, Instantiation>();
@@ -101,9 +102,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             return instances.Select(inst => inst.Quant).ToList();
         }
 
-        public void PushScope()
+        public void PushScope(int checkNo)
         {
-            ScopeDesc d = new ScopeDesc();
+            ScopeDesc d = new ScopeDesc(checkNo);
             scopes.Add(d);
         }
 
@@ -113,22 +114,29 @@ namespace Z3AxiomProfiler.QuantifierModel
             scopes[scopes.Count - 1].InstanceCount++;
         }
 
-        public void PopScopes(int n, Conflict cnfl)
+        public void PopScopes(int n, Conflict cnfl, int checkNumber)
         {
             Debug.Assert(n <= scopes.Count - 1);
 
-            Scope cur = new Scope
+            // Instantiate scope from scope descriptor.
+            // cur represents the root of the scope tree that is popped away.
+            Scope cur = new Scope(checkNumber)
             {
-                lev = -(scopes.Count - n - 1),
+                level = -(scopes.Count - n - 1),
                 Conflict = cnfl
             };
+
+            // traverse backwards
             for (int i = scopes.Count - 1; i >= scopes.Count - n; --i)
             {
+                // add the new scope as a child of the first non null scope that is popped away as well.
+                // -> preserve the scope tree being popped.
                 if (scopes[i].Scope != null)
                 {
                     scopes[i].Scope.AddChildScope(cur);
                     cur = scopes[i].Scope;
                 }
+
                 cur.OwnInstanceCount += scopes[i].InstanceCount;
                 Literal l = scopes[i].Literal;
                 if (l != null)
@@ -145,11 +153,20 @@ namespace Z3AxiomProfiler.QuantifierModel
             int end = scopes.Count - 1;
             if (scopes[end].Scope == null)
             {
-                scopes[end].Scope = new Scope();
-                scopes[end].Scope.lev = end;
+                scopes[end].Scope = new Scope(checkNumber);
+                scopes[end].Scope.level = end;
             }
             scopes[end].Scope.AddChildScope(cur);
             scopes[end].Implied.Add(MarkerLiteral);
+        }
+
+        private void PopAllScopesWithCheckNo(int currentCheckNo)
+        {
+            if (currentCheckNo != 0)
+            {
+                int i = scopes.FindIndex(scopeDesc => scopeDesc.checkNumber == currentCheckNo);
+                PopScopes(scopes.Count - i, null, currentCheckNo);
+            }
         }
 
         public Common SetupImportantInstantiations()
@@ -310,7 +327,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             var copy = modelFuns;
             if (copy.Count > 0)
-                models.Add(new CallbackNode("MODEL #" + models.Count, delegate () { return this.ModelKids(copy); }));
+                models.Add(new CallbackNode("MODEL #" + models.Count, () => this.ModelKids(copy)));
             modelFuns = new List<FunSymbol>();
             modelFunsByName.Clear();
             modelPartsByName.Clear();
@@ -378,12 +395,27 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     }
 
+    // Class to represent a push statement.
     public class ScopeDesc
     {
+        // The underlying scope.
         public Scope Scope;
+
+        // The first [assigne] literal.
+        // This is stored as the cause of all implied literals.
         public Literal Literal;
-        public List<Literal> Implied = new List<Literal>();
+
+        // All literals implied by this scope.
+        public readonly List<Literal> Implied = new List<Literal>();
+
+        // Number of quantifier instantiations in this scope.
         public int InstanceCount;
+
+        public readonly int checkNumber;
+        public ScopeDesc(int checkNo)
+        {
+            checkNumber = checkNo;
+        }
     }
 
     public abstract class Common
@@ -474,7 +506,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
     }
 
-    public delegate T MyFunc<T>();
+    public delegate T MyFunc<out T>();
 
     public class CallbackNode : Common
     {
@@ -506,32 +538,58 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public class Scope : Common
     {
+        // Literals implied in this scope.
         public readonly List<Literal> Literals = new List<Literal>();
-        public Literal[] ImpliedAtParent;
-        public Conflict Conflict;
-        public readonly List<Scope> ChildrenScopes = new List<Scope>();
-        public int lev;
-        public Scope parentScope;
-        int recConflictCount = -1;
-        int recInstanceCount = -1;
-        int recInstanceDepth = -1;
-        int maxConflictSize = 0;
-        bool recInstanceCountComputed;
-        int id = -1;
-        int subid = 0;
 
+        // Literals implied at parent.
+        // Will be assigned after parsing for the tree structure.
+        private Literal[] ImpliedAtParent;
+
+        // Conflict that was found in this proof branch.
+        public Conflict Conflict;
+
+        // All children scopes.
+        public readonly List<Scope> ChildrenScopes = new List<Scope>();
+
+        // Depth of this scope.
+        public int level;
+
+        public Scope parentScope;
+
+        // Recursively calculated information about this scope.
+        int recursiveConflictCount = -1;
+        int recursiveInstanceCount = -1;
+        int recurisveInstanceDepth = -1;
+
+        // Largest conflict (measured in the number of Literals).
+        int maxConflictSize = 0;
+
+        bool recursiveInstanceCountComputed;
+
+        // Identifier based on the conflict in this scope or below.
+        int id = -1;
+        int subid;
+
+        public readonly int checkNumber;
+
+        public Scope(int checkNo)
+        {
+            checkNumber = checkNo;
+        }
+        
+        // Number of quantifier instantiations in this level.
         public int OwnInstanceCount;
 
         public int InstanceCount
         {
             get
             {
-                if (recInstanceCountComputed) return recInstanceCount;
-                recInstanceCountComputed = true;
-                recInstanceCount = OwnInstanceCount;
+                if (recursiveInstanceCountComputed) return recursiveInstanceCount;
+                recursiveInstanceCountComputed = true;
+                recursiveInstanceCount = OwnInstanceCount;
                 foreach (var c in ChildrenScopes)
-                    recInstanceCount += c.InstanceCount;
-                return recInstanceCount;
+                    recursiveInstanceCount += c.InstanceCount;
+                return recursiveInstanceCount;
             }
         }
 
@@ -551,34 +609,34 @@ namespace Z3AxiomProfiler.QuantifierModel
             s.parentScope = this;
         }
 
-        public int RecInstanceDepth
+        public int RecurisveInstanceDepth
         {
             get
             {
-                var dummy = RecConflictCount;
-                return recInstanceDepth;
+                var dummy = RecursiveConflictCount;
+                return recurisveInstanceDepth;
             }
         }
 
-        public int RecConflictCount
+        public int RecursiveConflictCount
         {
             get
             {
-                if (recConflictCount >= 0) return recConflictCount;
-                recConflictCount = 0;
+                if (recursiveConflictCount >= 0) return recursiveConflictCount;
+                recursiveConflictCount = 0;
                 if (Conflict != null)
                     maxConflictSize = Conflict.Literals.Count;
                 foreach (var c in ChildrenScopes)
                 {
-                    recConflictCount += c.RecConflictCount;
+                    recursiveConflictCount += c.RecursiveConflictCount;
                     if (c.maxConflictSize > maxConflictSize)
                         maxConflictSize = c.maxConflictSize;
-                    if (c.recInstanceDepth > recInstanceDepth)
-                        recInstanceDepth = c.recInstanceDepth;
+                    if (c.recurisveInstanceDepth > recurisveInstanceDepth)
+                        recurisveInstanceDepth = c.recurisveInstanceDepth;
                 }
-                recInstanceDepth += OwnInstanceCount;
-                if (Conflict != null) recConflictCount++;
-                return recConflictCount;
+                recurisveInstanceDepth += OwnInstanceCount;
+                if (Conflict != null) recursiveConflictCount++;
+                return recursiveConflictCount;
             }
         }
 
@@ -605,15 +663,15 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
             }
 
-            string res = string.Format("Scope#{5}: {0} / {2} inst, {1} lits [{3}lev:{4}]",
-              InstanceCount, Literals.Count, OwnInstanceCount, lev < 0 ? "f" : "", lev < 0 ? -lev : lev,
+            string res = string.Format("Scope#{5}: {0} / {2} inst, {1} lits [{3}level:{4}]",
+              InstanceCount, Literals.Count, OwnInstanceCount, level < 0 ? "f" : "", level < 0 ? -level : level,
               string.Format("{0}.{1}", id, subid));
             if (ChildrenScopes.Count > 0)
                 res += string.Format(", {0} children [rec: {1}, {2} inst/cnfl]",
-                                     ChildrenScopes.Count, RecConflictCount,
-                                     (RecConflictCount == 0) ? "inf" :
-                                     (InstanceCount / RecConflictCount).ToString());
-            var dummy = RecConflictCount;
+                                     ChildrenScopes.Count, RecursiveConflictCount,
+                                     (RecursiveConflictCount == 0) ? "inf" :
+                                     (InstanceCount / RecursiveConflictCount).ToString());
+            var dummy = RecursiveConflictCount;
             if (maxConflictSize > 0)
                 res += string.Format(" maxCnflSz: {0}", maxConflictSize);
             return res;
@@ -623,7 +681,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (Conflict != null)
                 return Conflict.ToolTip();
-            else return "No conflict";
+            return "No conflict";
         }
 
         public void PropagateImpliedByChildren()
