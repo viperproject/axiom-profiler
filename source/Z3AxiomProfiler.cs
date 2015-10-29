@@ -350,8 +350,7 @@ namespace Z3AxiomProfiler
             if (rootSD.Literal == null)
             {
                 foreach (var i in rootSD.Implied)
-                    //TODO: more info about magic number.
-                    System.Diagnostics.Debug.Assert(i.Id == -13);
+                    System.Diagnostics.Debug.Assert(i.Id == Model.MarkerLiteral.Id);
             }
             else
             {

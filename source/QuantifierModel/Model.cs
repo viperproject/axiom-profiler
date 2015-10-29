@@ -25,7 +25,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         // Fingerprint (pointer) of specific instance to instantiation dict.
         public Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
-        public List<Dictionary<string,Instantiation>> FingerprintsPerCheck = new List<Dictionary<string, Instantiation>>(); 
+        public List<Dictionary<string, Instantiation>> FingerprintsPerCheck = new List<Dictionary<string, Instantiation>>();
 
         // Specific quantifier instantiations.
         public List<Instantiation> instances = new List<Instantiation>();
@@ -60,8 +60,12 @@ namespace Z3AxiomProfiler.QuantifierModel
         // Source of the model.
         public string LogFileName;
 
-        // Literal to mark a scope as done (popped out of existence(?)).
-        internal static readonly Literal MarkerLiteral = new Literal();
+        // Literal to mark a scope as done.
+        internal static readonly Literal MarkerLiteral = new Literal
+        {
+            Id = -13,
+            Term = new Term("marker", new Term[] { })
+        };
 
         // TODO: Find out, what these do!
         private readonly Dictionary<Instantiation, ImportantInstantiation> importants = new Dictionary<Instantiation, ImportantInstantiation>();
@@ -69,8 +73,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public Model()
         {
-            MarkerLiteral.Id = -13;
-            MarkerLiteral.Term = new Term("marker", new Term[] { });
             PushScope();
         }
 

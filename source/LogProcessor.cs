@@ -904,10 +904,7 @@ namespace Z3AxiomProfiler
                 }
                 return true;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         private Term GetLiteralTerm(string w, out bool negated, out int id)
