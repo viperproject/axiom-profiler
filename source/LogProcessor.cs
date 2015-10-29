@@ -662,6 +662,8 @@ namespace Z3AxiomProfiler
                 case "[begin-check]":
                     beginCheckSeen++;
                     interestedInCurrentCheck = checkToConsider == 0 || checkToConsider == beginCheckSeen;
+                    // saves and stores away the per check data.
+                    model.NewCheck();
                     break;
 
                 case "[query-done]":
@@ -983,7 +985,6 @@ namespace Z3AxiomProfiler
             lastInst = inst;
             inst.Cost = 1.0;
             quant.Instances.Add(inst);
-            model.quantifierInstantiations.Add(quant);
             model.AddInstance(inst);
 
             foreach (Term t in inst.Responsible)

@@ -27,11 +27,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
         public List<Dictionary<string,Instantiation>> FingerprintsPerCheck = new List<Dictionary<string, Instantiation>>(); 
 
-        // TODO: obsolete
-        // List of instantiated quanitfierts. Can be generated from 'instances' list (inst.quant).
-        public List<Quantifier> quantifierInstantiations = new List<Quantifier>(); // TODO: use instances instead, as they have more info
-        public List<List<Quantifier>> QuantInstPerCheck = new List<List<Quantifier>>();List<Quantifier>(); // TODO: use instances instead, as they have more info
-
         // Specific quantifier instantiations.
         public List<Instantiation> instances = new List<Instantiation>();
         public List<List<Instantiation>> InstancesPerCheck = new List<List<Instantiation>>();
@@ -82,9 +77,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public void NewCheck()
         {
             // save state and make a 'clean' model.
-            QuantInstPerCheck.Add(quantifierInstantiations);
-            quantifierInstantiations = new List<Quantifier>();
-
             FingerprintsPerCheck.Add(fingerprints);
             fingerprints = new Dictionary<string, Instantiation>();
 
@@ -104,7 +96,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public List<Quantifier> GetQuantifiersSortedByOccurence()
         {
-            return quantifierInstantiations;
+            return instances.Select(inst => inst.Quant).ToList();
         }
 
         public void PushScope()
