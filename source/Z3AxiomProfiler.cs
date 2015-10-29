@@ -344,6 +344,7 @@ namespace Z3AxiomProfiler
                 AddTopNode(c);
 
             model.PopScopes(model.scopes.Count - 1, null, 0);
+            model.BuildInstantiationDAG();
 
             var rootSD = model.scopes[0];
             Scope root = rootSD.Scope;
@@ -595,11 +596,11 @@ namespace Z3AxiomProfiler
             {
                 searchTree.SelectScope((Scope)c);
             }
-            List<Common> longestList = CollectLongestResponsibleChain(c);
+            List<Instantiation> longestList = BuildInstantiationDAG(c);
             PrettyPrintLongestList(longestList);
         }
 
-        private void PrettyPrintLongestList(List<Common> list)
+        private void PrettyPrintLongestList(List<Instantiation> list)
         {
             Console.WriteLine("--------------------------------------------------------------------------------------------");
             foreach (var common in list)
@@ -609,57 +610,31 @@ namespace Z3AxiomProfiler
             Console.WriteLine("--------------------------------------------------------------------------------------------");
         }
 
-        private List<Common> CollectLongestResponsibleChain(Common c)
+        private List<Instantiation> BuildInstantiationDAG(Common c)
         {
-            Stack<Common> trackingStack = new Stack<Common>();
-            Stack<Common> resultStack = new Stack<Common>();
-            Dictionary<Common, int> visited = new Dictionary<Common, int>();
-            List<Common> longest = new List<Common>();
-
-            trackingStack.Push(c);
-            int depth = 0;
-            while (trackingStack.Count > 0)
+            Instantiation inst = c as Instantiation;
+            if (inst != null)
             {
-                Common current = trackingStack.Peek();
-                if (visited.ContainsKey(current))
-                {
-                    depth--;
-                    //already visited do not visit again
-                    trackingStack.Pop();
-
-                    visited.Remove(current);
-                    if (resultStack.Count > longest.Count)
-                    {
-                        longest = resultStack.ToList();
-                    }
-                    resultStack.Pop();
-                }
-                else
-                {
-                    depth++;
-                    visited[current] = 1;
-                    resultStack.Push(current);
-
-                    if (current is Quantifier)
-                    {
-                        Quantifier quant = (Quantifier)current;
-                        foreach (Instantiation inst in quant.Instances)
-                        {
-                            trackingStack.Push(inst);
-                        }
-                    }
-                    else if (current is Instantiation)
-                    {
-                        Instantiation inst = (Instantiation)current;
-                        foreach (Instantiation dependenInst in inst.Dependants)
-                        {
-                            trackingStack.Push(dependenInst);
-                        }
-                    }
-                }
+                return model.LongestPathWithInstantiation(inst);
             }
-
-            return longest;
+            Term t = c as Term;
+            if (t?.Responsible != null)
+            {
+                return model.LongestPathWithInstantiation(t.Responsible);
+            }
+            Quantifier q = c as Quantifier;
+            if (q != null && q.Instances.Count > 0)
+            {
+                foreach (Instantiation quantInstance in q.Instances)
+                {
+                    if (inst == null || quantInstance.LongestPathLength > inst.LongestPathLength)
+                    {
+                        inst = quantInstance;
+                    }
+                }
+                return model.LongestPathWithInstantiation(inst);
+            }
+            return new List<Instantiation>();
         }
 
         void Search()

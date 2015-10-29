@@ -78,7 +78,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public void NewCheck(int oldCheckNo)
         {
-            //PopAllScopesWithCheckNo(oldCheckNo);
             // save state and make a 'clean' model.
             FingerprintsPerCheck.Add(fingerprints);
             fingerprints = new Dictionary<string, Instantiation>();
@@ -88,6 +87,67 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             ConflictsPerCheck.Add(conflicts);
             conflicts = new List<Conflict>();
+        }
+
+        public void BuildInstantiationDAG()
+        {
+            if (instances.Count == 0)
+            {
+                return;
+            }
+
+            // calculate distance for each node
+            // forwards propagation
+            Queue<Instantiation> todo = new Queue<Instantiation>(instances.Where(inst => inst.ResponsibleInstantiations.Count == 0));
+            while (todo.Count > 0)
+            {
+                Instantiation current = todo.Dequeue();
+                foreach (Instantiation inst in current.DependantInstantiations.Where(inst => current.MaxDistanceFromSource + 1 > inst.MaxDistanceFromSource))
+                {
+                    inst.MaxDistanceFromSource = current.MaxDistanceFromSource + 1;
+                    todo.Enqueue(inst);
+                }
+            }
+
+            // inform each node about path length
+            // backwards propagation
+            todo = new Queue<Instantiation>(instances.Where(inst => inst.DependantInstantiations.Count == 0));
+            while (todo.Count > 0)
+            {
+                Instantiation current = todo.Dequeue();
+                foreach (Instantiation inst in current.DependantInstantiations
+                    .Where(inst => (current.MaxDistanceFromSource - 1 > inst.MaxDistanceFromSource) 
+                    && current.LongestPathLength > inst.LongestPathLength))
+                {
+                    inst.LongestPathLength = current.LongestPathLength;
+                    todo.Enqueue(inst);
+                }
+            }
+        }
+
+        public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
+        {
+            List<Instantiation> path = new List<Instantiation>();
+            Instantiation current = inst;
+            // reconstruct path to source
+            while (current != null)
+            {
+                path.Add(current);
+                current = current.ResponsibleInstantiations.Find(
+                    i => i.MaxDistanceFromSource == current.MaxDistanceFromSource - 1);
+            }
+            path.Reverse();
+            // other direction
+            current = inst.DependantInstantiations.Find(
+                i => i.MaxDistanceFromSource == inst.MaxDistanceFromSource + 1);
+            while (current != null)
+            {
+                path.Add(current);
+                current = current.DependantInstantiations.Find(
+                    i => i.MaxDistanceFromSource == current.MaxDistanceFromSource + 1);
+            }
+
+            return path;
         }
 
         public List<Quantifier> GetQuantifiersSortedByInstantiations()
@@ -593,7 +653,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             checkNumber = checkNo;
         }
-        
+
         // Number of quantifier instantiations in this level.
         public int OwnInstanceCount;
 
@@ -877,7 +937,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (lev != 0 && inst.Quant == this) return 0;
             double res = 1;
-            foreach (var ch in inst.Dependants)
+            foreach (var ch in inst.DependantInstantiations)
             {
                 int cnt = 0;
                 foreach (var other in ch.Responsible)
@@ -926,10 +986,13 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Term[] Responsible;
         public int LineNo;
         public double Cost;
-        public List<Instantiation> Dependants = new List<Instantiation>();
+        public readonly List<Instantiation> ResponsibleInstantiations = new List<Instantiation>();
+        public readonly List<Instantiation> DependantInstantiations = new List<Instantiation>();
         public int Z3Generation;
         int depth;
         int wdepth = -1;
+        public int MaxDistanceFromSource;
+        public int LongestPathLength;
 
         public void CopyTo(Instantiation inst)
         {
@@ -1033,10 +1096,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Callback("BIND", () => Bindings);
             }
 
-            if (Dependants.Count > 0)
+            if (DependantInstantiations.Count > 0)
             {
-                Dependants.Sort(delegate (Instantiation i1, Instantiation i2) { return i2.Cost.CompareTo(i1.Cost); });
-                yield return Callback("YIELDS", () => Dependants);
+                DependantInstantiations.Sort(delegate (Instantiation i1, Instantiation i2) { return i2.Cost.CompareTo(i1.Cost); });
+                yield return Callback("YIELDS", () => DependantInstantiations);
             }
         }
 

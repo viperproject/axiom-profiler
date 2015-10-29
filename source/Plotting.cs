@@ -210,7 +210,7 @@ namespace Z3AxiomProfiler {
 
           var edgesTo = new Dictionary<string, int>();
           foreach (var instance in source.Instances) {
-            foreach (var dependants in instance.Dependants) {
+            foreach (var dependants in instance.DependantInstantiations) {
               var dName = normalizeName(dependants.Quant);
               int count; edgesTo.TryGetValue(dName, out count);
               edgesTo[dName] = count + 1;
@@ -321,7 +321,7 @@ namespace Z3AxiomProfiler {
       }
 
       spine.Push(quant);
-      foreach (Instantiation child in inst.Dependants)
+      foreach (Instantiation child in inst.DependantInstantiations)
         FindCycles(source, child, cyclesCounter, spine);
       spine.Pop();
     }

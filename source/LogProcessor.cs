@@ -989,7 +989,9 @@ namespace Z3AxiomProfiler
             {
                 if (t.Responsible != null)
                 {
-                    t.Responsible.Dependants.Add(inst);
+                    // Link both ways in DAG of Instantiations.
+                    t.Responsible.DependantInstantiations.Add(inst);
+                    inst.ResponsibleInstantiations.Add(t.Responsible);
                 }
             }
         }
