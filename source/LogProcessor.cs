@@ -44,7 +44,9 @@ namespace Z3AxiomProfiler
             curlineNo = 0;
             this.skipDecisions = skipDecisions;
             if (bplFileInfos != null)
+            {
                 LoadBoogieFiles(bplFileInfos);
+            }
         }
 
         public void LoadBoogieFiles(List<FileInfo> bplFileInfos)
@@ -983,11 +985,14 @@ namespace Z3AxiomProfiler
             quant.Instances.Add(inst);
             model.quantifierInstantiations.Add(quant);
             model.AddInstance(inst);
+
             foreach (Term t in inst.Responsible)
+            {
                 if (t.Responsible != null)
                 {
                     t.Responsible.Dependants.Add(inst);
                 }
+            }
         }
 
         private Quantifier CreateQuantifier(string name, string qid)

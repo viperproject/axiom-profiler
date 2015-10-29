@@ -18,26 +18,27 @@ namespace Z3AxiomProfiler.QuantifierModel
     public class Model
     {
         // dict with all terms seen so far.
-        // does not care about 'c:' option.
         public Dictionary<string, Term> terms = new Dictionary<string, Term>();
 
         // dict with all quanitfiers seen so far.
-        // does not care about 'c:' option.
         public Dictionary<string, Quantifier> quantifiers = new Dictionary<string, Quantifier>();
 
-        // cares about c: option.
+        // Fingerprint (pointer) of specific instance to instantiation dict.
         public Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
+        public List<Dictionary<string,Instantiation>> FingerprintsPerCheck = new List<Dictionary<string, Instantiation>>(); 
 
         // TODO: obsolete
         // List of instantiated quanitfierts. Can be generated from 'instances' list (inst.quant).
         public List<Quantifier> quantifierInstantiations = new List<Quantifier>(); // TODO: use instances instead, as they have more info
+        public List<List<Quantifier>> QuantInstPerCheck = new List<List<Quantifier>>();List<Quantifier>(); // TODO: use instances instead, as they have more info
 
         // Specific quantifier instantiations.
         public List<Instantiation> instances = new List<Instantiation>();
+        public List<List<Instantiation>> InstancesPerCheck = new List<List<Instantiation>>();
 
         // list of conflicts.
-        // cares about 'c:' option.
         public List<Conflict> conflicts = new List<Conflict>();
+        public List<List<Conflict>> ConflictsPerCheck = new List<List<Conflict>>();
 
         // TODO: list of function symbols(?) 
         public List<FunSymbol> modelFuns = new List<FunSymbol>();
@@ -49,6 +50,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Dictionary<string, Partition> modelPartsByName = new Dictionary<string, Partition>();
 
         // TODO: no idea what this is for. Also misleading name probably.
+        // Representation of the internal prover model.
         public List<Common> models = new List<Common>();
 
         // TODO: some structure for proof mode(?)
@@ -64,7 +66,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public string LogFileName;
 
         // Literal to mark a scope as done (popped out of existence(?)).
-        internal static Literal MarkerLiteral = new Literal();
+        internal static readonly Literal MarkerLiteral = new Literal();
 
         // TODO: Find out, what these do!
         private readonly Dictionary<Instantiation, ImportantInstantiation> importants = new Dictionary<Instantiation, ImportantInstantiation>();
@@ -75,6 +77,22 @@ namespace Z3AxiomProfiler.QuantifierModel
             MarkerLiteral.Id = -13;
             MarkerLiteral.Term = new Term("marker", new Term[] { });
             PushScope();
+        }
+
+        public void NewCheck()
+        {
+            // save state and make a 'clean' model.
+            QuantInstPerCheck.Add(quantifierInstantiations);
+            quantifierInstantiations = new List<Quantifier>();
+
+            FingerprintsPerCheck.Add(fingerprints);
+            fingerprints = new Dictionary<string, Instantiation>();
+
+            InstancesPerCheck.Add(instances);
+            instances = new List<Instantiation>();
+
+            ConflictsPerCheck.Add(conflicts);
+            conflicts = new List<Conflict>();
         }
 
         public List<Quantifier> GetQuantifiersSortedByInstantiations()
@@ -385,7 +403,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
           where S : T
         {
-            return x.Select(y => (T) y);
+            return x.Select(y => (T)y);
         }
 
         public static CallbackNode Callback<T>(string name, MyFunc<IEnumerable<T>> fn)
