@@ -592,49 +592,31 @@ namespace Z3AxiomProfiler
                 toolTipBox.Lines = c.ToolTip().Replace("\r", "").Split('\n');
             }
 
-            if (c is Scope && searchTree != null)
+            Scope scope = c as Scope;
+            if (scope != null)
             {
-                searchTree.SelectScope((Scope)c);
+                searchTree?.SelectScope(scope);
             }
-            List<Instantiation> longestList = BuildInstantiationDAG(c);
-            PrettyPrintLongestList(longestList);
-        }
-
-        private void PrettyPrintLongestList(List<Instantiation> list)
-        {
-            Console.WriteLine("--------------------------------------------------------------------------------------------");
-            foreach (var common in list)
-            {
-                Console.WriteLine(common.OneLinePrettyPrint());
-            }
-            Console.WriteLine("--------------------------------------------------------------------------------------------");
-        }
-
-        private List<Instantiation> BuildInstantiationDAG(Common c)
-        {
             Instantiation inst = c as Instantiation;
             if (inst != null)
             {
-                return model.LongestPathWithInstantiation(inst);
-            }
-            Term t = c as Term;
-            if (t?.Responsible != null)
-            {
-                return model.LongestPathWithInstantiation(t.Responsible);
-            }
-            Quantifier q = c as Quantifier;
-            if (q != null && q.Instances.Count > 0)
-            {
-                foreach (Instantiation quantInstance in q.Instances)
+                // delete old content
+                InstantiationPathView.BeginUpdate();
+                InstantiationPathView.Items.Clear();
+                List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
+
+                foreach (Instantiation i in instantiationPath)
                 {
-                    if (inst == null || quantInstance.LongestPathLength > inst.LongestPathLength)
-                    {
-                        inst = quantInstance;
-                    }
+                    ListViewItem item = new ListViewItem();
+                    item.Text = i.FingerPrint;
+                    item.Name = $"Quantifier Instantiation {i.FingerPrint}";
+                    item.SubItems.Add(i.Depth.ToString());
+                    item.SubItems.Add(i.Quant.PrintName);
+
+                    InstantiationPathView.Items.Add(item);
                 }
-                return model.LongestPathWithInstantiation(inst);
+                InstantiationPathView.EndUpdate();
             }
-            return new List<Instantiation>();
         }
 
         void Search()
