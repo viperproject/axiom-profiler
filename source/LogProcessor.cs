@@ -235,18 +235,11 @@ namespace Z3AxiomProfiler
             for (int i = model.instances.Count - 1; i >= 0; i--)
             {
                 Instantiation inst = model.instances[i];
-                int deps = 0;
-                foreach (Term t in inst.Responsible)
+                int deps = inst.Responsible.Count(t => t.Responsible != null);
+                foreach (Term t in inst.Responsible.Where(t => t.Responsible != null))
                 {
-                    if (t.Responsible != null) deps++;
-                }
-                foreach (Term t in inst.Responsible)
-                {
-                    if (t.Responsible != null)
-                    {
-                        t.Responsible.Cost += inst.Cost / deps;
-                        t.Responsible.Quant.CrudeCost += inst.Cost / deps;
-                    }
+                    t.Responsible.Cost += inst.Cost / deps;
+                    t.Responsible.Quant.CrudeCost += inst.Cost / deps;
                 }
             }
         }
@@ -601,7 +594,6 @@ namespace Z3AxiomProfiler
                     }
                     break;
                 case "[end-of-instance]": lastInst = null; break;
-
 
                 case "[decide-and-or]":
                     if (!interestedInCurrentCheck) break;

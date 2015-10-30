@@ -908,15 +908,10 @@ namespace Z3AxiomProfiler.QuantifierModel
         private double InstanceCost(Instantiation inst, int lev)
         {
             if (lev != 0 && inst.Quant == this) return 0;
-            double res = 1;
-            foreach (var ch in inst.DependantInstantiations)
-            {
-                int cnt = 0;
-                foreach (var other in ch.Responsible)
-                    if (other.Responsible != null) cnt++;
-                res += InstanceCost(ch, lev + 1) / cnt;
-            }
-            return res;
+            return 1 + (from ch in inst.DependantInstantiations
+                        let cnt = ch.Responsible.Count(other => other.Responsible != null)
+                        select InstanceCost(ch, lev + 1)/cnt)
+                        .Sum();
         }
 
         private double realCost;
@@ -978,18 +973,14 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             get
             {
-                if (depth == 0)
+                if (depth != 0)
                 {
-                    int max = 0;
-                    foreach (Term t in Responsible)
-                    {
-                        if (t.Responsible != null)
-                        {
-                            if (t.Responsible.Depth > max) max = t.Responsible.Depth;
-                        }
-                    }
-                    depth = max + 1;
+                    return depth;
                 }
+
+                int max = (from t in Responsible where t.Responsible != null select t.Responsible.Depth)
+                    .Concat(new[] {0}).Max();
+                depth = max + 1;
                 return depth;
             }
         }
@@ -1001,7 +992,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (wdepth == -1)
                 {
                     int max = 0;
-                    //depth = 1;
                     foreach (Term t in Responsible)
                     {
                         if (t.Responsible != null)
@@ -1050,8 +1040,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                 List<Term> sortedResponsibleList = new List<Term>(this.Responsible);
                 sortedResponsibleList.Sort(delegate (Term t1, Term t2)
                 {
-                    int d1 = t1.Responsible == null ? 0 : t1.Responsible.Depth;
-                    int d2 = t2.Responsible == null ? 0 : t2.Responsible.Depth;
+                    int d1 = t1.Responsible?.Depth ?? 0;
+                    int d2 = t2.Responsible?.Depth ?? 0;
                     return d2.CompareTo(d1);
                 });
                 foreach (Term t in sortedResponsibleList)
