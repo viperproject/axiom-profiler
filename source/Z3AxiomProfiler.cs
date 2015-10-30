@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -344,7 +345,6 @@ namespace Z3AxiomProfiler
                 AddTopNode(c);
 
             model.PopScopes(model.scopes.Count - 1, null, 0);
-            model.BuildInstantiationDAG();
 
             var rootSD = model.scopes[0];
             Scope root = rootSD.Scope;
@@ -607,13 +607,22 @@ namespace Z3AxiomProfiler
 
                 foreach (Instantiation i in instantiationPath)
                 {
-                    ListViewItem item = new ListViewItem();
-                    item.Text = i.FingerPrint;
-                    item.Name = $"Quantifier Instantiation {i.FingerPrint}";
-                    item.SubItems.Add(i.Depth.ToString());
-                    item.SubItems.Add(i.Quant.PrintName);
+                    ListViewItem item = new ListViewItem
+                    {
+                        Text = i.Depth.ToString(),
+                        Name = $"Quantifier Instantiation {i.FingerPrint}"
+                    };
+                    item.SubItems.Add(i.FingerPrint);
+                    item.SubItems.Add(i.Quant.Qid);
+                    item.SubItems.Add(i.Quant.Instances.Count.ToString());
 
                     InstantiationPathView.Items.Add(item);
+
+                    if (i != inst) continue;
+
+                    item.BackColor = Color.GreenYellow;
+                    item.Focused = true;
+                    item.EnsureVisible();
                 }
                 InstantiationPathView.EndUpdate();
             }

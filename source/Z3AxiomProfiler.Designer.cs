@@ -46,13 +46,14 @@
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.z3AxiomTree = new System.Windows.Forms.TreeView();
-            this.toolTipBox = new System.Windows.Forms.TextBox();
-            this.InstantiationPathView = new System.Windows.Forms.ListView();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.z3AxiomTree = new System.Windows.Forms.TreeView();
+            this.InstantiationPathView = new System.Windows.Forms.ListView();
             this.FingerprintHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.QuantifierHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.toolTipBox = new System.Windows.Forms.TextBox();
+            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -72,7 +73,7 @@
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(741, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(1055, 24);
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -211,52 +212,9 @@
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.toolTipBox);
-            this.splitContainer1.Size = new System.Drawing.Size(741, 672);
+            this.splitContainer1.Size = new System.Drawing.Size(1055, 672);
             this.splitContainer1.SplitterDistance = 614;
             this.splitContainer1.TabIndex = 3;
-            // 
-            // z3AxiomTree
-            // 
-            this.z3AxiomTree.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.z3AxiomTree.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.z3AxiomTree.HideSelection = false;
-            this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
-            this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(531, 614);
-            this.z3AxiomTree.TabIndex = 1;
-            this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
-            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.SetTooltip);
-            this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
-            // 
-            // toolTipBox
-            // 
-            this.toolTipBox.AcceptsReturn = true;
-            this.toolTipBox.AcceptsTab = true;
-            this.toolTipBox.CausesValidation = false;
-            this.toolTipBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.toolTipBox.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.toolTipBox.Location = new System.Drawing.Point(0, 0);
-            this.toolTipBox.Multiline = true;
-            this.toolTipBox.Name = "toolTipBox";
-            this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(741, 54);
-            this.toolTipBox.TabIndex = 0;
-            // 
-            // InstantiationPathView
-            // 
-            this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.FingerprintHeader,
-            this.DepthHeader,
-            this.QuantifierHeader});
-            this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.InstantiationPathView.FullRowSelect = true;
-            this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
-            this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(206, 614);
-            this.InstantiationPathView.TabIndex = 2;
-            this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
-            this.InstantiationPathView.View = System.Windows.Forms.View.Details;
             // 
             // splitContainer2
             // 
@@ -271,28 +229,79 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.InstantiationPathView);
-            this.splitContainer2.Size = new System.Drawing.Size(741, 614);
-            this.splitContainer2.SplitterDistance = 531;
+            this.splitContainer2.Size = new System.Drawing.Size(1055, 614);
+            this.splitContainer2.SplitterDistance = 716;
             this.splitContainer2.TabIndex = 3;
+            // 
+            // z3AxiomTree
+            // 
+            this.z3AxiomTree.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.z3AxiomTree.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.z3AxiomTree.HideSelection = false;
+            this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
+            this.z3AxiomTree.Name = "z3AxiomTree";
+            this.z3AxiomTree.Size = new System.Drawing.Size(716, 614);
+            this.z3AxiomTree.TabIndex = 1;
+            this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
+            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.SetTooltip);
+            this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
+            // 
+            // InstantiationPathView
+            // 
+            this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.DepthHeader,
+            this.FingerprintHeader,
+            this.QIdHeader,
+            this.InstancesCountHeader});
+            this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.InstantiationPathView.FullRowSelect = true;
+            this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
+            this.InstantiationPathView.Name = "InstantiationPathView";
+            this.InstantiationPathView.Size = new System.Drawing.Size(335, 614);
+            this.InstantiationPathView.TabIndex = 2;
+            this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
+            this.InstantiationPathView.View = System.Windows.Forms.View.Details;
             // 
             // FingerprintHeader
             // 
             this.FingerprintHeader.Text = "Fingerprint";
-            this.FingerprintHeader.Width = 90;
+            this.FingerprintHeader.Width = 120;
             // 
             // DepthHeader
             // 
             this.DepthHeader.Text = "Depth";
+            this.DepthHeader.Width = 50;
             // 
-            // QuantifierHeader
+            // InstancesCountHeader
             // 
-            this.QuantifierHeader.Text = "Quantifier";
+            this.InstancesCountHeader.Text = "#Instances Total";
+            this.InstancesCountHeader.Width = 200;
+            // 
+            // toolTipBox
+            // 
+            this.toolTipBox.AcceptsReturn = true;
+            this.toolTipBox.AcceptsTab = true;
+            this.toolTipBox.CausesValidation = false;
+            this.toolTipBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.toolTipBox.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.toolTipBox.Location = new System.Drawing.Point(0, 0);
+            this.toolTipBox.Multiline = true;
+            this.toolTipBox.Name = "toolTipBox";
+            this.toolTipBox.ReadOnly = true;
+            this.toolTipBox.Size = new System.Drawing.Size(1055, 54);
+            this.toolTipBox.TabIndex = 0;
+            // 
+            // QIdHeader
+            // 
+            this.QIdHeader.Text = "QId";
+            this.QIdHeader.Width = 80;
             // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(741, 696);
+            this.ClientSize = new System.Drawing.Size(1055, 696);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.Name = "Z3AxiomProfiler";
@@ -341,7 +350,8 @@
         private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.ColumnHeader FingerprintHeader;
         private System.Windows.Forms.ColumnHeader DepthHeader;
-        private System.Windows.Forms.ColumnHeader QuantifierHeader;
+        private System.Windows.Forms.ColumnHeader InstancesCountHeader;
+        private System.Windows.Forms.ColumnHeader QIdHeader;
     }
 }
 

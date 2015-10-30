@@ -200,6 +200,7 @@ namespace Z3AxiomProfiler
                     }
                 }
                 processor.ComputeCost();
+                processor.model.BuildInstantiationDAG();
             }
             statusUpdate(1000, 2);
         }

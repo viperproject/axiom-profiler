@@ -528,7 +528,9 @@ namespace Z3AxiomProfiler
                             model.terms[words[1]] = t;
                         }
                         if (lastInst != null)
+                        {
                             t.Responsible = lastInst;
+                        }
                     }
                     break;
 
@@ -653,9 +655,6 @@ namespace Z3AxiomProfiler
                     break;
 
                 case "[begin-check]":
-                    // saves and stores away the per check data.
-                    model.NewCheck(beginCheckSeen);
-
                     beginCheckSeen++;
                     interestedInCurrentCheck = checkToConsider == 0 || checkToConsider == beginCheckSeen;
                     break;
@@ -949,8 +948,8 @@ namespace Z3AxiomProfiler
             if (lit.Inverse != null && lit.Inverse.Inverse == null) lit.Inverse.Inverse = lit;
             literalById[id] = lit;
 
-            lit.Clause = this.decideClause;
-            this.decideClause = null;
+            lit.Clause = decideClause;
+            decideClause = null;
             return lit;
         }
 
@@ -959,14 +958,9 @@ namespace Z3AxiomProfiler
             Literal l = GetLiteral(w, true);
             if (l.Negated)
             {
-                if (l.Term.NegatedVersion == null)
-                    l.Term.NegatedVersion = new Term("not", new Term[] { l.Term });
-                return l.Term.NegatedVersion;
+                return l.Term.NegatedVersion ?? (l.Term.NegatedVersion = new Term("not", new Term[] {l.Term}));
             }
-            else
-            {
-                return l.Term;
-            }
+            return l.Term;
         }
 
         private void AddInstance(Instantiation inst)
@@ -980,27 +974,29 @@ namespace Z3AxiomProfiler
 
             foreach (Term t in inst.Responsible)
             {
-                if (t.Responsible != null)
-                {
-                    // Link both ways in DAG of Instantiations.
-                    t.Responsible.DependantInstantiations.Add(inst);
-                    inst.ResponsibleInstantiations.Add(t.Responsible);
-                }
+                if (t.Responsible == null) continue;
+
+                // Link both ways in DAG of Instantiations.
+                t.Responsible.DependantInstantiations.Add(inst);
+                inst.ResponsibleInstantiations.Add(t.Responsible);
             }
         }
 
         private Quantifier CreateQuantifier(string name, string qid)
         {
             Quantifier quant;
-            if (!model.quantifiers.TryGetValue(name, out quant))
+            if (model.quantifiers.TryGetValue(name, out quant))
             {
-                quant = new Quantifier();
-                quant.Qid = qid;
-                quant.Instances = new List<Instantiation>();
-                model.quantifiers[name] = quant;
-
-                loadBoogieToken(quant);
+                return quant;
             }
+
+            quant = new Quantifier
+            {
+                Qid = qid,
+                Instances = new List<Instantiation>()
+            };
+            model.quantifiers[name] = quant;
+            loadBoogieToken(quant);
             return quant;
         }
 

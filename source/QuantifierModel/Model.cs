@@ -98,11 +98,13 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             // calculate distance for each node
             // forwards propagation
-            Queue<Instantiation> todo = new Queue<Instantiation>(instances.Where(inst => inst.ResponsibleInstantiations.Count == 0));
+            Queue<Instantiation> todo = new Queue<Instantiation>(instances
+                .Where(inst => inst.ResponsibleInstantiations.Count == 0));
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
-                foreach (Instantiation inst in current.DependantInstantiations.Where(inst => current.MaxDistanceFromSource + 1 > inst.MaxDistanceFromSource))
+                foreach (Instantiation inst in current.DependantInstantiations
+                    .Where(inst => current.MaxDistanceFromSource + 1 > inst.MaxDistanceFromSource))
                 {
                     inst.MaxDistanceFromSource = current.MaxDistanceFromSource + 1;
                     todo.Enqueue(inst);
@@ -910,7 +912,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (lev != 0 && inst.Quant == this) return 0;
             return 1 + (from ch in inst.DependantInstantiations
                         let cnt = ch.Responsible.Count(other => other.Responsible != null)
-                        select InstanceCost(ch, lev + 1)/cnt)
+                        select InstanceCost(ch, lev + 1) / cnt)
                         .Sum();
         }
 
@@ -979,7 +981,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
 
                 int max = (from t in Responsible where t.Responsible != null select t.Responsible.Depth)
-                    .Concat(new[] {0}).Max();
+                    .Concat(new[] { 0 }).Max();
                 depth = max + 1;
                 return depth;
             }
@@ -1079,7 +1081,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public Term(string name, Term[] args)
         {
-            Name = String.Intern(name);
+            Name = string.Intern(name);
             Args = args;
             foreach (Term t in Args)
             {
