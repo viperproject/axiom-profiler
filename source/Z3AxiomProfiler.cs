@@ -697,9 +697,28 @@ namespace Z3AxiomProfiler
             searchTree.Show();
         }
 
-        private void PathItemClick(object sender, EventArgs e)
+        private void PathItemClick(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            Console.WriteLine("Help");
+            Common c = e.Item.Tag as Common;
+            if (c != null)
+            {
+                SetToolTip(c);
+            }
+        }
+
+        private void z3AxiomTree_Enter(object sender, EventArgs e)
+        {
+            TreeNode t = z3AxiomTree.SelectedNode;
+            if (t == null) return;
+            Common c = t.Tag as Common;
+            SetToolTip(c);
+        }
+
+        private void InstantiationPathView_Enter(object sender, EventArgs e)
+        {
+            if (InstantiationPathView.SelectedItems.Count <= 0) return;
+            Common c = InstantiationPathView.SelectedItems[0].Tag as Common;
+            SetToolTip(c);
         }
     }
 }

@@ -244,6 +244,7 @@
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeClick);
+            this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);
             this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
             // 
             // InstantiationPathView
@@ -257,12 +258,14 @@
             this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.InstantiationPathView.FullRowSelect = true;
             this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
+            this.InstantiationPathView.MultiSelect = false;
             this.InstantiationPathView.Name = "InstantiationPathView";
             this.InstantiationPathView.Size = new System.Drawing.Size(335, 614);
             this.InstantiationPathView.TabIndex = 2;
             this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
             this.InstantiationPathView.View = System.Windows.Forms.View.Details;
-            this.InstantiationPathView.Click += new System.EventHandler(this.PathItemClick);
+            this.InstantiationPathView.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.PathItemClick);
+            this.InstantiationPathView.Enter += new System.EventHandler(this.InstantiationPathView_Enter);
             // 
             // DepthHeader
             // 
