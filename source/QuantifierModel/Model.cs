@@ -26,15 +26,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         // Fingerprint (pointer) of specific instance to instantiation dict.
         public Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
-        public List<Dictionary<string, Instantiation>> FingerprintsPerCheck = new List<Dictionary<string, Instantiation>>();
 
         // Specific quantifier instantiations.
         public List<Instantiation> instances = new List<Instantiation>();
-        public List<List<Instantiation>> InstancesPerCheck = new List<List<Instantiation>>();
 
         // list of conflicts.
         public List<Conflict> conflicts = new List<Conflict>();
-        public List<List<Conflict>> ConflictsPerCheck = new List<List<Conflict>>();
 
         // TODO: list of function symbols(?) 
         public List<FunSymbol> modelFuns = new List<FunSymbol>();
@@ -76,19 +73,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             PushScope(0);
         }
 
-        public void NewCheck(int oldCheckNo)
-        {
-            // save state and make a 'clean' model.
-            FingerprintsPerCheck.Add(fingerprints);
-            fingerprints = new Dictionary<string, Instantiation>();
-
-            InstancesPerCheck.Add(instances);
-            instances = new List<Instantiation>();
-
-            ConflictsPerCheck.Add(conflicts);
-            conflicts = new List<Conflict>();
-        }
-
         public void BuildInstantiationDAG()
         {
             if (instances.Count == 0)
@@ -111,17 +95,18 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
             }
 
-            // inform each node about path length
+            // inform each node about subpath length
             // backwards propagation
             todo = new Queue<Instantiation>(instances.Where(inst => inst.DependantInstantiations.Count == 0));
+
+            // propagate through DAG
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
-                foreach (Instantiation inst in current.DependantInstantiations
-                    .Where(inst => (current.MaxDistanceFromSource - 1 > inst.MaxDistanceFromSource)
-                    && current.LongestPathLength > inst.LongestPathLength))
+                foreach (Instantiation inst in current.ResponsibleInstantiations
+                    .Where(inst => current.DeepestSubpathDepth >= inst.DeepestSubpathDepth))
                 {
-                    inst.LongestPathLength = current.LongestPathLength;
+                    inst.DeepestSubpathDepth = current.DeepestSubpathDepth + 1;
                     todo.Enqueue(inst);
                 }
             }
@@ -130,25 +115,31 @@ namespace Z3AxiomProfiler.QuantifierModel
         public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
         {
             List<Instantiation> path = new List<Instantiation>();
+
             Instantiation current = inst;
             // reconstruct path to source
-            while (current != null)
+            path.Add(current);
+            while (current.ResponsibleInstantiations.Count > 0)
             {
+                // follow the longest path
+                current = current.ResponsibleInstantiations
+                    .Aggregate((i1, i2) => i1.MaxDistanceFromSource > i2.MaxDistanceFromSource ? i1 : i2);
                 path.Add(current);
-                current = current.ResponsibleInstantiations.Find(
-                    i => i.MaxDistanceFromSource == current.MaxDistanceFromSource - 1);
             }
             path.Reverse();
+
             // other direction
-            current = inst.DependantInstantiations.Find(
-                i => i.MaxDistanceFromSource == inst.MaxDistanceFromSource + 1);
-            while (current != null)
+            current = inst;
+            while (current.DependantInstantiations.Count > 0)
             {
+                // follow the longest path
+                current = current.DependantInstantiations
+                    .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
+
                 path.Add(current);
-                current = current.DependantInstantiations.Find(
-                    i => i.MaxDistanceFromSource == current.MaxDistanceFromSource + 1);
             }
 
+            Debug.Assert(path.Count == inst.DeepestSubpathDepth + inst.MaxDistanceFromSource + 1);
             return path;
         }
 
@@ -961,7 +952,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         int depth;
         int wdepth = -1;
         public int MaxDistanceFromSource;
-        public int LongestPathLength;
+        public int DeepestSubpathDepth;
         public string FingerPrint;
 
         public void CopyTo(Instantiation inst)

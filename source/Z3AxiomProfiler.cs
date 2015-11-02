@@ -583,49 +583,61 @@ namespace Z3AxiomProfiler
             Clipboard.SetText(sb.ToString());
         }
 
-        private void SetTooltip(object sender, TreeViewEventArgs e)
+        private void HandleTreeNodeClick(object sender, TreeViewEventArgs e)
         {
             TreeNode t = z3AxiomTree.SelectedNode;
             Common c = t.Tag as Common;
-            if (c != null)
-            {
-                toolTipBox.Lines = c.ToolTip().Replace("\r", "").Split('\n');
-            }
+            SetToolTip(c);
 
             Scope scope = c as Scope;
             if (scope != null)
             {
                 searchTree?.SelectScope(scope);
             }
+
             Instantiation inst = c as Instantiation;
             if (inst != null)
             {
-                // delete old content
-                InstantiationPathView.BeginUpdate();
-                InstantiationPathView.Items.Clear();
-                List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
-
-                foreach (Instantiation i in instantiationPath)
-                {
-                    ListViewItem item = new ListViewItem
-                    {
-                        Text = i.Depth.ToString(),
-                        Name = $"Quantifier Instantiation {i.FingerPrint}"
-                    };
-                    item.SubItems.Add(i.FingerPrint);
-                    item.SubItems.Add(i.Quant.Qid);
-                    item.SubItems.Add(i.Quant.Instances.Count.ToString());
-
-                    InstantiationPathView.Items.Add(item);
-
-                    if (i != inst) continue;
-
-                    item.BackColor = Color.GreenYellow;
-                    item.Focused = true;
-                    item.EnsureVisible();
-                }
-                InstantiationPathView.EndUpdate();
+                SetInstantiationPath(inst);
             }
+        }
+
+        private void SetToolTip(Common c)
+        {
+            if (c != null)
+            {
+                toolTipBox.Lines = c.ToolTip().Replace("\r", "").Split('\n');
+            }
+        }
+
+        private void SetInstantiationPath(Instantiation inst)
+        {
+            // delete old content
+            InstantiationPathView.BeginUpdate();
+            InstantiationPathView.Items.Clear();
+
+            List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
+            foreach (Instantiation i in instantiationPath)
+            {
+                ListViewItem item = new ListViewItem
+                {
+                    Text = i.Depth.ToString(),
+                    Name = $"Quantifier Instantiation {i.FingerPrint}"
+                };
+                item.Tag = i;
+                item.SubItems.Add(i.FingerPrint);
+                item.SubItems.Add(i.Quant.Qid);
+                item.SubItems.Add(i.Quant.Instances.Count.ToString());
+
+                InstantiationPathView.Items.Add(item);
+
+                if (i != inst) continue;
+
+                item.BackColor = Color.GreenYellow;
+                item.Focused = true;
+                item.EnsureVisible();
+            }
+            InstantiationPathView.EndUpdate();
         }
 
         void Search()
@@ -683,6 +695,11 @@ namespace Z3AxiomProfiler
             if (searchTree == null)
                 searchTree = new SearchTree(model, this);
             searchTree.Show();
+        }
+
+        private void PathItemClick(object sender, EventArgs e)
+        {
+            Console.WriteLine("Help");
         }
     }
 }

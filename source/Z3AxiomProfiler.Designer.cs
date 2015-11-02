@@ -49,11 +49,11 @@
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.z3AxiomTree = new System.Windows.Forms.TreeView();
             this.InstantiationPathView = new System.Windows.Forms.ListView();
-            this.FingerprintHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.FingerprintHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.toolTipBox = new System.Windows.Forms.TextBox();
-            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -243,7 +243,7 @@
             this.z3AxiomTree.Size = new System.Drawing.Size(716, 614);
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
-            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.SetTooltip);
+            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeClick);
             this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
             // 
             // InstantiationPathView
@@ -262,16 +262,22 @@
             this.InstantiationPathView.TabIndex = 2;
             this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
             this.InstantiationPathView.View = System.Windows.Forms.View.Details;
+            this.InstantiationPathView.Click += new System.EventHandler(this.PathItemClick);
+            // 
+            // DepthHeader
+            // 
+            this.DepthHeader.Text = "Depth";
+            this.DepthHeader.Width = 50;
             // 
             // FingerprintHeader
             // 
             this.FingerprintHeader.Text = "Fingerprint";
             this.FingerprintHeader.Width = 120;
             // 
-            // DepthHeader
+            // QIdHeader
             // 
-            this.DepthHeader.Text = "Depth";
-            this.DepthHeader.Width = 50;
+            this.QIdHeader.Text = "QId";
+            this.QIdHeader.Width = 80;
             // 
             // InstancesCountHeader
             // 
@@ -291,11 +297,6 @@
             this.toolTipBox.ReadOnly = true;
             this.toolTipBox.Size = new System.Drawing.Size(1055, 54);
             this.toolTipBox.TabIndex = 0;
-            // 
-            // QIdHeader
-            // 
-            this.QIdHeader.Text = "QId";
-            this.QIdHeader.Width = 80;
             // 
             // Z3AxiomProfiler
             // 
