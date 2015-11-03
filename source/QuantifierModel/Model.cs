@@ -1232,24 +1232,23 @@ namespace Z3AxiomProfiler.QuantifierModel
             return sb.ToString();
         }
 
-        public void WriteTo(StringBuilder s)
+        public void WriteTo(StringBuilder s, string indent)
         {
-            if (s.Length > 1096) return;
-            s.Append(Name);
+            s.Append(indent + Name);
             if (Args.Length == 0) return;
-            s.Append('(');
+            s.Append("(\n");
             for (int i = 0; i < Args.Length; ++i)
             {
-                if (i != 0) s.Append(", ");
-                Args[i].WriteTo(s);
+                if (i != 0) s.Append(",\n");
+                Args[i].WriteTo(s, indent + ' ');
             }
-            s.Append(')');
+            s.Append('\n' + indent + ')');
         }
 
         public override string ToString()
         {
             StringBuilder b = new StringBuilder();
-            WriteTo(b);
+            WriteTo(b, "");
             return b.ToString();
         }
 

@@ -213,7 +213,7 @@
             // 
             this.splitContainer1.Panel2.Controls.Add(this.toolTipBox);
             this.splitContainer1.Size = new System.Drawing.Size(1184, 687);
-            this.splitContainer1.SplitterDistance = 627;
+            this.splitContainer1.SplitterDistance = 548;
             this.splitContainer1.TabIndex = 3;
             // 
             // splitContainer2
@@ -229,7 +229,7 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.InstantiationPathView);
-            this.splitContainer2.Size = new System.Drawing.Size(1184, 627);
+            this.splitContainer2.Size = new System.Drawing.Size(1184, 548);
             this.splitContainer2.SplitterDistance = 707;
             this.splitContainer2.TabIndex = 3;
             // 
@@ -240,7 +240,7 @@
             this.z3AxiomTree.HideSelection = false;
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(707, 627);
+            this.z3AxiomTree.Size = new System.Drawing.Size(707, 548);
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeClick);
@@ -260,7 +260,7 @@
             this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
             this.InstantiationPathView.MultiSelect = false;
             this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(473, 627);
+            this.InstantiationPathView.Size = new System.Drawing.Size(473, 548);
             this.InstantiationPathView.TabIndex = 2;
             this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
             this.InstantiationPathView.View = System.Windows.Forms.View.Details;
@@ -298,8 +298,10 @@
             this.toolTipBox.Multiline = true;
             this.toolTipBox.Name = "toolTipBox";
             this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(1184, 56);
+            this.toolTipBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.toolTipBox.Size = new System.Drawing.Size(1184, 135);
             this.toolTipBox.TabIndex = 0;
+            this.toolTipBox.WordWrap = false;
             // 
             // Z3AxiomProfiler
             // 
