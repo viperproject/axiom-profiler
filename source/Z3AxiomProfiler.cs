@@ -414,26 +414,24 @@ namespace Z3AxiomProfiler
             z3AxiomTree.EndUpdate();
         }
 
-        internal string ToolTipProcessor(string tip)
+        private string ToolTipProcessor(string tip)
         {
-            string tt = tip;
-            if (tt.Length > 80)
+            if (tip.Length <= 80) return tip;
+
+            // This is too long. Try to truncate the string...
+            // Assume that tool tips with multiple lines are OK.
+            // So just truncate each line around position 80.
+            string[] lines = tip.Replace("\r", "").Split('\n');
+            string tt = "";
+            foreach (string line in lines)
             {
-                // This is too long. Try to truncate the string...
-                // Assume that tool tips with multiple lines are OK.
-                // So just truncate each line around position 80.
-                string[] lines = tt.Replace("\r", "").Split('\n');
-                tt = "";
-                foreach (string line in lines)
+                if (line.Length < 80)
                 {
-                    if (line.Length < 80)
-                    {
-                        tt += line + "\n";
-                    }
-                    else
-                    {
-                        tt += line.Substring(0, 80) + "...\n";
-                    }
+                    tt += line + "\n";
+                }
+                else
+                {
+                    tt += line.Substring(0, 80) + "...\n";
                 }
             }
 

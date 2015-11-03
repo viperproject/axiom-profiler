@@ -73,7 +73,7 @@
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1055, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(1184, 24);
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -212,8 +212,8 @@
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.toolTipBox);
-            this.splitContainer1.Size = new System.Drawing.Size(1055, 672);
-            this.splitContainer1.SplitterDistance = 614;
+            this.splitContainer1.Size = new System.Drawing.Size(1184, 687);
+            this.splitContainer1.SplitterDistance = 627;
             this.splitContainer1.TabIndex = 3;
             // 
             // splitContainer2
@@ -229,8 +229,8 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.InstantiationPathView);
-            this.splitContainer2.Size = new System.Drawing.Size(1055, 614);
-            this.splitContainer2.SplitterDistance = 716;
+            this.splitContainer2.Size = new System.Drawing.Size(1184, 627);
+            this.splitContainer2.SplitterDistance = 707;
             this.splitContainer2.TabIndex = 3;
             // 
             // z3AxiomTree
@@ -240,7 +240,7 @@
             this.z3AxiomTree.HideSelection = false;
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(716, 614);
+            this.z3AxiomTree.Size = new System.Drawing.Size(707, 627);
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeClick);
@@ -260,7 +260,7 @@
             this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
             this.InstantiationPathView.MultiSelect = false;
             this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(335, 614);
+            this.InstantiationPathView.Size = new System.Drawing.Size(473, 627);
             this.InstantiationPathView.TabIndex = 2;
             this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
             this.InstantiationPathView.View = System.Windows.Forms.View.Details;
@@ -275,17 +275,17 @@
             // FingerprintHeader
             // 
             this.FingerprintHeader.Text = "Fingerprint";
-            this.FingerprintHeader.Width = 120;
+            this.FingerprintHeader.Width = 130;
             // 
             // QIdHeader
             // 
             this.QIdHeader.Text = "QId";
-            this.QIdHeader.Width = 80;
+            this.QIdHeader.Width = 200;
             // 
             // InstancesCountHeader
             // 
             this.InstancesCountHeader.Text = "#Instances Total";
-            this.InstancesCountHeader.Width = 200;
+            this.InstancesCountHeader.Width = 150;
             // 
             // toolTipBox
             // 
@@ -298,14 +298,14 @@
             this.toolTipBox.Multiline = true;
             this.toolTipBox.Name = "toolTipBox";
             this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(1055, 54);
+            this.toolTipBox.Size = new System.Drawing.Size(1184, 56);
             this.toolTipBox.TabIndex = 0;
             // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1055, 696);
+            this.ClientSize = new System.Drawing.Size(1184, 711);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.Name = "Z3AxiomProfiler";
