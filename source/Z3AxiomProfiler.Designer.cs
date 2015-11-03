@@ -53,7 +53,7 @@
             this.FingerprintHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.toolTipBox = new System.Windows.Forms.TextBox();
+            this.toolTipBox = new System.Windows.Forms.RichTextBox();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -289,7 +289,6 @@
             // 
             // toolTipBox
             // 
-            this.toolTipBox.AcceptsReturn = true;
             this.toolTipBox.AcceptsTab = true;
             this.toolTipBox.CausesValidation = false;
             this.toolTipBox.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -298,7 +297,6 @@
             this.toolTipBox.Multiline = true;
             this.toolTipBox.Name = "toolTipBox";
             this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.toolTipBox.Size = new System.Drawing.Size(1184, 135);
             this.toolTipBox.TabIndex = 0;
             this.toolTipBox.WordWrap = false;
@@ -349,7 +347,7 @@
         private System.Windows.Forms.ToolStripMenuItem profileZ3TraceToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.TreeView z3AxiomTree;
-        private System.Windows.Forms.TextBox toolTipBox;
+        private System.Windows.Forms.RichTextBox toolTipBox;
         private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchTreeVisualizationToolStripMenuItem;
         private System.Windows.Forms.ListView InstantiationPathView;

@@ -1227,29 +1227,50 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public string AsCString(bool states)
         {
-            StringBuilder sb = new StringBuilder("C: ");
-            CWriteTo(sb, states);
+            StringBuilder sb = new StringBuilder("C: disabled");
+            //CWriteTo(sb, states);
             return sb.ToString();
         }
 
-        public void WriteTo(StringBuilder s, string indent)
+        private static int maxTermWidth = 80;
+        private static string indentDiff = "  ";
+        public string PrettyPrint(string indent, out bool isMultiline)
         {
-            s.Append(indent + Name);
-            if (Args.Length == 0) return;
-            s.Append("(\n");
-            for (int i = 0; i < Args.Length; ++i)
+            isMultiline = false;
+            string childIndent = indent + indentDiff;
+            string[] arguments = new string[Args.Length];
+            for(int i = 0; i < Args.Length; i++)
             {
-                if (i != 0) s.Append(",\n");
-                Args[i].WriteTo(s, indent + ' ');
+                bool multiline_tmp;
+                arguments[i] = Args[i].PrettyPrint(childIndent, out multiline_tmp);
+                isMultiline = isMultiline || multiline_tmp;
             }
-            s.Append('\n' + indent + ')');
+            StringBuilder resultBuilder = new StringBuilder(Name);
+
+            if (isMultiline || arguments.Sum(s => s.Length) > maxTermWidth)
+            {
+                resultBuilder.Append("(\n").Append(childIndent);
+                resultBuilder.Append(string.Join(",\n" + childIndent, arguments));
+                resultBuilder.Append("\n").Append(indent).Append(')');
+            }
+            else
+            {
+                resultBuilder.Append("(");
+                resultBuilder.Append(string.Join(", ", arguments));
+                resultBuilder.Append(')');
+            }
+            return resultBuilder.ToString();
         }
 
         public override string ToString()
         {
+            /*
             StringBuilder b = new StringBuilder();
             WriteTo(b, "");
             return b.ToString();
+            */
+            bool tmp;
+            return PrettyPrint("", out tmp);
         }
 
         public string Desc
