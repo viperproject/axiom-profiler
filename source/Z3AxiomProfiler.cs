@@ -471,7 +471,7 @@ namespace Z3AxiomProfiler
             cNode.Tag = common;
             cNode.ToolTipText = ToolTipProcessor(common.ToolTip());
             if (common.ForeColor() != 0)
-                cNode.ForeColor = System.Drawing.Color.FromArgb(common.ForeColor());
+                cNode.ForeColor = Color.FromArgb(common.ForeColor());
             if (common.HasChildren())
                 cNode.Nodes.Add(new TreeNode("dummy node"));
             if (common.AutoExpand())

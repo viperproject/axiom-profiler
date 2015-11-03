@@ -842,8 +842,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string ToString()
         {
             if (PrintName == null) PrintName = Qid;
-            string costFormat = String.Format("{0:0}         ", Cost).Substring(0, 9);
-            return string.Format("{0:0} {1}  (direct: {2}, cnfl: {3})", costFormat, PrintName, Instances.Count, GeneratedConflicts);
+            string costFormat = $"{Cost:0}";
+            return $"{costFormat} {PrintName}  (#instances: {Instances.Count}, #conflicts: {GeneratedConflicts})";
         }
 
         public override string ToolTip()
@@ -852,15 +852,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return Body;
         }
 
-        public int Weight
-        {
-            get
-            {
-                // TODO: check weight calculation
-                if (Body.Contains("{:weight 0")) return 0;
-                return 1;
-            }
-        }
+        public int Weight => Body.Contains("{:weight 0") ? 0 : 1;
 
         private Common TheMost(string tag, Comparison<Instantiation> cmp)
         {
@@ -893,9 +885,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override int ForeColor()
         {
-            if (Weight == 0)
-                return 0x000088;
-            return base.ForeColor();
+            return Weight == 0 ? 0x000088 : base.ForeColor();
         }
 
         private double InstanceCost(Instantiation inst, int lev)
@@ -914,28 +904,20 @@ namespace Z3AxiomProfiler.QuantifierModel
             get
             {
                 if (realCost != 0) return realCost;
-                foreach (var inst in this.Instances)
+                foreach (var inst in Instances)
                     realCost += InstanceCost(inst, 0);
                 return realCost;
             }
         }
 
-        public double Cost
-        {
-            get
-            {
-                return CrudeCost + Instances.Count;
-            }
-        }
+        public double Cost => CrudeCost + Instances.Count;
 
         internal void ComputeBody()
         {
-            if (Body == null)
-            {
-                Body = "?";
-                if (BodyTerm != null)
-                    Body = BodyTerm.ToString();
-            }
+            if (Body != null) return;
+            Body = "?";
+            if (BodyTerm != null)
+                Body = BodyTerm.ToString();
         }
     }
 
