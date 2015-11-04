@@ -381,7 +381,6 @@ namespace Z3AxiomProfiler
             {
                 AddTopNode(q);
             }
-            z3AxiomTree.ShowNodeToolTips = true;
         }
 
 
@@ -414,30 +413,6 @@ namespace Z3AxiomProfiler
             z3AxiomTree.EndUpdate();
         }
 
-        private string ToolTipProcessor(string tip)
-        {
-            if (tip.Length <= 80) return tip;
-
-            // This is too long. Try to truncate the string...
-            // Assume that tool tips with multiple lines are OK.
-            // So just truncate each line around position 80.
-            string[] lines = tip.Replace("\r", "").Split('\n');
-            string tt = "";
-            foreach (string line in lines)
-            {
-                if (line.Length < 80)
-                {
-                    tt += line + "\n";
-                }
-                else
-                {
-                    tt += line.Substring(0, 80) + "...\n";
-                }
-            }
-
-            return tt;
-        }
-
         public TreeNode ExpandScope(Scope s)
         {
             var coll = z3AxiomTree.Nodes;
@@ -461,7 +436,7 @@ namespace Z3AxiomProfiler
             return null;
         }
 
-        internal TreeNode makeNode(Common common)
+        private TreeNode makeNode(Common common)
         {
             var label = common.ToString();
             var n = 100;
@@ -469,7 +444,6 @@ namespace Z3AxiomProfiler
                 label = label.Substring(0, n) + "...";
             TreeNode cNode = new TreeNode(label);
             cNode.Tag = common;
-            cNode.ToolTipText = ToolTipProcessor(common.ToolTip());
             if (common.ForeColor() != 0)
                 cNode.ForeColor = Color.FromArgb(common.ForeColor());
             if (common.HasChildren())
@@ -517,15 +491,6 @@ namespace Z3AxiomProfiler
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             new AboutBox().Show();
-        }
-
-        private void toolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            loadModelFromBoogie();
-        }
-
-        private void conflictsAsCSVToClipboardToolStripMenuItem_Click(object sender, EventArgs e)
-        {
         }
 
         private void allConflictsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -581,7 +546,7 @@ namespace Z3AxiomProfiler
             Clipboard.SetText(sb.ToString());
         }
 
-        private void HandleTreeNodeClick(object sender, TreeViewEventArgs e)
+        private void HandleTreeNodeSelect(object sender, TreeViewEventArgs e)
         {
             TreeNode t = z3AxiomTree.SelectedNode;
             Common c = t.Tag as Common;
@@ -677,10 +642,6 @@ namespace Z3AxiomProfiler
                     e.Handled = true;
                     break;
             }
-        }
-
-        private void Z3AxiomProfiler_KeyPress(object sender, KeyPressEventArgs e)
-        {
         }
 
         private void searchTreeVisualizationToolStripMenuItem_Click(object sender, EventArgs e)

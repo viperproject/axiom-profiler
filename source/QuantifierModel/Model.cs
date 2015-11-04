@@ -1052,6 +1052,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         public int Depth;
         public Term NegatedVersion;
 
+        public string prettyPrintedBody;
+
         public Term(string name, Term[] args)
         {
             Name = string.Intern(name);
@@ -1228,13 +1230,13 @@ namespace Z3AxiomProfiler.QuantifierModel
         public string AsCString(bool states)
         {
             StringBuilder sb = new StringBuilder("C: disabled");
-            //CWriteTo(sb, states);
             return sb.ToString();
         }
 
-        private static int maxTermWidth = 80;
+        private static int maxTermWidth = 40;
         private static string indentDiff = "  ";
-        public string PrettyPrint(string indent, out bool isMultiline)
+
+        private string PrettyPrint(string indent, out bool isMultiline)
         {
             isMultiline = false;
             string childIndent = indent + indentDiff;
@@ -1264,13 +1266,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            /*
-            StringBuilder b = new StringBuilder();
-            WriteTo(b, "");
-            return b.ToString();
-            */
-            bool tmp;
-            return PrettyPrint("", out tmp);
+            if (prettyPrintedBody == null)
+            {
+                bool tmp;
+                prettyPrintedBody = PrettyPrint("", out tmp);
+            }
+            return prettyPrintedBody;
         }
 
         public string Desc
