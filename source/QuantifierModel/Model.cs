@@ -110,6 +110,14 @@ namespace Z3AxiomProfiler.QuantifierModel
                     todo.Enqueue(inst);
                 }
             }
+
+            foreach (Instantiation i in instances)
+            {
+                if (i.Depth != i.MaxDistanceFromSource + 1)
+                {
+                    Console.WriteLine("halp!");
+                }
+            }
         }
 
         public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
@@ -813,11 +821,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override IEnumerable<Common> Children()
         {
-            yield return Callback("LITERALS [" + Literals.Count + "]", delegate () { return Literals; });
+            yield return Callback("LITERALS [" + Literals.Count + "]", () => Literals);
             if (Conflict != null)
                 yield return Conflict;
             if (ImpliedAtParent != null)
-                yield return Callback("AT PARENT [" + ImpliedAtParent.Length + "]", delegate () { return ImpliedAtParent; });
+                yield return Callback("AT PARENT [" + ImpliedAtParent.Length + "]", () => ImpliedAtParent);
             foreach (var c in ChildrenScopes)
             {
                 yield return c;
@@ -844,9 +852,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            if (PrintName == null) PrintName = Qid;
-            string costFormat = $"{Cost:0}";
-            return $"{costFormat} {PrintName}  (#instances: {Instances.Count}, #conflicts: {GeneratedConflicts})";
+            string result = $"Quantifier[{PrintName}] Cost: {Cost}, #instances: {Instances.Count}, #conflicts: {GeneratedConflicts}";
+            return result;
         }
 
         public override string ToolTip()
@@ -927,7 +934,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             _body = "?";
             if (BodyTerm != null)
             {
-                _body = BodyTerm.ToString();
+                _body = BodyTerm.PrettyPrint();
             }
             return _body;
         }
@@ -937,9 +944,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder s = new StringBuilder();
             s.Append("Quantifier Info:\n");
             s.Append("================\n\n");
-            s.Append("QId: ").Append(Qid).Append('\n');
+            s.Append("Print name: ").Append(PrintName).Append('\n');
             s.Append("Cost: ").Append(RealCost).Append('\n');
-            s.Append("Max Depth: ").Append(MaxDepth).Append('\n');
             s.Append("Number of Instantiations: ").Append(Instances.Count).Append('\n');
             s.Append("Number of Conflicts: ").Append(GeneratedConflicts).Append('\n');
             return s.ToString();
@@ -1003,22 +1009,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Instantiation[{FingerPrint}] @line={LineNo}, Depth={this.depth}, Cost={Cost}";
-            StringBuilder s = new StringBuilder();
-            s.Append(Quant.PrintName);
-            int size = 0, depth = 0;
-            foreach (Term t in Bindings)
-            {
-                size += t.Size;
-                if (t.Depth > depth) depth = t.Depth;
-            }
-            s.AppendFormat("Instantiation:  {0} ({5}) / |{1}:{2}| @{3} {4:0.0} ", Depth, size, depth, LineNo, Cost, WDepth);
-            foreach (Term t in Bindings)
-            {
-                s.Append("  ");
-                s.Append(t.Desc);
-            }
-            if (s.Length > 500) s.Length = 500;
+            string result = $"Instantiation[{FingerPrint}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
             return result;
         }
 
@@ -1030,7 +1021,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             s.Append("Bindings:\n\n");
             foreach (Term t in Bindings)
             {
-                s.Append(t);
+                s.Append(t.SummaryInfo());
+                s.Append('\n');
+                s.Append(t.PrettyPrint());
                 s.Append("\n\n");
             }
 
@@ -1043,7 +1036,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string SummaryInfo()
         {
-
             StringBuilder s = new StringBuilder();
             s.Append("Instantiation Info:\n");
             s.Append("===================\n\n");
@@ -1122,10 +1114,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             Responsible = t.Responsible;
         }
 
-        public string Sig
-        {
-            get { return Name + "/" + Args.Length; }
-        }
+        public string Sig => Name + "/" + Args.Length;
 
         public void CWriteTo(StringBuilder s, bool states)
         {
@@ -1315,6 +1304,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
+            return $"Term[{Name}] Depth:{Depth}, #Children:{Args.Length}";
+        }
+
+        public string PrettyPrint()
+        {
             if (prettyPrintedBody == null)
             {
                 bool tmp;
@@ -1323,22 +1317,17 @@ namespace Z3AxiomProfiler.QuantifierModel
             return prettyPrintedBody;
         }
 
-        public string Desc
-        {
-            get
-            {
-                return Name + " |" + Size + ":" + Depth + "|";
-            }
-        }
+        public string Desc => Name + " |" + Size + ":" + Depth + "|";
 
-        public string Stats
-        {
-            get { return Size + ":" + Depth; }
-        }
+        public string Stats => Size + ":" + Depth;
 
         public override string ToolTip()
         {
-            return string.Format("{0}\n\n{1}", ToString(), AsCString(false));
+            StringBuilder s = new StringBuilder();
+            s.Append(SummaryInfo());
+            s.Append('\n');
+            s.Append(PrettyPrint());
+            return s.ToString();
         }
 
         public override bool HasChildren()
@@ -1348,10 +1337,17 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override IEnumerable<Common> Children()
         {
-            foreach (Term t in Args)
-            {
-                yield return t;
-            }
+            return Args;
+        }
+
+        public override string SummaryInfo()
+        {
+            StringBuilder s = new StringBuilder();
+            s.Append("Term Info:\n");
+            s.Append("==========\n\n");
+            s.Append("Depth: ").Append(Depth).Append('\n');
+            s.Append("Number of Children: ").Append(Args.Length).Append('\n');
+            return s.ToString();
         }
     }
 

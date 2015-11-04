@@ -439,9 +439,6 @@ namespace Z3AxiomProfiler
         private TreeNode makeNode(Common common)
         {
             var label = common.ToString();
-            var n = 100;
-            if (label.Length > n)
-                label = label.Substring(0, n) + "...";
             TreeNode cNode = new TreeNode(label) {Tag = common};
 
             if (common.ForeColor() != 0)
