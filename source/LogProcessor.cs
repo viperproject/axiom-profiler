@@ -118,7 +118,7 @@ namespace Z3AxiomProfiler
 
             var result = LoadBoogieToken_internal(quant, shortname, colNo, lineNo);
             if (result != null)
-                quant.Body = quant.BoogieBody = result.Trim();
+                quant.BoogieBody = result.Trim();
         }
 
         private string LoadBoogieToken_internal(Quantifier quant, string shortname, int colNo, int lineNo)

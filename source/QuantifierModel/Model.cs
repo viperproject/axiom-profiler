@@ -474,6 +474,8 @@ namespace Z3AxiomProfiler.QuantifierModel
     public abstract class Common
     {
         public virtual string ToolTip() { return ToString(); }
+
+        public virtual string SummaryInfo() { return ToString(); }
         public abstract IEnumerable<Common> Children();
         public virtual bool HasChildren() { return true; }
         public virtual bool AutoExpand() { return false; }
@@ -828,7 +830,8 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
         public string Qid;
         public string PrintName;
-        public string Body;
+        public string Body => ComputeBody();
+        private string _body;
         public string BoogieBody;
         public Term BodyTerm;
         public List<Instantiation> Instances;
@@ -848,8 +851,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToolTip()
         {
-            ComputeBody();
-            return Body;
+            StringBuilder s = new StringBuilder();
+            s.Append(SummaryInfo());
+            s.Append('\n');
+            s.Append(Body);
+            return s.ToString();
         }
 
         public int Weight => Body.Contains("{:weight 0") ? 0 : 1;
@@ -912,12 +918,31 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public double Cost => CrudeCost + Instances.Count;
 
-        internal void ComputeBody()
+        internal string ComputeBody()
         {
-            if (Body != null) return;
-            Body = "?";
+            if (_body != null)
+            {
+                return _body;
+            }
+            _body = "?";
             if (BodyTerm != null)
-                Body = BodyTerm.ToString();
+            {
+                _body = BodyTerm.ToString();
+            }
+            return _body;
+        }
+
+        public override string SummaryInfo()
+        {
+            StringBuilder s = new StringBuilder();
+            s.Append("Quantifier Info:\n");
+            s.Append("================\n\n");
+            s.Append("QId: ").Append(Qid).Append('\n');
+            s.Append("Cost: ").Append(RealCost).Append('\n');
+            s.Append("Max Depth: ").Append(MaxDepth).Append('\n');
+            s.Append("Number of Instantiations: ").Append(Instances.Count).Append('\n');
+            s.Append("Number of Conflicts: ").Append(GeneratedConflicts).Append('\n');
+            return s.ToString();
         }
     }
 
@@ -966,14 +991,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 if (wdepth == -1)
                 {
-                    int max = 0;
-                    foreach (Term t in Responsible)
-                    {
-                        if (t.Responsible != null)
-                        {
-                            if (t.Responsible.WDepth > max) max = t.Responsible.WDepth;
-                        }
-                    }
+                    int max = (from t in Responsible where t.Responsible != null select t.Responsible.WDepth)
+                        .Concat(new[] {0}).Max();
                     wdepth = max + Quant.Weight;
                 }
                 return wdepth;
@@ -984,6 +1003,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
+            string result = $"Instantiation[{FingerPrint}] @line={LineNo}, Depth={this.depth}, Cost={Cost}";
             StringBuilder s = new StringBuilder();
             s.Append(Quant.PrintName);
             int size = 0, depth = 0;
@@ -992,20 +1012,46 @@ namespace Z3AxiomProfiler.QuantifierModel
                 size += t.Size;
                 if (t.Depth > depth) depth = t.Depth;
             }
-            s.AppendFormat("  {0} ({5}) / |{1}:{2}| @{3} {4:0.0} ", Depth, size, depth, LineNo, Cost, WDepth);
+            s.AppendFormat("Instantiation:  {0} ({5}) / |{1}:{2}| @{3} {4:0.0} ", Depth, size, depth, LineNo, Cost, WDepth);
             foreach (Term t in Bindings)
             {
                 s.Append("  ");
                 s.Append(t.Desc);
             }
             if (s.Length > 500) s.Length = 500;
-            return s.ToString();
+            return result;
         }
 
         public override string ToolTip()
         {
-            Quant.ComputeBody();
-            return Quant.Body;
+            StringBuilder s = new StringBuilder();
+            s.Append(SummaryInfo());
+            s.Append('\n');
+            s.Append("Bindings:\n\n");
+            foreach (Term t in Bindings)
+            {
+                s.Append(t);
+                s.Append("\n\n");
+            }
+
+            s.Append('\n');
+            s.Append(Quant.SummaryInfo());
+            s.Append('\n');
+            s.Append(Quant.Body);
+            return s.ToString();
+        }
+
+        public override string SummaryInfo()
+        {
+
+            StringBuilder s = new StringBuilder();
+            s.Append("Instantiation Info:\n");
+            s.Append("===================\n\n");
+            s.Append("Depth: ").Append(depth).Append('\n');
+            s.Append("Cost: ").Append(Cost).Append('\n');
+            s.Append("Fingerprint: ").Append(FingerPrint).Append('\n');
+            s.Append("Line Number: ").Append(LineNo).Append('\n');
+            return s.ToString();
         }
 
         public override IEnumerable<Common> Children()
@@ -1036,7 +1082,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             if (DependantInstantiations.Count > 0)
             {
-                DependantInstantiations.Sort(delegate (Instantiation i1, Instantiation i2) { return i2.Cost.CompareTo(i1.Cost); });
+                DependantInstantiations.Sort((i1, i2) => i2.Cost.CompareTo(i1.Cost));
                 yield return Callback("YIELDS", () => DependantInstantiations);
             }
         }
@@ -1052,7 +1098,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public int Depth;
         public Term NegatedVersion;
 
-        public string prettyPrintedBody;
+        private string prettyPrintedBody;
 
         public Term(string name, Term[] args)
         {
