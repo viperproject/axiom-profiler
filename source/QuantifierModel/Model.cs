@@ -80,26 +80,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                 return;
             }
 
-            // calculate distance for each node
-            // forwards propagation
             Queue<Instantiation> todo = new Queue<Instantiation>(instances
-                .Where(inst => inst.ResponsibleInstantiations.Count == 0));
-            while (todo.Count > 0)
-            {
-                Instantiation current = todo.Dequeue();
-                foreach (Instantiation inst in current.DependantInstantiations
-                    .Where(inst => current.MaxDistanceFromSource + 1 > inst.MaxDistanceFromSource))
-                {
-                    inst.MaxDistanceFromSource = current.MaxDistanceFromSource + 1;
-                    todo.Enqueue(inst);
-                }
-            }
-
-            // inform each node about subpath length
-            // backwards propagation
-            todo = new Queue<Instantiation>(instances.Where(inst => inst.DependantInstantiations.Count == 0));
-
-            // propagate through DAG
+                .Where(inst => inst.DependantInstantiations.Count == 0));
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
@@ -108,14 +90,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     inst.DeepestSubpathDepth = current.DeepestSubpathDepth + 1;
                     todo.Enqueue(inst);
-                }
-            }
-
-            foreach (Instantiation i in instances)
-            {
-                if (i.Depth != i.MaxDistanceFromSource + 1)
-                {
-                    Console.WriteLine("halp!");
                 }
             }
         }
@@ -131,7 +105,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 // follow the longest path
                 current = current.ResponsibleInstantiations
-                    .Aggregate((i1, i2) => i1.MaxDistanceFromSource > i2.MaxDistanceFromSource ? i1 : i2);
+                    .Aggregate((i1, i2) => i1.Depth > i2.Depth ? i1 : i2);
                 path.Add(current);
             }
             path.Reverse();
@@ -147,7 +121,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 path.Add(current);
             }
 
-            Debug.Assert(path.Count == inst.DeepestSubpathDepth + inst.MaxDistanceFromSource + 1);
+            Debug.Assert(path.Count == inst.DeepestSubpathDepth + inst.Depth);
             return path;
         }
 
@@ -964,7 +938,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public int Z3Generation;
         int depth;
         int wdepth = -1;
-        public int MaxDistanceFromSource;
         public int DeepestSubpathDepth;
         public string FingerPrint;
 
