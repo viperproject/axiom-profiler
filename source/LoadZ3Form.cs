@@ -51,13 +51,11 @@ namespace Z3AxiomProfiler
         public void setParameterConfiguration(ParameterConfiguration config)
         {
             string allZ3Options = config.z3Options;
-            z3FilePath.Text = (config.z3InputFile == null) ? "" : config.z3InputFile;
+            z3FilePath.Text = config.z3InputFile ?? "";
             z3Timeout.Text = config.timeout.ToString();
-            if (allZ3Options.Contains("PROOF_MODE=2") && allZ3Options.Contains("DISPLAY_PROOF=true"))
+            if (allZ3Options.Contains("PROOF=true"))
             {
                 rb_proofLogging.Checked = true;
-                allZ3Options = allZ3Options.Replace("PROOF_MODE=2", "");
-                allZ3Options = allZ3Options.Replace("DISPLAY_PROOF=true", "");
                 allZ3Options = allZ3Options.Replace("  ", " ");
                 allZ3Options = allZ3Options.Trim();
             }
@@ -73,10 +71,6 @@ namespace Z3AxiomProfiler
             ParameterConfiguration config = ParameterConfiguration.loadParameterConfigurationFromSettings();
             string allZ3Options = z3Options.Text;
             config.z3InputFile = z3FilePath.Text;
-            if (rb_proofLogging.Checked)
-            {
-                allZ3Options += " PROOF_MODE=2 DISPLAY_PROOF=true";
-            }
             config.z3Options = allZ3Options;
             Int32.TryParse(z3Timeout.Text, out config.timeout);
             return config;

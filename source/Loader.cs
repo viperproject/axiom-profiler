@@ -82,7 +82,6 @@ namespace Z3AxiomProfiler
         public event loaderProgressUpdater statusUpdate;
 
         private ParameterConfiguration config;
-        public string z3OutputFile;
         private LogProcessor processor;
 
         public enum LoaderTask { LoaderTaskBoogie, LoaderTaskZ3, LoaderTaskParse };
@@ -90,7 +89,7 @@ namespace Z3AxiomProfiler
 
         public Loader(ParameterConfiguration config, LoaderTask task)
         {
-            List<FileInfo> filelist = null;
+            List<FileInfo> filelist;
 
             this.config = config;
             this.task = task;

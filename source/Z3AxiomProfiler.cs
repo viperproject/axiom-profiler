@@ -94,7 +94,6 @@ namespace Z3AxiomProfiler
             ParameterConfiguration config = new ParameterConfiguration();
 
             config.boogieOptions = "/bv:z /trace";
-            config.z3Options = "/rs:0";
             error = "";
 
             for (idx = 0; idx < args.Length; idx++)
@@ -202,7 +201,6 @@ namespace Z3AxiomProfiler
         private string getZ3Setting(int randomSeed, bool randomSeedEnabled)
         {
             string defaultSetting = Properties.Settings.Default.Z3Options;
-            string z3Options = String.Empty;
             string newRandomSeedArgument = String.Empty;
 
             if (randomSeedEnabled)
@@ -223,8 +221,8 @@ namespace Z3AxiomProfiler
                 }
                 return defaultSetting.Replace(oldArgument, newRandomSeedArgument).Trim();
             }
-            else //Is not, add it!
-                return (defaultSetting + " " + newRandomSeedArgument).Trim();
+            //Is not, add it!
+            return (defaultSetting + " " + newRandomSeedArgument).Trim();
         }
 
         //New Entry, witch is called from the AddIn
@@ -439,7 +437,7 @@ namespace Z3AxiomProfiler
         private TreeNode makeNode(Common common)
         {
             var label = common.ToString();
-            TreeNode cNode = new TreeNode(label) {Tag = common};
+            TreeNode cNode = new TreeNode(label) { Tag = common };
 
             if (common.ForeColor() != 0)
                 cNode.ForeColor = Color.FromArgb(common.ForeColor());
