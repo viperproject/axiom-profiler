@@ -294,7 +294,7 @@
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
             this.z3AxiomTree.Size = new System.Drawing.Size(609, 687);
-            this.z3AxiomTree.TabIndex = 2;
+            this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
             this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);

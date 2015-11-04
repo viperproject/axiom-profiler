@@ -1234,7 +1234,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         private static int maxTermWidth = 40;
-        private static string indentDiff = "  ";
+        private static string indentDiff = "¦  ";
 
         private string PrettyPrint(string indent, out bool isMultiline)
         {
@@ -1248,16 +1248,19 @@ namespace Z3AxiomProfiler.QuantifierModel
                 isMultiline = isMultiline || multiline_tmp;
             }
             StringBuilder resultBuilder = new StringBuilder(Name);
+            resultBuilder.Append('(');
 
             if (isMultiline || arguments.Sum(s => s.Length) > maxTermWidth)
             {
-                resultBuilder.Append("(\n").Append(childIndent);
-                resultBuilder.Append(string.Join(",\n" + childIndent, arguments));
-                resultBuilder.Append("\n").Append(indent).Append(')');
+                foreach (string arg in arguments)
+                {
+                    resultBuilder.Append('\n').Append(indent).Append("¦- ");
+                    resultBuilder.Append(arg);
+                }
+                resultBuilder.Append('\n').Append(indent).Append(')');
             }
             else
             {
-                resultBuilder.Append("(");
                 resultBuilder.Append(string.Join(", ", arguments));
                 resultBuilder.Append(')');
             }
@@ -1357,7 +1360,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Term;
             if (Explanation != null)
             {
-                yield return Common.Callback("EXPLANATION [" + Explanation.Length + "]", () => Explanation);
+                yield return Callback("EXPLANATION [" + Explanation.Length + "]", () => Explanation);
             }
             if (Clause != null)
             {

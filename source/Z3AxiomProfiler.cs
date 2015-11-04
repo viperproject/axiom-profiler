@@ -442,8 +442,8 @@ namespace Z3AxiomProfiler
             var n = 100;
             if (label.Length > n)
                 label = label.Substring(0, n) + "...";
-            TreeNode cNode = new TreeNode(label);
-            cNode.Tag = common;
+            TreeNode cNode = new TreeNode(label) {Tag = common};
+
             if (common.ForeColor() != 0)
                 cNode.ForeColor = Color.FromArgb(common.ForeColor());
             if (common.HasChildren())
@@ -505,9 +505,7 @@ namespace Z3AxiomProfiler
 
             if (model.conflicts == null) return res;
 
-            double sum = 0;
-            foreach (var c in model.conflicts)
-                sum += c.InstCost;
+            double sum = model.conflicts.Sum(c => c.InstCost);
 
             int id = 0;
             Random r = new Random(0);
@@ -585,9 +583,9 @@ namespace Z3AxiomProfiler
                 ListViewItem item = new ListViewItem
                 {
                     Text = i.Depth.ToString(),
-                    Name = $"Quantifier Instantiation {i.FingerPrint}"
+                    Name = $"Quantifier Instantiation {i.FingerPrint}",
+                    Tag = i
                 };
-                item.Tag = i;
                 item.SubItems.Add(i.FingerPrint);
                 item.SubItems.Add(i.Quant.Qid);
                 item.SubItems.Add(i.Quant.Instances.Count.ToString());
