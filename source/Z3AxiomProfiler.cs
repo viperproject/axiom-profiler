@@ -366,9 +366,6 @@ namespace Z3AxiomProfiler
             root.AccountLastDecision(model);
             model.rootScope = root;
 
-            var fInfo = parameterConfiguration.preludeBplFileInfo;
-            GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
-
             List<Quantifier> quantByCnfls = model.quantifiers.Values.Where(q => q.GeneratedConflicts > 0).ToList();
             quantByCnfls.Sort((q1, q2) => q2.GeneratedConflicts.CompareTo(q1.GeneratedConflicts));
             if (quantByCnfls.Count > 0)
@@ -672,6 +669,12 @@ namespace Z3AxiomProfiler
             if (InstantiationPathView.SelectedItems.Count <= 0) return;
             Common c = InstantiationPathView.SelectedItems[0].Tag as Common;
             SetToolTip(c);
+        }
+
+        private void quantifierBlameVisualizationToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var fInfo = parameterConfiguration.preludeBplFileInfo;
+            GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
         }
     }
 }
