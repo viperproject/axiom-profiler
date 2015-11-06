@@ -1454,7 +1454,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             sb.AppendFormat("{0},{1},{2},{3}", id++, LineNo, Cost, Literals.Count);
             foreach (var l in Literals)
-                sb.AppendFormat(",\"{0}\"", l.ToString());
+                sb.AppendFormat(",\"{0}\"", l);
             sb.Append("\r\n");
         }
 

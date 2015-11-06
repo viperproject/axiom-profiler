@@ -27,7 +27,7 @@ namespace Z3AxiomProfiler
 
     private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
     {
-      loader.statusUpdate += this.loaderProgressChanged;
+      loader.statusUpdate += loaderProgressChanged;
       loader.Load();
     }
 
@@ -45,7 +45,6 @@ namespace Z3AxiomProfiler
     private void loaderProgressChanged(int perc, int a)
     {
       backgroundWorker1.ReportProgress(perc, a);
-
     }
     private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
     {

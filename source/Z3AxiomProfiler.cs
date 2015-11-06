@@ -39,20 +39,16 @@ namespace Z3AxiomProfiler
 
         private void Z3AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
         {
-            if (!this.launchedFromAddin)
-            {
-                if (parameterConfiguration != null)
-                {
-                    Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
+            if (launchedFromAddin || parameterConfiguration == null) return;
 
-                    if (!string.IsNullOrEmpty(parameterConfiguration.z3LogFile))
-                    {
-                        task = Loader.LoaderTask.LoaderTaskParse;
-                    }
-                    loadModel(parameterConfiguration, task);
-                    ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-                }
+            Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
+
+            if (!string.IsNullOrEmpty(parameterConfiguration.z3LogFile))
+            {
+                task = Loader.LoaderTask.LoaderTaskParse;
             }
+            loadModel(parameterConfiguration, task);
+            ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
         }
 
         private void LoadBoogie_Click(object sender, EventArgs e)
@@ -100,7 +96,7 @@ namespace Z3AxiomProfiler
             {
                 args[idx] = stripCygdrive(args[idx]);
                 if (args[idx].StartsWith("-")) args[idx] = "/" + args[idx].Substring(1);
-                if (args[idx].StartsWith("/") && !System.IO.File.Exists(args[idx]))
+                if (args[idx].StartsWith("/") && !File.Exists(args[idx]))
                 {
                     // parse command line parameter switches
                     if (args[idx].StartsWith("/f:"))
@@ -116,9 +112,9 @@ namespace Z3AxiomProfiler
                     else if (args[idx].StartsWith("/t:"))
                     {
                         uint timeout;
-                        if (!UInt32.TryParse(args[idx].Substring(3), out timeout))
+                        if (!uint.TryParse(args[idx].Substring(3), out timeout))
                         {
-                            error = String.Format("Cannot parse timeout duration \"{0}\"", args[idx].Substring(3));
+                            error = $"Cannot parse timeout duration \"{args[idx].Substring(3)}\"";
                             return false;
                         }
                         config.timeout = (int)timeout;
@@ -126,9 +122,9 @@ namespace Z3AxiomProfiler
                     else if (args[idx].StartsWith("/c:"))
                     {
                         uint ch;
-                        if (!UInt32.TryParse(args[idx].Substring(3), out ch))
+                        if (!uint.TryParse(args[idx].Substring(3), out ch))
                         {
-                            error = String.Format("Cannot parse check number \"{0}\"", args[idx].Substring(3));
+                            error = $"Cannot parse check number \"{args[idx].Substring(3)}\"";
                             return false;
                         }
                         config.checkToConsider = (int)ch;
@@ -139,7 +135,7 @@ namespace Z3AxiomProfiler
                     }
                     else if (args[idx] == "/v1")
                     {
-                        error = String.Format("Z3 version 1 is no longer supported.");
+                        error = "Z3 version 1 is no longer supported.";
                         return false;
                     }
                     else if (args[idx] == "/s")
@@ -148,7 +144,7 @@ namespace Z3AxiomProfiler
                     }
                     else
                     {
-                        error = String.Format("Unknown command line argument \"{0}\".", args[idx]);
+                        error = $"Unknown command line argument \"{args[idx]}\".";
                         return false;
                     }
                 }
@@ -229,11 +225,13 @@ namespace Z3AxiomProfiler
         public void load(string BPLFileName, string FunctionName, string PreludeFileName,
                          int randomSeed, bool randomSeedEnabled, string vcccmdswitches)
         {
-            parameterConfiguration = new ParameterConfiguration();
-            parameterConfiguration.functionName = FunctionName;
-            parameterConfiguration.preludeBplFileInfo = new FileInfo(PreludeFileName);
-            parameterConfiguration.codeBplFileInfo = new FileInfo(BPLFileName);
-            parameterConfiguration.z3Options = getZ3Setting(randomSeed, randomSeedEnabled);
+            parameterConfiguration = new ParameterConfiguration
+            {
+                functionName = FunctionName,
+                preludeBplFileInfo = new FileInfo(PreludeFileName),
+                codeBplFileInfo = new FileInfo(BPLFileName),
+                z3Options = getZ3Setting(randomSeed, randomSeedEnabled)
+            };
 
             loadModelFromBoogie();
         }
@@ -250,9 +248,7 @@ namespace Z3AxiomProfiler
                 loadform.reloadParameterConfiguration();
             }
 
-            DialogResult dialogResult;
-
-            dialogResult = loadform.ShowDialog();
+            var dialogResult = loadform.ShowDialog();
             if (dialogResult != DialogResult.OK)
                 return;
 
@@ -274,9 +270,7 @@ namespace Z3AxiomProfiler
                 loadform.reloadParameterConfiguration();
             }
 
-            DialogResult dialogResult;
-
-            dialogResult = loadform.ShowDialog();
+            var dialogResult = loadform.ShowDialog();
             if (dialogResult != DialogResult.OK)
                 return;
 
@@ -298,9 +292,7 @@ namespace Z3AxiomProfiler
                 loadform.reloadParameterConfiguration();
             }
 
-            DialogResult dialogResult;
-
-            dialogResult = loadform.ShowDialog();
+            var dialogResult = loadform.ShowDialog();
             if (dialogResult != DialogResult.OK)
                 return;
 
@@ -323,7 +315,7 @@ namespace Z3AxiomProfiler
 
         private void loadTree()
         {
-            this.Text = model.LogFileName + ": Z3 Axiom Profiler";
+            Text = model.LogFileName + ": Z3 Axiom Profiler";
             z3AxiomTree.Nodes.Clear();
             InstantiationPathView.Items.Clear();
 
@@ -436,10 +428,10 @@ namespace Z3AxiomProfiler
         {
             TreeNode cNode = new TreeNode(common.ToString())
             {
-                Tag = common
+                Tag = common,
+                ForeColor = common.ForeColor()
             };
 
-            cNode.ForeColor = common.ForeColor();
             if (common.HasChildren())
                 cNode.Nodes.Add(new TreeNode("dummy node"));
             if (common.AutoExpand())
@@ -459,20 +451,12 @@ namespace Z3AxiomProfiler
 
         private void nodeSelector(object sender, EventArgs args)
         {
-            if (sender is LinkLabel)
-            {
-                LinkLabel ll = (LinkLabel)sender;
-                foreach (TreeNode node in z3AxiomTree.Nodes)
-                {
-                    if ((node != null) && (node.Text != null))
-                    {
+            var ll = sender as LinkLabel;
+            if (ll == null) return;
 
-                        if (ll.Text == node.Text)
-                        {
-                            z3AxiomTree.SelectedNode = node;
-                        }
-                    }
-                }
+            foreach (TreeNode node in z3AxiomTree.Nodes.Cast<TreeNode>().Where(node => node != null && ll.Text == node.Text))
+            {
+                z3AxiomTree.SelectedNode = node;
             }
         }
 

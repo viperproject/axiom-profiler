@@ -21,10 +21,10 @@ namespace Z3AxiomProfiler
         private bool interestedInCurrentCheck = true;
         private readonly int checkToConsider = 0; //0 is a special value that forces all checks to be processed
         private int eofSeen = 0;
-        private Conflict curConfl = null;
+        private Conflict curConfl;
         private readonly List<Literal> cnflResolveLits = new List<Literal>();
-        private Instantiation lastInst = null;
-        private Term decideClause = null;
+        private Instantiation lastInst;
+        private Term decideClause;
         private static readonly Term[] EmptyTerms = new Term[0];
         private readonly Dictionary<string, List<string>> boogieFiles = new Dictionary<string, List<string>>();
         private readonly Dictionary<string, string> shortnameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -96,11 +96,6 @@ namespace Z3AxiomProfiler
             Regex re = new Regex(regexppattern, RegexOptions.IgnoreCase);
 
             return re.Replace(input, repl);
-        }
-
-        void LoadBoogieToken_internal()
-        {
-
         }
 
         void loadBoogieToken(Quantifier quant)

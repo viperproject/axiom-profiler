@@ -131,10 +131,7 @@ namespace Z3AxiomProfiler
         public void Cancel()
         {
             isCancelled = true;
-            if (currentProcess != null)
-            {
-                currentProcess.Kill();
-            }
+            currentProcess?.Kill();
         }
 
         public void Load()
