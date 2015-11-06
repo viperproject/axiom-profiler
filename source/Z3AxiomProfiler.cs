@@ -325,6 +325,7 @@ namespace Z3AxiomProfiler
         {
             this.Text = model.LogFileName + ": Z3 Axiom Profiler";
             z3AxiomTree.Nodes.Clear();
+            InstantiationPathView.Items.Clear();
 
             if (model.conflicts.Count > 0)
             {
