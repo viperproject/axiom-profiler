@@ -1237,12 +1237,13 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public string AsCString(bool states)
         {
-            StringBuilder sb = new StringBuilder("C: disabled");
+            StringBuilder sb = new StringBuilder("C: ");
+            CWriteTo(sb, states);
             return sb.ToString();
         }
 
-        private static int maxTermWidth = 40;
-        private static string indentDiff = "¦  ";
+        private static int maxTermWidth = 60;
+        private static string indentDiff = "¦ ";
 
         private string PrettyPrint(string indent, out bool isMultiline)
         {
@@ -1258,11 +1259,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder resultBuilder = new StringBuilder(Name);
             resultBuilder.Append('(');
 
-            if (isMultiline || arguments.Sum(s => s.Length) > maxTermWidth)
+            if (isMultiline || 
+                arguments.Sum(s => s.Length) + resultBuilder.Length > maxTermWidth)
             {
                 foreach (string arg in arguments)
                 {
-                    resultBuilder.Append('\n').Append(indent).Append("¦- ");
+                    resultBuilder.Append('\n').Append(childIndent);
                     resultBuilder.Append(arg);
                 }
                 resultBuilder.Append('\n').Append(indent).Append(')');
