@@ -318,6 +318,7 @@ namespace Z3AxiomProfiler
             Text = model.LogFileName + ": Z3 Axiom Profiler";
             z3AxiomTree.Nodes.Clear();
             InstantiationPathView.Items.Clear();
+            toolTipBox.Clear();
 
             if (model.conflicts.Count > 0)
             {
@@ -426,8 +427,9 @@ namespace Z3AxiomProfiler
 
         private static TreeNode makeNode(Common common)
         {
-            TreeNode cNode = new TreeNode(common.ToString())
+            TreeNode cNode = new TreeNode
             {
+                Text = common.ToString(),
                 Tag = common,
                 ForeColor = common.ForeColor()
             };

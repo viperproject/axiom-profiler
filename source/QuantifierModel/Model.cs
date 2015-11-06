@@ -915,6 +915,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             s.Append("Quantifier Info:\n");
             s.Append("================\n\n");
             s.Append("Print name: ").Append(PrintName).Append('\n');
+            s.Append("QId: ").Append(Qid).Append('\n');
             s.Append("Cost: ").Append(Cost).Append('\n');
             s.Append("Number of Instantiations: ").Append(Instances.Count).Append('\n');
             s.Append("Number of Conflicts: ").Append(GeneratedConflicts).Append('\n');
