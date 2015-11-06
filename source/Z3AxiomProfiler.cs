@@ -432,13 +432,14 @@ namespace Z3AxiomProfiler
             return null;
         }
 
-        private TreeNode makeNode(Common common)
+        private static TreeNode makeNode(Common common)
         {
-            var label = common.ToString();
-            TreeNode cNode = new TreeNode(label) { Tag = common };
+            TreeNode cNode = new TreeNode(common.ToString())
+            {
+                Tag = common
+            };
 
-            if (common.ForeColor() != 0)
-                cNode.ForeColor = Color.FromArgb(common.ForeColor());
+            cNode.ForeColor = common.ForeColor();
             if (common.HasChildren())
                 cNode.Nodes.Add(new TreeNode("dummy node"));
             if (common.AutoExpand())

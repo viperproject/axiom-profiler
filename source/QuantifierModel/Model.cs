@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Security.Permissions;
 using System.Text;
@@ -461,7 +462,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public abstract IEnumerable<Common> Children();
         public virtual bool HasChildren() { return true; }
         public virtual bool AutoExpand() { return false; }
-        public virtual int ForeColor() { return 0x000000; }
+        public virtual Color ForeColor() { return Color.Black; }
 
         public static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
           where S : T
@@ -500,7 +501,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.Children();
         }
-        public override int ForeColor()
+        public override Color ForeColor()
         {
             return Fwd.ForeColor();
         }
@@ -869,9 +870,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                           Callback("ALL [" + Instances.Count + "]", () => Instances)};
         }
 
-        public override int ForeColor()
+        public override Color ForeColor()
         {
-            return Weight == 0 ? 0x000088 : base.ForeColor();
+            return Weight == 0 ? Color.IndianRed : base.ForeColor();
         }
 
         private double InstanceCost(Instantiation inst, int lev)
@@ -1387,10 +1388,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Callback("IMPLIED [" + Implied.Length + "]", () => Implied);
         }
 
-        public override int ForeColor()
+        public override Color ForeColor()
         {
             if (Clause != null)
-                return 0x995555;
+                return Color.IndianRed;
             else return base.ForeColor();
         }
 
@@ -1406,10 +1407,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             foreach (var e in Results) yield return e;
         }
 
-        public override int ForeColor()
+        public override Color ForeColor()
         {
             if (LevelDifference == 0)
-                return 0x995555;
+                return Color.IndianRed;
             else return base.ForeColor();
         }
 
@@ -1560,12 +1561,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        public override int ForeColor()
+        public override Color ForeColor()
         {
             if (Quant.Weight == 0)
-                return 0x888888;
-            else
-                return base.ForeColor();
+            {
+                return Color.DarkSeaGreen;
+            }
+            return base.ForeColor();
         }
     }
 
