@@ -195,59 +195,59 @@ namespace Z3AxiomProfiler.QuantifierModel
             scopes[end].Implied.Add(MarkerLiteral);
         }
 
-        private void PopAllScopesWithCheckNo(int currentCheckNo)
-        {
-            if (currentCheckNo != 0)
-            {
-                int i = scopes.FindIndex(scopeDesc => scopeDesc.checkNumber == currentCheckNo);
-                PopScopes(scopes.Count - i, null, currentCheckNo);
-            }
-        }
-
         public Common SetupImportantInstantiations()
         {
             List<Common> res = new List<Common>();
-            if (this.proofSteps.ContainsKey(0))
+
+            if (!proofSteps.ContainsKey(0))
             {
-                List<ImportantInstantiation> roots = new List<ImportantInstantiation>();
-                List<ImportantInstantiation> allUsed = new List<ImportantInstantiation>();
-                List<Quantifier> quantsByMaxDepth = new List<Quantifier>();
-                List<Common> quantLabels = new List<Common>();
-                res.Add(Common.Callback("QUANTS BY MAX USEFUL DEPTH", delegate () { return quantLabels; }));
-                res.Add(Common.Callback("ALL PROOF INSTS", delegate () { return allUsed; }));
-                CollectInsts((ProofRule)proofSteps[0]);
-                foreach (var imp in importants.Values)
-                {
-                    if (imp.DepCount == 0)
-                        roots.Add(imp);
-                    imp.Quant.UsefulInstances++;
-                    if (imp.UseCount > 0) allUsed.Add(imp);
-                }
-                roots.Sort(delegate (ImportantInstantiation i1, ImportantInstantiation i2) { return i2.WDepth.CompareTo(i1.WDepth); });
-
-                foreach (var r in roots) ComputeMaxDepth(r);
-
-                foreach (var q in quantifiers.Values)
-                {
-                    if (q.MaxDepth > 0)
-                        quantsByMaxDepth.Add(q);
-                }
-                quantsByMaxDepth.Sort(delegate (Quantifier q1, Quantifier q2)
-                {
-                    if (q1.MaxDepth == q2.MaxDepth)
-                        return q2.UsefulInstances.CompareTo(q1.UsefulInstances);
-                    else
-                        return q2.MaxDepth.CompareTo(q1.MaxDepth);
-                });
-                foreach (var q in quantsByMaxDepth)
-                    quantLabels.Add(new ForwardingNode(q.MaxDepth + "   " + q.UsefulInstances + "    " + q.ToString(), q));
-
-                importants.Clear();
-                visitedRules.Clear();
-                foreach (var r in roots)
-                    res.Add(r);
+                return Common.Callback("PROOF-INST", () => res);
             }
-            return Common.Callback("PROOF-INST", delegate () { return res; });
+
+            List<ImportantInstantiation> roots = new List<ImportantInstantiation>();
+            List<ImportantInstantiation> allUsed = new List<ImportantInstantiation>();
+            List<Common> quantLabels = new List<Common>();
+
+            res.Add(Common.Callback("QUANTS BY MAX USEFUL DEPTH", () => quantLabels));
+            res.Add(Common.Callback("ALL PROOF INSTS", () => allUsed));
+
+            CollectInsts((ProofRule)proofSteps[0]);
+            foreach (var imp in importants.Values)
+            {
+                if (imp.DepCount == 0)
+                {
+                    roots.Add(imp);
+                }
+
+                imp.Quant.UsefulInstances++;
+
+                if (imp.UseCount > 0)
+                {
+                    allUsed.Add(imp);
+                }
+            }
+
+            roots.Sort((i1, i2) => i2.WDepth.CompareTo(i1.WDepth));
+            foreach (var r in roots)
+            {
+                ComputeMaxDepth(r);
+            }
+
+            List<Quantifier> quantsByMaxDepth = quantifiers.Values
+                .Where(q => q.MaxDepth > 0).ToList();
+
+            quantsByMaxDepth.Sort((q1, q2) =>
+                q1.MaxDepth == q2.MaxDepth
+                    ? q2.UsefulInstances.CompareTo(q1.UsefulInstances)
+                    : q2.MaxDepth.CompareTo(q1.MaxDepth));
+
+            quantLabels.AddRange(quantsByMaxDepth
+                .Select(q => new ForwardingNode(q.MaxDepth + "   " + q.UsefulInstances + "    " + q.ToString(), q)));
+
+            importants.Clear();
+            visitedRules.Clear();
+            res.AddRange(roots);
+            return Common.Callback("PROOF-INST", () => res);
         }
 
         private void ComputeMaxDepth(ImportantInstantiation imp)
@@ -914,7 +914,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             s.Append("Quantifier Info:\n");
             s.Append("================\n\n");
             s.Append("Print name: ").Append(PrintName).Append('\n');
-            s.Append("Cost: ").Append(RealCost).Append('\n');
+            s.Append("Cost: ").Append(Cost).Append('\n');
             s.Append("Number of Instantiations: ").Append(Instances.Count).Append('\n');
             s.Append("Number of Conflicts: ").Append(GeneratedConflicts).Append('\n');
             return s.ToString();
@@ -966,7 +966,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (wdepth == -1)
                 {
                     int max = (from t in Responsible where t.Responsible != null select t.Responsible.WDepth)
-                        .Concat(new[] {0}).Max();
+                        .Concat(new[] { 0 }).Max();
                     wdepth = max + Quant.Weight;
                 }
                 return wdepth;
@@ -1245,7 +1245,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             isMultiline = false;
             string childIndent = indent + indentDiff;
             string[] arguments = new string[Args.Length];
-            for(int i = 0; i < Args.Length; i++)
+            for (int i = 0; i < Args.Length; i++)
             {
                 bool multiline_tmp;
                 arguments[i] = Args[i].PrettyPrint(childIndent, out multiline_tmp);
@@ -1254,7 +1254,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder resultBuilder = new StringBuilder(Name);
             resultBuilder.Append('(');
 
-            if (isMultiline || 
+            if (isMultiline ||
                 arguments.Sum(s => s.Length) + resultBuilder.Length > maxTermWidth)
             {
                 foreach (string arg in arguments)
