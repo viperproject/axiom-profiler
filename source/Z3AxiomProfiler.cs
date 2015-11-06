@@ -4,6 +4,7 @@
 //
 //-----------------------------------------------------------------------------
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -11,27 +12,32 @@ using System.Text;
 using System.Windows.Forms;
 using Z3AxiomProfiler.QuantifierModel;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Timer = System.Windows.Forms.Timer;
 
 namespace Z3AxiomProfiler
 {
     public partial class Z3AxiomProfiler : Form
     {
+        // TODO: This is legacy stuff -> remove.
         readonly bool launchedFromAddin;
         readonly Control ctrl;
+
         public string SearchText = "";
         SearchTree searchTree;
         readonly Dictionary<TreeNode, Common> expanded = new Dictionary<TreeNode, Common>();
 
-        public Z3AxiomProfiler()
-          : this(false, null)
-        {
-        }
+        // Needed to expand nodes with many children without freezing the GUI.
+        private readonly Timer treeUpdateTimer = new Timer();
+        private ConcurrentQueue<Tuple<TreeNode, TreeNode>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, TreeNode>>();
+        private static int workCounter;
 
-        public Z3AxiomProfiler(bool launchedFromAddin, Control ctrl)
+        public Z3AxiomProfiler()
         {
-            this.launchedFromAddin = launchedFromAddin;
-            this.ctrl = ctrl;
             InitializeComponent();
+            treeUpdateTimer.Interval = 5;
+            treeUpdateTimer.Tick += expandAddTimer;
         }
 
         private ParameterConfiguration parameterConfiguration = null;
@@ -385,20 +391,75 @@ namespace Z3AxiomProfiler
             if (args == null) return;
 
             TreeNode node = args.Node;
-            if (expanded.ContainsKey(node))
-                return;
+            if (expanded.ContainsKey(node)) return;
             expanded[node] = null;
+            if (!(node.Tag is Common)) return;
 
-            if (!(node.Tag is Common))
-                return;
-
-            z3AxiomTree.BeginUpdate();
             Common nodeTag = (Common)node.Tag;
-            node.Nodes.Clear();
-            foreach (var c in nodeTag.Children())
-                node.Nodes.Add(makeNode(c));
+            Task.Run(() => GenerateChildNodes(node, nodeTag));
 
             node.EnsureVisible();
+            treeUpdateTimer.Start();
+            Interlocked.Increment(ref workCounter);
+        }
+
+        private void GenerateChildNodes(TreeNode node, Common nodeTag)
+        {
+            int i = 1;
+            foreach (var common in nodeTag.Children())
+            {
+                expandQueue.Enqueue(new Tuple<TreeNode, TreeNode>(node, makeNode(common)));
+                if (i == 1000)
+                {
+                    // 1000 is probably enough for a start.
+                    // new sequence so that the parent is reevaluated again.
+                    expandQueue.Enqueue(new Tuple<TreeNode, TreeNode>(node, null));
+                    Interlocked.Increment(ref workCounter);
+                    expandQueue.Enqueue(new Tuple<TreeNode, TreeNode>(node.Parent, makeNode(new CallbackNode("...", () => nodeTag.Children().Skip(1001)))));
+                    expandQueue.Enqueue(new Tuple<TreeNode, TreeNode>(node.Parent, null));
+                    return;
+                }
+                i++;
+            }
+
+            // end of work batch
+            expandQueue.Enqueue(new Tuple<TreeNode, TreeNode>(node, null));
+        }
+
+        private void expandAddTimer(object sender, EventArgs e)
+        {
+            Tuple<TreeNode, TreeNode> currTuple;
+            List<TreeNode> nodes = new List<TreeNode>();
+            var counter = 0;
+            while (expandQueue.TryDequeue(out currTuple) && counter < 30 && currTuple?.Item2 != null)
+            {
+                counter++;
+                nodes.Add(currTuple.Item2);
+            }
+            if (currTuple == null) return;
+
+            TreeNode parentNode = currTuple.Item1;
+            TreeNode enqueNode = currTuple.Item2;
+
+
+            z3AxiomTree.BeginUpdate();
+            if (enqueNode == null)
+            {
+                // "Processing..." dummy node
+                parentNode.Nodes.RemoveAt(0);
+
+                // done with a batch, disable updating
+                int work_counter = Interlocked.Decrement(ref workCounter);
+                if (work_counter == 0)
+                {
+                    treeUpdateTimer.Stop();
+                }
+            }
+            else
+            {
+                parentNode.Nodes[0].Text = $"Processing... [{parentNode.Nodes.Count}]";
+            }
+            parentNode.Nodes.AddRange(nodes.ToArray());
             z3AxiomTree.EndUpdate();
         }
 
@@ -435,7 +496,7 @@ namespace Z3AxiomProfiler
             };
 
             if (common.HasChildren())
-                cNode.Nodes.Add(new TreeNode("dummy node"));
+                cNode.Nodes.Add(new TreeNode("Processing..."));
             if (common.AutoExpand())
                 cNode.Expand();
             return cNode;
