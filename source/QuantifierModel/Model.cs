@@ -813,7 +813,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public string Qid;
         public string PrintName;
         public string Body => ComputeBody();
-        private string _body;
         public string BoogieBody;
         public Term BodyTerm;
         public List<Instantiation> Instances;
@@ -901,16 +900,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         internal string ComputeBody()
         {
-            if (_body != null)
-            {
-                return _body;
-            }
-            _body = "?";
+            string body = "unknown body term";
             if (BodyTerm != null)
             {
-                _body = BodyTerm.PrettyPrint();
+                body = BodyTerm.PrettyPrint();
             }
-            return _body;
+            return body;
         }
 
         public override string SummaryInfo()

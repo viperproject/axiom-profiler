@@ -504,7 +504,6 @@ namespace Z3AxiomProfiler
                                 q.PrintName = words[2] + "[" + words[1] + "]";
                             else
                                 q.PrintName = words[1];
-                            q.ComputeBody();
                         }
                     }
                     break;
