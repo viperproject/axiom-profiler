@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Z3AxiomProfiler
@@ -8,9 +9,9 @@ namespace Z3AxiomProfiler
   {
     public SearchBox(Z3AxiomProfiler a)
     {
-      this.axprof = a;
+      axprof = a;
       InitializeComponent();
-      this.textBox1.Text = a.SearchText;
+      textBox1.Text = a.SearchText;
     }
 
     class NodeText
@@ -38,22 +39,14 @@ namespace Z3AxiomProfiler
 
     public void SetFilter(string s)
     {
-      axprof.SearchText = this.textBox1.Text;
+      axprof.SearchText = textBox1.Text;
       var words0 = s.Split(' ');
-      var words = new List<string>();
-      foreach (var w in words0) if (w != "") words.Add(w.ToLower());
-      var objs = new List<object>();
-      foreach (var n in nodes) {
-        bool wrong = false;
-        string x = n.ToString().ToLower();
-        foreach (var w in words) {
-          if (!x.Contains(w)) { wrong = true; break; }
-        }
-        if (!wrong) objs.Add(n);
-      }
-      listBox1.BeginUpdate();
+      var words = (from w in words0 where w != "" select w.ToLower()).ToList();
+        listBox1.BeginUpdate();
       listBox1.Items.Clear();
-      listBox1.Items.AddRange(objs.ToArray());
+      listBox1.Items.AddRange((from n in nodes let x = n.ToString().ToLower()
+                               let wrong = words.Any(w => !x.Contains(w))
+                               where !wrong select n).Cast<object>().ToArray());
       listBox1.EndUpdate();
     }
 
@@ -61,7 +54,7 @@ namespace Z3AxiomProfiler
     {
       nodes.Clear();
       AddNodes(coll);
-      SetFilter(this.textBox1.Text);
+      SetFilter(textBox1.Text);
     }
 
     private void textBox1_TextChanged(object sender, EventArgs e)
@@ -91,7 +84,7 @@ namespace Z3AxiomProfiler
         Execute(true);
         e.Handled = true;
       } else if (e.KeyCode == Keys.Escape) {
-        this.Hide();
+        Hide();
         e.Handled = true;
       }
     }

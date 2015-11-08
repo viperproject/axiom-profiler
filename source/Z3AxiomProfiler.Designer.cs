@@ -37,6 +37,7 @@
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.colorVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchTreeVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.quantifierBlameVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cSVToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
@@ -51,10 +52,9 @@
             this.z3AxiomTree = new System.Windows.Forms.TreeView();
             this.InstantiationPathView = new System.Windows.Forms.ListView();
             this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.FingerprintHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.PrintNameHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.quantifierBlameVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -141,6 +141,13 @@
             this.searchTreeVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
             this.searchTreeVisualizationToolStripMenuItem.Text = "Search &Tree Visualization";
             this.searchTreeVisualizationToolStripMenuItem.Click += new System.EventHandler(this.searchTreeVisualizationToolStripMenuItem_Click);
+            // 
+            // quantifierBlameVisualizationToolStripMenuItem
+            // 
+            this.quantifierBlameVisualizationToolStripMenuItem.Name = "quantifierBlameVisualizationToolStripMenuItem";
+            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
+            this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
@@ -266,7 +273,7 @@
             // 
             this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.DepthHeader,
-            this.FingerprintHeader,
+            this.PrintNameHeader,
             this.QIdHeader,
             this.InstancesCountHeader});
             this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -287,10 +294,10 @@
             this.DepthHeader.Text = "Depth";
             this.DepthHeader.Width = 50;
             // 
-            // FingerprintHeader
+            // PrintNameHeader
             // 
-            this.FingerprintHeader.Text = "Fingerprint";
-            this.FingerprintHeader.Width = 130;
+            this.PrintNameHeader.Text = "Print Name";
+            this.PrintNameHeader.Width = 130;
             // 
             // QIdHeader
             // 
@@ -301,13 +308,6 @@
             // 
             this.InstancesCountHeader.Text = "#Instances Total";
             this.InstancesCountHeader.Width = 150;
-            // 
-            // quantifierBlameVisualizationToolStripMenuItem
-            // 
-            this.quantifierBlameVisualizationToolStripMenuItem.Name = "quantifierBlameVisualizationToolStripMenuItem";
-            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
-            this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
             // 
             // Z3AxiomProfiler
             // 
@@ -357,7 +357,7 @@
         private System.Windows.Forms.ToolStripMenuItem searchTreeVisualizationToolStripMenuItem;
         private System.Windows.Forms.ListView InstantiationPathView;
         private System.Windows.Forms.SplitContainer splitContainer2;
-        private System.Windows.Forms.ColumnHeader FingerprintHeader;
+        private System.Windows.Forms.ColumnHeader PrintNameHeader;
         private System.Windows.Forms.ColumnHeader DepthHeader;
         private System.Windows.Forms.ColumnHeader InstancesCountHeader;
         private System.Windows.Forms.ColumnHeader QIdHeader;

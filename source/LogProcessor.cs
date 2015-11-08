@@ -524,6 +524,7 @@ namespace Z3AxiomProfiler
                         if (lastInst != null)
                         {
                             t.Responsible = lastInst;
+                            lastInst.dependentTerms.Add(t);
                         }
                     }
                     break;
@@ -738,6 +739,7 @@ namespace Z3AxiomProfiler
                         {
                             t = new Term(words[2], args);
                             t.Responsible = lastInst;
+                            lastInst?.dependentTerms.Add(t);
                             model.terms[words[1]] = t;
                         }
                     }
@@ -750,6 +752,7 @@ namespace Z3AxiomProfiler
                         Term[] args = GetArgs(4, words);
                         Term t = new Term(args.Length == 0 ? words[3] : words[3].Substring(1), args);
                         t.Responsible = lastInst;
+                        lastInst?.dependentTerms.Add(t);
                         model.terms[words[1]] = t;
                     }
                     break;
@@ -771,7 +774,7 @@ namespace Z3AxiomProfiler
                         Instantiation inst;
                         if (!model.fingerprints.TryGetValue(words[2], out inst))
                         {
-                            System.Console.WriteLine("fingerprint not found {0}", words[0]);
+                            Console.WriteLine("fingerprint not found {0}", words[0]);
                             break;
                         }
                         if (inst.Quant != null)

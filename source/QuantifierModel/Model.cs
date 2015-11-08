@@ -93,6 +93,18 @@ namespace Z3AxiomProfiler.QuantifierModel
                     todo.Enqueue(inst);
                 }
             }
+            collectDependentTerm();
+        }
+
+        public void collectDependentTerm()
+        {
+            foreach (var t in terms.Values.Where(t => !t.Responsible?.dependentTerms.Contains(t) ?? false))
+            {
+                Console.WriteLine("Bug?!");
+            }
+
+            List<Term> ts = terms.Values.Where(t => t.Responsible == null).ToList();
+            Console.WriteLine(ts.Count);
         }
 
         public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
@@ -928,6 +940,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Quantifier Quant;
         public Term[] Bindings;
         public Term[] Responsible;
+        public readonly List<Term> dependentTerms = new List<Term>();
+        public readonly List<Term> dependentTerms2 = new List<Term>();
         public int LineNo;
         public double Cost;
         public readonly List<Instantiation> ResponsibleInstantiations = new List<Instantiation>();
@@ -988,8 +1002,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append("Bindings:\n\n");
-            foreach (Term t in Bindings)
+            s.Append("Instantiated because of:\n\n");
+
+            foreach (var t in Responsible)
+            {
+                s.Append(t.SummaryInfo());
+                s.Append('\n');
+                s.Append(t.PrettyPrint());
+                s.Append("\n\n");
+            }
+            s.Append('\n');
+
+            s.Append("The free variables were bound to:\n\n");
+            foreach (var t in Bindings)
             {
                 s.Append(t.SummaryInfo());
                 s.Append('\n');
@@ -1020,19 +1045,16 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (Responsible != null)
             {
-                List<Term> sortedResponsibleList = new List<Term>(this.Responsible);
+                List<Term> sortedResponsibleList = new List<Term>(Responsible);
                 sortedResponsibleList.Sort(delegate (Term t1, Term t2)
                 {
                     int d1 = t1.Responsible?.Depth ?? 0;
                     int d2 = t2.Responsible?.Depth ?? 0;
                     return d2.CompareTo(d1);
                 });
-                foreach (Term t in sortedResponsibleList)
+                foreach (Term t in sortedResponsibleList.Where(t => t.Responsible != null))
                 {
-                    if (t.Responsible != null)
-                    {
-                        yield return t.Responsible;
-                    }
+                    yield return t.Responsible;
                 }
                 yield return Callback("BLAME", () => sortedResponsibleList);
             }
@@ -1042,10 +1064,20 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Callback("BIND", () => Bindings);
             }
 
+            if (dependentTerms.Count > 0)
+            {
+                yield return Callback("YIELDS TERMS", () => dependentTerms);
+            }
+
+            if (dependentTerms.Count > 0)
+            {
+                yield return Callback("YIELDS TERMS ALT", () => dependentTerms2);
+            }
+
             if (DependantInstantiations.Count > 0)
             {
                 DependantInstantiations.Sort((i1, i2) => i2.Cost.CompareTo(i1.Cost));
-                yield return Callback("YIELDS", () => DependantInstantiations);
+                yield return Callback("YIELDS INSTANTIATIONS", () => DependantInstantiations);
             }
         }
     }

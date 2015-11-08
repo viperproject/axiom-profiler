@@ -633,7 +633,7 @@ namespace Z3AxiomProfiler
                     Name = $"Quantifier Instantiation {i.FingerPrint}",
                     Tag = i
                 };
-                item.SubItems.Add(i.FingerPrint);
+                item.SubItems.Add(i.Quant.PrintName);
                 item.SubItems.Add(i.Quant.Qid);
                 item.SubItems.Add(i.Quant.Instances.Count.ToString());
 
@@ -675,7 +675,7 @@ namespace Z3AxiomProfiler
                     break;
                 case (char)27:
                     e.Handled = true;
-                    this.Close();
+                    Close();
                     break;
                 case 'v':
                     e.Handled = true;
