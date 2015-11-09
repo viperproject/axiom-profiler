@@ -1044,23 +1044,23 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     yield return t.Responsible;
                 }
-                yield return Callback("BLAME", () => sortedResponsibleList);
+                yield return Callback($"BLAME [{sortedResponsibleList.Count}]", () => sortedResponsibleList);
             }
 
             if (Bindings.Length > 0)
             {
-                yield return Callback("BIND", () => Bindings);
+                yield return Callback($"BIND [{Bindings.Length}]", () => Bindings);
             }
 
             if (dependentTerms.Count > 0)
             {
-                yield return Callback("YIELDS TERMS", () => dependentTerms);
+                yield return Callback($"YIELDS TERMS [{dependentTerms.Count}]", () => dependentTerms);
             }
 
             if (DependantInstantiations.Count > 0)
             {
                 DependantInstantiations.Sort((i1, i2) => i2.Cost.CompareTo(i1.Cost));
-                yield return Callback("YIELDS INSTANTIATIONS", () => DependantInstantiations);
+                yield return Callback($"YIELDS INSTANTIATIONS [{DependantInstantiations.Count}]", () => DependantInstantiations);
             }
         }
     }
@@ -1068,12 +1068,14 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public class Term : Common
     {
-        public string Name;
-        public Term[] Args;
+        public readonly string Name;
+        public readonly Term[] Args;
         public Instantiation Responsible;
-        public int Size;
-        public int Depth;
+        public string identifier = "None";
+        private readonly int Size;
+        private readonly int Depth;
         public Term NegatedVersion;
+        private readonly List<Term> dependentTerms = new List<Term>();
 
         private string prettyPrintedBody;
 
@@ -1085,6 +1087,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 Size += t.Size;
                 Depth = Depth > t.Depth ? Depth : t.Depth;
+                t.dependentTerms.Add(this);
             }
             Size++;
             Depth++;
@@ -1097,6 +1100,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             Size = t.Size;
             Depth = t.Depth;
             Responsible = t.Responsible;
+            identifier = t.identifier;
         }
 
         public string Sig => Name + "/" + Args.Length;
@@ -1291,7 +1295,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            return $"Term[{Name}] Depth:{Depth}, #Children:{Args.Length}";
+            return $"Term[{Name}] Identifier:{identifier}, Depth:{Depth}, #Children:{Args.Length}";
         }
 
         public string PrettyPrint()
@@ -1304,10 +1308,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             return prettyPrintedBody;
         }
 
-        public string Desc => Name + " |" + Size + ":" + Depth + "|";
-
-        public string Stats => Size + ":" + Depth;
-
         public override string ToolTip()
         {
             StringBuilder s = new StringBuilder();
@@ -1319,12 +1319,22 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override bool HasChildren()
         {
-            return (Args.Length > 0) && (Size > 3);
+            return ((Args.Length > 0) && (Size > 3))
+                || dependentTerms.Count > 0;
         }
 
         public override IEnumerable<Common> Children()
         {
-            return Args;
+            foreach (var arg in Args)
+            {
+                yield return arg;
+            }
+
+            if (dependentTerms.Count > 0)
+            {
+                yield return Callback($"YIELDS TERMS [{dependentTerms.Count}]", () => dependentTerms);
+            }
+
         }
 
         public override string SummaryInfo()
@@ -1332,6 +1342,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder s = new StringBuilder();
             s.Append("Term Info:\n");
             s.Append("==========\n\n");
+            s.Append("Identifier: ").Append(identifier).Append('\n');
             s.Append("Depth: ").Append(Depth).Append('\n');
             s.Append("Number of Children: ").Append(Args.Length).Append('\n');
             return s.ToString();
@@ -1374,7 +1385,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (Term == null) t = "(nil)";
             else if (isBin)
             {
-                t = string.Format("{0}  {1}  {2}", Term.Args[0].AsCString(false), Term.Name, Term.Args[1].AsCString(false));
+                t = $"{Term.Args[0].AsCString(false)}  {Term.Name}  {Term.Args[1].AsCString(false)}";
             }
             else
             {
@@ -1406,11 +1417,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override Color ForeColor()
         {
-            if (Clause != null)
-                return Color.IndianRed;
-            else return base.ForeColor();
+            return Clause != null ? Color.IndianRed : base.ForeColor();
         }
-
     }
 
     public class ResolutionLiteral : Literal

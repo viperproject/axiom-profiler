@@ -488,7 +488,10 @@ namespace Z3AxiomProfiler
                 case "[mk-quant]":
                     {
                         Term[] args = GetArgs(3, words);
-                        Term t = new Term("FORALL" + words[1], args);
+                        Term t = new Term("FORALL" + words[1], args)
+                        {
+                            identifier = words[1]
+                        };
                         model.terms[words[1]] = t;
 
                         if (args.Length != 0)
@@ -508,6 +511,7 @@ namespace Z3AxiomProfiler
                         Term[] args = GetArgs(3, words);
                         Term t = new Term(words[2], args);
                         model.terms[words[1]] = t;
+                        t.identifier = words[1];
                     }
                     break;
 
@@ -737,8 +741,11 @@ namespace Z3AxiomProfiler
                         }
                         else
                         {
-                            t = new Term(words[2], args);
-                            t.Responsible = lastInst;
+                            t = new Term(words[2], args)
+                            {
+                                Responsible = lastInst,
+                                identifier = words[1]
+                            };
                             lastInst?.dependentTerms.Add(t);
                             model.terms[words[1]] = t;
                         }
@@ -754,6 +761,7 @@ namespace Z3AxiomProfiler
                         t.Responsible = lastInst;
                         lastInst?.dependentTerms.Add(t);
                         model.terms[words[1]] = t;
+                        t.identifier = words[1];
                     }
                     break;
                 case "[fingerprint]":
