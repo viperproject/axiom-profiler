@@ -32,6 +32,7 @@ namespace Z3AxiomProfiler
         private readonly Timer treeUpdateTimer = new Timer();
         private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
         private int workCounter;
+        private Common lastToolTipCommon = null;
 
         public Z3AxiomProfiler()
         {
@@ -614,7 +615,8 @@ namespace Z3AxiomProfiler
         {
             if (c != null)
             {
-                toolTipBox.Lines = c.ToolTip().Replace("\r", "").Split('\n');
+                lastToolTipCommon = c;
+                toolTipBox.Lines = c.ToolTip(80, typeEnabledBox.Checked).Replace("\r", "").Split('\n');
             }
         }
 
@@ -732,6 +734,11 @@ namespace Z3AxiomProfiler
                 var fInfo = parameterConfiguration?.preludeBplFileInfo;
                 GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
             }
+        }
+
+        private void ToolTipTypeInfoChanged(object sender, EventArgs e)
+        {
+            SetToolTip(lastToolTipCommon);
         }
     }
 }

@@ -319,6 +319,7 @@
             this.typeEnabledBox.TabIndex = 4;
             this.typeEnabledBox.Text = "Show Types";
             this.typeEnabledBox.UseVisualStyleBackColor = true;
+            this.typeEnabledBox.CheckedChanged += new System.EventHandler(this.ToolTipTypeInfoChanged);
             // 
             // Z3AxiomProfiler
             // 
