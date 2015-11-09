@@ -458,7 +458,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public abstract class Common
     {
-        public virtual string ToolTip(int width, bool typeInfo) { return ToString(); }
+        public virtual string ToolTip(int width, bool typeInfo, bool showId) { return ToString(); }
 
         public virtual string SummaryInfo() { return ToString(); }
         public abstract IEnumerable<Common> Children();
@@ -512,9 +512,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.HasChildren();
         }
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
-            return Fwd.ToolTip(width, typeInfo);
+            return Fwd.ToolTip(width, typeInfo, showId);
         }
         public override string ToString()
         {
@@ -718,10 +718,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             return res;
         }
 
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
             if (Conflict != null)
-                return Conflict.ToolTip(width, typeInfo);
+                return Conflict.ToolTip(width, typeInfo, showId);
             return "No conflict";
         }
 
@@ -815,7 +815,7 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
         public string Qid;
         public string PrintName;
-        public string Body => BodyTerm.PrettyPrint(true, 80);
+        public string Body => BodyTerm.PrettyPrint(true, true, 80);
         public string BoogieBody;
         public Term BodyTerm;
         public List<Instantiation> Instances;
@@ -832,12 +832,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append(BodyTerm.PrettyPrint(typeInfo, width));
+            s.Append(BodyTerm.PrettyPrint(typeInfo, showId, width));
             return s.ToString();
         }
 
@@ -976,7 +976,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
@@ -987,7 +987,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 s.Append(t.SummaryInfo());
                 s.Append('\n');
-                s.Append(t.PrettyPrint(typeInfo, width));
+                s.Append(t.PrettyPrint(typeInfo, showId, width));
                 s.Append("\n\n");
             }
             s.Append('\n');
@@ -997,14 +997,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 s.Append(t.SummaryInfo());
                 s.Append('\n');
-                s.Append(t.PrettyPrint(typeInfo, width));
+                s.Append(t.PrettyPrint(typeInfo, showId, width));
                 s.Append("\n\n");
             }
 
             s.Append('\n');
-            s.Append(Quant.SummaryInfo());
-            s.Append('\n');
-            s.Append(Quant.Body);
+            s.Append(Quant.ToolTip(width, showId, typeInfo));
             return s.ToString();
         }
 
@@ -1058,7 +1056,7 @@ namespace Z3AxiomProfiler.QuantifierModel
     public class Term : Common
     {
         public readonly string Name;
-        public readonly string GenericType;
+        private readonly string GenericType;
         public readonly Term[] Args;
         public Instantiation Responsible;
         public string identifier = "None";
@@ -1066,8 +1064,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         private readonly int Depth;
         public Term NegatedVersion;
         private readonly List<Term> dependentTerms = new List<Term>();
-
-        private string prettyPrintedBody;
 
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
 
@@ -1262,7 +1258,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static string indentDiff = "¦ ";
 
-        private bool PrettyPrint(StringBuilder builder, int maxTermWidth, StringBuilder indentBuilder, bool withType)
+        private bool PrettyPrint(StringBuilder builder, int maxTermWidth, StringBuilder indentBuilder, bool withType, bool withId)
         {
             bool isMultiline = false;
             int[] breakIndices = new int[Args.Length + 1];
@@ -1275,12 +1271,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 builder.Append(GenericType);
             }
+            if (withId)
+            {
+                builder.Append('[').Append(identifier).Append(']');
+            }
             builder.Append('(');
             
             breakIndices[0] = builder.Length;
             for (int i = 0; i < Args.Length; i++)
             {
-                isMultiline = isMultiline || Args[i].PrettyPrint(builder, maxTermWidth, indentBuilder, withType);
+                // Note: DO NOT CHANGE ORDER (-> short circuit)
+                isMultiline = Args[i].PrettyPrint(builder, maxTermWidth, indentBuilder, withType, withId)
+                    || isMultiline;
 
                 if (i != Args.Length - 1)
                 {
@@ -1291,7 +1293,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             builder.Append(')');
 
-            if (!isMultiline && builder.Length - startLength <= maxTermWidth)
+            if (!isMultiline && builder.Length - startLength <= maxTermWidth 
+                || maxTermWidth == 0)
             {
                 // unindent again
                 indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
@@ -1320,19 +1323,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             return $"Term[{Name}] Identifier:{identifier}, Depth:{Depth}, #Children:{Args.Length}";
         }
 
-        public string PrettyPrint(bool withType, int maxTermWidth)
+        public string PrettyPrint(bool withType, bool withId, int maxTermWidth)
         {
             StringBuilder builder = new StringBuilder();
-            PrettyPrint(builder, maxTermWidth, new StringBuilder(), withType);
+            PrettyPrint(builder, maxTermWidth, new StringBuilder(), withType, withId);
             return builder.ToString();
         }
 
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append(PrettyPrint(typeInfo, width));
+            s.Append(PrettyPrint(typeInfo, showId, width));
             return s.ToString();
         }
 
@@ -1512,7 +1515,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         }
 
-        public override string ToolTip(int width, bool typeInfo)
+        public override string ToolTip(int width, bool typeInfo, bool showId)
         {
             StringBuilder sb = new StringBuilder();
             foreach (Literal l in Literals)

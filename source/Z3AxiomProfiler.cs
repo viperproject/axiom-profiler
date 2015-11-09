@@ -613,11 +613,12 @@ namespace Z3AxiomProfiler
 
         private void SetToolTip(Common c)
         {
-            if (c != null)
-            {
-                lastToolTipCommon = c;
-                toolTipBox.Lines = c.ToolTip(80, typeEnabledBox.Checked).Replace("\r", "").Split('\n');
-            }
+            if (c == null) return;
+
+            lastToolTipCommon = c;
+            int width;
+            int.TryParse(termWidthTextBox.Text, out width);
+            toolTipBox.Lines = c.ToolTip(width, showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n');
         }
 
         private void SetInstantiationPath(Instantiation inst)
@@ -736,7 +737,56 @@ namespace Z3AxiomProfiler
             }
         }
 
-        private void ToolTipTypeInfoChanged(object sender, EventArgs e)
+        private void termWidthKeyPressHandler(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Back 
+                || e.KeyChar == (char)Keys.Delete
+                || char.IsDigit(e.KeyChar))
+            {
+                return;
+            }
+
+            if (e.KeyChar == (char) Keys.Enter)
+            {
+                SetToolTip(lastToolTipCommon);
+            }
+
+            e.Handled = true;
+        }
+
+        private bool showTypesButtonToggleState = true;
+        private void toolStripButton1_Click(object sender, EventArgs e)
+        {
+            if (showTypesButtonToggleState)
+            {
+                showTypesButtonToggleState = false;
+                typeToggleButton.Text = "Show Types";
+            }
+            else
+            {
+                showTypesButtonToggleState = true;
+                typeToggleButton.Text = "Hide Types";
+            }
+            SetToolTip(lastToolTipCommon);
+        }
+
+        private bool showTermIdButtonToggleState = true;
+        private void termIdToggle_Click(object sender, EventArgs e)
+        {
+            if (showTermIdButtonToggleState)
+            {
+                showTermIdButtonToggleState = false;
+                termIdToggle.Text = "Show Term Identifiers";
+            }
+            else
+            {
+                showTermIdButtonToggleState = true;
+                termIdToggle.Text = "Hide Term Identifiers";
+            }
+            SetToolTip(lastToolTipCommon);
+        }
+
+        private void termWidthTextBoxTriggerReprint(object sender, EventArgs e)
         {
             SetToolTip(lastToolTipCommon);
         }

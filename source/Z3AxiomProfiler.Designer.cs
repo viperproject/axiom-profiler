@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Z3AxiomProfiler));
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.toolTipBox = new System.Windows.Forms.RichTextBox();
@@ -55,7 +56,12 @@
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
-            this.typeEnabledBox = new System.Windows.Forms.CheckBox();
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
+            this.termWidthTextBox = new System.Windows.Forms.ToolStripTextBox();
+            this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.typeToggleButton = new System.Windows.Forms.ToolStripButton();
+            this.termIdToggle = new System.Windows.Forms.ToolStripButton();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -65,6 +71,7 @@
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
+            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // splitContainer1
@@ -287,14 +294,14 @@
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
             this.aboutToolStripMenuItem.Text = "&About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // helpToolStripMenuItem1
             // 
             this.helpToolStripMenuItem1.Name = "helpToolStripMenuItem1";
-            this.helpToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
+            this.helpToolStripMenuItem1.Size = new System.Drawing.Size(107, 22);
             this.helpToolStripMenuItem1.Text = "&Help";
             this.helpToolStripMenuItem1.Click += new System.EventHandler(this.helpToolStripMenuItem1_Click);
             // 
@@ -310,23 +317,70 @@
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
-            // typeEnabledBox
+            // toolStrip1
             // 
-            this.typeEnabledBox.AutoSize = true;
-            this.typeEnabledBox.Location = new System.Drawing.Point(140, 5);
-            this.typeEnabledBox.Name = "typeEnabledBox";
-            this.typeEnabledBox.Size = new System.Drawing.Size(85, 17);
-            this.typeEnabledBox.TabIndex = 4;
-            this.typeEnabledBox.Text = "Show Types";
-            this.typeEnabledBox.UseVisualStyleBackColor = true;
-            this.typeEnabledBox.CheckedChanged += new System.EventHandler(this.ToolTipTypeInfoChanged);
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
+            this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripLabel1,
+            this.termWidthTextBox,
+            this.toolStripSeparator3,
+            this.typeToggleButton,
+            this.termIdToggle});
+            this.toolStrip1.Location = new System.Drawing.Point(135, 0);
+            this.toolStrip1.Name = "toolStrip1";
+            this.toolStrip1.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
+            this.toolStrip1.Size = new System.Drawing.Size(364, 25);
+            this.toolStrip1.TabIndex = 6;
+            this.toolStrip1.Text = "toolStrip1";
+            // 
+            // toolStripLabel1
+            // 
+            this.toolStripLabel1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.toolStripLabel1.Name = "toolStripLabel1";
+            this.toolStripLabel1.Size = new System.Drawing.Size(97, 22);
+            this.toolStripLabel1.Text = "Max Term Width:";
+            // 
+            // termWidthTextBox
+            // 
+            this.termWidthTextBox.Name = "termWidthTextBox";
+            this.termWidthTextBox.Size = new System.Drawing.Size(40, 25);
+            this.termWidthTextBox.Text = "80";
+            this.termWidthTextBox.TextBoxTextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.termWidthTextBox.Leave += new System.EventHandler(this.termWidthTextBoxTriggerReprint);
+            this.termWidthTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.termWidthKeyPressHandler);
+            this.termWidthTextBox.Validated += new System.EventHandler(this.termWidthTextBoxTriggerReprint);
+            // 
+            // toolStripSeparator3
+            // 
+            this.toolStripSeparator3.Name = "toolStripSeparator3";
+            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            // 
+            // typeToggleButton
+            // 
+            this.typeToggleButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.typeToggleButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.typeToggleButton.Name = "typeToggleButton";
+            this.typeToggleButton.Size = new System.Drawing.Size(69, 22);
+            this.typeToggleButton.Text = "Hide Types";
+            this.typeToggleButton.Click += new System.EventHandler(this.toolStripButton1_Click);
+            // 
+            // termIdToggle
+            // 
+            this.termIdToggle.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.termIdToggle.Image = ((System.Drawing.Image)(resources.GetObject("termIdToggle.Image")));
+            this.termIdToggle.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.termIdToggle.Name = "termIdToggle";
+            this.termIdToggle.Size = new System.Drawing.Size(116, 22);
+            this.termIdToggle.Text = "Hide Term Identifier";
+            this.termIdToggle.Click += new System.EventHandler(this.termIdToggle_Click);
             // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1184, 711);
-            this.Controls.Add(this.typeEnabledBox);
+            this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.Name = "Z3AxiomProfiler";
@@ -342,6 +396,8 @@
             this.splitContainer2.ResumeLayout(false);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
+            this.toolStrip1.ResumeLayout(false);
+            this.toolStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -375,7 +431,12 @@
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem1;
         private System.Windows.Forms.MenuStrip menuStrip1;
-        private System.Windows.Forms.CheckBox typeEnabledBox;
+        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStripLabel toolStripLabel1;
+        private System.Windows.Forms.ToolStripTextBox termWidthTextBox;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
+        private System.Windows.Forms.ToolStripButton typeToggleButton;
+        private System.Windows.Forms.ToolStripButton termIdToggle;
     }
 }
 
