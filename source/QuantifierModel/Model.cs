@@ -1034,17 +1034,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (Responsible != null)
             {
                 List<Term> sortedResponsibleList = new List<Term>(Responsible);
-                sortedResponsibleList.Sort(delegate (Term t1, Term t2)
+                sortedResponsibleList.Sort((t1, t2) =>
                 {
                     int d1 = t1.Responsible?.Depth ?? 0;
                     int d2 = t2.Responsible?.Depth ?? 0;
                     return d2.CompareTo(d1);
                 });
-                foreach (Term t in sortedResponsibleList.Where(t => t.Responsible != null))
-                {
-                    yield return t.Responsible;
-                }
-                yield return Callback($"BLAME [{sortedResponsibleList.Count}]", () => sortedResponsibleList);
+                yield return Callback($"BLAME INSTANTIATIONS [{sortedResponsibleList.Count(t => t.Responsible != null)}]", () => sortedResponsibleList.Where(t => t.Responsible != null));
+                yield return Callback($"BLAME TERMS [{sortedResponsibleList.Count}]", () => sortedResponsibleList);
             }
 
             if (Bindings.Length > 0)
