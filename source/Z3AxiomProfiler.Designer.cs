@@ -28,7 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.toolTipBox = new System.Windows.Forms.RichTextBox();
+            this.z3AxiomTree = new System.Windows.Forms.TreeView();
+            this.InstantiationPathView = new System.Windows.Forms.ListView();
+            this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.PrintNameHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadZ3TraceLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.profileZ3TraceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -46,16 +54,8 @@
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.splitContainer2 = new System.Windows.Forms.SplitContainer();
-            this.toolTipBox = new System.Windows.Forms.RichTextBox();
-            this.z3AxiomTree = new System.Windows.Forms.TreeView();
-            this.InstantiationPathView = new System.Windows.Forms.ListView();
-            this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.PrintNameHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.menuStrip1.SuspendLayout();
+            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.typeEnabledBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -64,19 +64,110 @@
             this.splitContainer2.Panel1.SuspendLayout();
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
+            this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // menuStrip1
+            // splitContainer1
             // 
-            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.fileToolStripMenuItem,
-            this.cSVToolStripMenuItem1,
-            this.helpToolStripMenuItem});
-            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
-            this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1184, 24);
-            this.menuStrip1.TabIndex = 2;
-            this.menuStrip1.Text = "menuStrip1";
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer1.Location = new System.Drawing.Point(0, 24);
+            this.splitContainer1.Name = "splitContainer1";
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.InstantiationPathView);
+            this.splitContainer1.Size = new System.Drawing.Size(1184, 687);
+            this.splitContainer1.SplitterDistance = 894;
+            this.splitContainer1.TabIndex = 3;
+            // 
+            // splitContainer2
+            // 
+            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer2.Location = new System.Drawing.Point(0, 0);
+            this.splitContainer2.Name = "splitContainer2";
+            // 
+            // splitContainer2.Panel1
+            // 
+            this.splitContainer2.Panel1.Controls.Add(this.toolTipBox);
+            // 
+            // splitContainer2.Panel2
+            // 
+            this.splitContainer2.Panel2.Controls.Add(this.z3AxiomTree);
+            this.splitContainer2.Size = new System.Drawing.Size(894, 687);
+            this.splitContainer2.SplitterDistance = 281;
+            this.splitContainer2.TabIndex = 3;
+            // 
+            // toolTipBox
+            // 
+            this.toolTipBox.AcceptsTab = true;
+            this.toolTipBox.CausesValidation = false;
+            this.toolTipBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.toolTipBox.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.toolTipBox.Location = new System.Drawing.Point(0, 0);
+            this.toolTipBox.Name = "toolTipBox";
+            this.toolTipBox.ReadOnly = true;
+            this.toolTipBox.Size = new System.Drawing.Size(281, 687);
+            this.toolTipBox.TabIndex = 0;
+            this.toolTipBox.Text = "";
+            this.toolTipBox.WordWrap = false;
+            // 
+            // z3AxiomTree
+            // 
+            this.z3AxiomTree.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.z3AxiomTree.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.z3AxiomTree.HideSelection = false;
+            this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
+            this.z3AxiomTree.Name = "z3AxiomTree";
+            this.z3AxiomTree.Size = new System.Drawing.Size(609, 687);
+            this.z3AxiomTree.TabIndex = 1;
+            this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
+            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
+            this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);
+            this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
+            // 
+            // InstantiationPathView
+            // 
+            this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.DepthHeader,
+            this.PrintNameHeader,
+            this.QIdHeader,
+            this.InstancesCountHeader});
+            this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.InstantiationPathView.FullRowSelect = true;
+            this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
+            this.InstantiationPathView.MultiSelect = false;
+            this.InstantiationPathView.Name = "InstantiationPathView";
+            this.InstantiationPathView.Size = new System.Drawing.Size(286, 687);
+            this.InstantiationPathView.TabIndex = 2;
+            this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
+            this.InstantiationPathView.View = System.Windows.Forms.View.Details;
+            this.InstantiationPathView.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.PathItemClick);
+            this.InstantiationPathView.Enter += new System.EventHandler(this.InstantiationPathView_Enter);
+            // 
+            // DepthHeader
+            // 
+            this.DepthHeader.Text = "Depth";
+            this.DepthHeader.Width = 50;
+            // 
+            // PrintNameHeader
+            // 
+            this.PrintNameHeader.Text = "Print Name";
+            this.PrintNameHeader.Width = 130;
+            // 
+            // QIdHeader
+            // 
+            this.QIdHeader.Text = "QId";
+            this.QIdHeader.Width = 200;
+            // 
+            // InstancesCountHeader
+            // 
+            this.InstancesCountHeader.Text = "#Instances Total";
+            this.InstancesCountHeader.Width = 150;
             // 
             // fileToolStripMenuItem
             // 
@@ -196,131 +287,50 @@
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.aboutToolStripMenuItem.Text = "&About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // helpToolStripMenuItem1
             // 
             this.helpToolStripMenuItem1.Name = "helpToolStripMenuItem1";
-            this.helpToolStripMenuItem1.Size = new System.Drawing.Size(107, 22);
+            this.helpToolStripMenuItem1.Size = new System.Drawing.Size(152, 22);
             this.helpToolStripMenuItem1.Text = "&Help";
             this.helpToolStripMenuItem1.Click += new System.EventHandler(this.helpToolStripMenuItem1_Click);
             // 
-            // splitContainer1
+            // menuStrip1
             // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 24);
-            this.splitContainer1.Name = "splitContainer1";
+            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fileToolStripMenuItem,
+            this.cSVToolStripMenuItem1,
+            this.helpToolStripMenuItem});
+            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+            this.menuStrip1.Name = "menuStrip1";
+            this.menuStrip1.Size = new System.Drawing.Size(1184, 24);
+            this.menuStrip1.TabIndex = 2;
+            this.menuStrip1.Text = "menuStrip1";
             // 
-            // splitContainer1.Panel1
+            // typeEnabledBox
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
-            // 
-            // splitContainer1.Panel2
-            // 
-            this.splitContainer1.Panel2.Controls.Add(this.InstantiationPathView);
-            this.splitContainer1.Size = new System.Drawing.Size(1184, 687);
-            this.splitContainer1.SplitterDistance = 894;
-            this.splitContainer1.TabIndex = 3;
-            // 
-            // splitContainer2
-            // 
-            this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer2.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer2.Name = "splitContainer2";
-            // 
-            // splitContainer2.Panel1
-            // 
-            this.splitContainer2.Panel1.Controls.Add(this.toolTipBox);
-            // 
-            // splitContainer2.Panel2
-            // 
-            this.splitContainer2.Panel2.Controls.Add(this.z3AxiomTree);
-            this.splitContainer2.Size = new System.Drawing.Size(894, 687);
-            this.splitContainer2.SplitterDistance = 281;
-            this.splitContainer2.TabIndex = 3;
-            // 
-            // toolTipBox
-            // 
-            this.toolTipBox.AcceptsTab = true;
-            this.toolTipBox.CausesValidation = false;
-            this.toolTipBox.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.toolTipBox.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.toolTipBox.Location = new System.Drawing.Point(0, 0);
-            this.toolTipBox.Name = "toolTipBox";
-            this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(281, 687);
-            this.toolTipBox.TabIndex = 0;
-            this.toolTipBox.Text = "";
-            this.toolTipBox.WordWrap = false;
-            // 
-            // z3AxiomTree
-            // 
-            this.z3AxiomTree.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.z3AxiomTree.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.z3AxiomTree.HideSelection = false;
-            this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
-            this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(609, 687);
-            this.z3AxiomTree.TabIndex = 1;
-            this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
-            this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
-            this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);
-            this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
-            // 
-            // InstantiationPathView
-            // 
-            this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.DepthHeader,
-            this.PrintNameHeader,
-            this.QIdHeader,
-            this.InstancesCountHeader});
-            this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.InstantiationPathView.FullRowSelect = true;
-            this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
-            this.InstantiationPathView.MultiSelect = false;
-            this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(286, 687);
-            this.InstantiationPathView.TabIndex = 2;
-            this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
-            this.InstantiationPathView.View = System.Windows.Forms.View.Details;
-            this.InstantiationPathView.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.PathItemClick);
-            this.InstantiationPathView.Enter += new System.EventHandler(this.InstantiationPathView_Enter);
-            // 
-            // DepthHeader
-            // 
-            this.DepthHeader.Text = "Depth";
-            this.DepthHeader.Width = 50;
-            // 
-            // PrintNameHeader
-            // 
-            this.PrintNameHeader.Text = "Print Name";
-            this.PrintNameHeader.Width = 130;
-            // 
-            // QIdHeader
-            // 
-            this.QIdHeader.Text = "QId";
-            this.QIdHeader.Width = 200;
-            // 
-            // InstancesCountHeader
-            // 
-            this.InstancesCountHeader.Text = "#Instances Total";
-            this.InstancesCountHeader.Width = 150;
+            this.typeEnabledBox.AutoSize = true;
+            this.typeEnabledBox.Location = new System.Drawing.Point(140, 5);
+            this.typeEnabledBox.Name = "typeEnabledBox";
+            this.typeEnabledBox.Size = new System.Drawing.Size(85, 17);
+            this.typeEnabledBox.TabIndex = 4;
+            this.typeEnabledBox.Text = "Show Types";
+            this.typeEnabledBox.UseVisualStyleBackColor = true;
             // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1184, 711);
+            this.Controls.Add(this.typeEnabledBox);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.Name = "Z3AxiomProfiler";
             this.Text = "Z3 Axiom Profiler";
             this.Load += new System.EventHandler(this.Z3AxiomProfiler_OnLoadEvent);
-            this.menuStrip1.ResumeLayout(false);
-            this.menuStrip1.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);
             this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
@@ -329,32 +339,16 @@
             this.splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
+            this.menuStrip1.ResumeLayout(false);
+            this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.MenuStrip menuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem loadZ3FromBoogieToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
-        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem colorVisualizationToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
-        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem cSVToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem allConflictsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem randomConflictsToolStripMenuItem1;
-        private System.Windows.Forms.ToolStripMenuItem loadZ3TraceLogToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem profileZ3TraceToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.RichTextBox toolTipBox;
-        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem searchTreeVisualizationToolStripMenuItem;
         private System.Windows.Forms.ListView InstantiationPathView;
         private System.Windows.Forms.SplitContainer splitContainer2;
         private System.Windows.Forms.ColumnHeader PrintNameHeader;
@@ -362,7 +356,25 @@
         private System.Windows.Forms.ColumnHeader InstancesCountHeader;
         private System.Windows.Forms.ColumnHeader QIdHeader;
         private System.Windows.Forms.TreeView z3AxiomTree;
+        private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem loadZ3TraceLogToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem profileZ3TraceToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem loadZ3FromBoogieToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem colorVisualizationToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem searchTreeVisualizationToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem quantifierBlameVisualizationToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem cSVToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem allConflictsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem randomConflictsToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem1;
+        private System.Windows.Forms.MenuStrip menuStrip1;
+        private System.Windows.Forms.CheckBox typeEnabledBox;
     }
 }
 
