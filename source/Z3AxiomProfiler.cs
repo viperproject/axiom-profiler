@@ -727,8 +727,11 @@ namespace Z3AxiomProfiler
 
         private void quantifierBlameVisualizationToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var fInfo = parameterConfiguration.preludeBplFileInfo;
-            GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
+            if (model != null)
+            {
+                var fInfo = parameterConfiguration?.preludeBplFileInfo;
+                GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
+            }
         }
     }
 }

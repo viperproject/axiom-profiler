@@ -93,19 +93,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                     todo.Enqueue(inst);
                 }
             }
-            collectDependentTerm();
         }
 
-        public void collectDependentTerm()
-        {
-            foreach (var t in terms.Values.Where(t => !t.Responsible?.dependentTerms.Contains(t) ?? false))
-            {
-                Console.WriteLine("Bug?!");
-            }
-
-            List<Term> ts = terms.Values.Where(t => t.Responsible == null).ToList();
-            Console.WriteLine(ts.Count);
-        }
 
         public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
         {
@@ -941,7 +930,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Term[] Bindings;
         public Term[] Responsible;
         public readonly List<Term> dependentTerms = new List<Term>();
-        public readonly List<Term> dependentTerms2 = new List<Term>();
         public int LineNo;
         public double Cost;
         public readonly List<Instantiation> ResponsibleInstantiations = new List<Instantiation>();
@@ -1067,11 +1055,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (dependentTerms.Count > 0)
             {
                 yield return Callback("YIELDS TERMS", () => dependentTerms);
-            }
-
-            if (dependentTerms.Count > 0)
-            {
-                yield return Callback("YIELDS TERMS ALT", () => dependentTerms2);
             }
 
             if (DependantInstantiations.Count > 0)
