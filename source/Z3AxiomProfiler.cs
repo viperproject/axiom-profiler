@@ -30,14 +30,14 @@ namespace Z3AxiomProfiler
 
         // Needed to expand nodes with many children without freezing the GUI.
         private readonly Timer treeUpdateTimer = new Timer();
-        private ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
+        private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
         private int workCounter;
 
         public Z3AxiomProfiler()
         {
             InitializeComponent();
             treeUpdateTimer.Interval = 5;
-            treeUpdateTimer.Tick += expandAddTimer;
+            treeUpdateTimer.Tick += expandTimerTick;
         }
 
         private ParameterConfiguration parameterConfiguration = null;
@@ -434,8 +434,8 @@ namespace Z3AxiomProfiler
             expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>>(node, childNodes));
         }
 
-        private static int batchSize = 30;
-        private void expandAddTimer(object sender, EventArgs e)
+        private static int batchSize = 20;
+        private void expandTimerTick(object sender, EventArgs e)
         {
             Tuple<TreeNode, List<TreeNode>> currTuple;
             if (!expandQueue.TryPeek(out currTuple)) return;
