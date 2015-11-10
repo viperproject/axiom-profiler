@@ -488,7 +488,7 @@ namespace Z3AxiomProfiler
                 case "[mk-quant]":
                     {
                         Term[] args = GetArgs(3, words);
-                        Term t = new Term("FORALL" + words[1], args)
+                        Term t = new Term("FORALL", args)
                         {
                             identifier = words[1]
                         };

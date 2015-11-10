@@ -62,6 +62,7 @@
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.typeToggleButton = new System.Windows.Forms.ToolStripButton();
             this.termIdToggle = new System.Windows.Forms.ToolStripButton();
+            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -322,6 +323,7 @@
             this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
             this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolStripSeparator4,
             this.toolStripLabel1,
             this.termWidthTextBox,
             this.toolStripSeparator3,
@@ -330,7 +332,7 @@
             this.toolStrip1.Location = new System.Drawing.Point(135, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-            this.toolStrip1.Size = new System.Drawing.Size(364, 25);
+            this.toolStrip1.Size = new System.Drawing.Size(339, 25);
             this.toolStrip1.TabIndex = 6;
             this.toolStrip1.Text = "toolStrip1";
             // 
@@ -374,6 +376,11 @@
             this.termIdToggle.Size = new System.Drawing.Size(116, 22);
             this.termIdToggle.Text = "Hide Term Identifier";
             this.termIdToggle.Click += new System.EventHandler(this.termIdToggle_Click);
+            // 
+            // toolStripSeparator4
+            // 
+            this.toolStripSeparator4.Name = "toolStripSeparator4";
+            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
             // 
             // Z3AxiomProfiler
             // 
@@ -437,6 +444,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
         private System.Windows.Forms.ToolStripButton typeToggleButton;
         private System.Windows.Forms.ToolStripButton termIdToggle;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
     }
 }
 
