@@ -1064,6 +1064,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         private readonly int Depth;
         public Term NegatedVersion;
         private readonly List<Term> dependentTerms = new List<Term>();
+        public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
+        public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
 
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
 
@@ -1357,6 +1359,15 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Callback($"YIELDS TERMS [{dependentTerms.Count}]", () => dependentTerms);
             }
 
+            if (dependentInstantiationsBlame.Count > 0)
+            {
+                yield return Callback($"YIELDS INSTANTIATIONS (BLAME) [{dependentInstantiationsBlame.Count}]", () => dependentInstantiationsBlame);
+            }
+
+            if (dependentInstantiationsBind.Count > 0)
+            {
+                yield return Callback($"YIELDS INSTANTIATIONS (BIND) [{dependentInstantiationsBind.Count}]", () => dependentInstantiationsBind);
+            }
         }
 
         public override string SummaryInfo()

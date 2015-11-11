@@ -985,6 +985,16 @@ namespace Z3AxiomProfiler
                 t.Responsible.DependantInstantiations.Add(inst);
                 inst.ResponsibleInstantiations.Add(t.Responsible);
             }
+
+            foreach (var term in inst.Responsible)
+            {
+                term.dependentInstantiationsBlame.Add(inst);
+            }
+
+            foreach (var term in inst.Bindings)
+            {
+                term.dependentInstantiationsBind.Add(inst);
+            }
         }
 
         private Quantifier CreateQuantifier(string name, string qid)
