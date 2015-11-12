@@ -972,7 +972,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Instantiation[{FingerPrint}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
+            string result = $"Instantiation[{Quant.PrintName}] Fingerprint: {FingerPrint}, @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
             return result;
         }
 
@@ -1044,11 +1044,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                 yield return Callback($"YIELDS TERMS [{dependentTerms.Count}]", () => dependentTerms);
             }
 
-            if (DependantInstantiations.Count > 0)
-            {
-                DependantInstantiations.Sort((i1, i2) => i2.Cost.CompareTo(i1.Cost));
-                yield return Callback($"YIELDS INSTANTIATIONS [{DependantInstantiations.Count}]", () => DependantInstantiations);
-            }
+            if (DependantInstantiations.Count <= 0) yield break;
+            
+            DependantInstantiations.Sort((i1, i2) => i1.LineNo.CompareTo(i2.LineNo));
+            yield return Callback($"YIELDS INSTANTIATIONS [{DependantInstantiations.Count}]", () => DependantInstantiations);
         }
     }
 
