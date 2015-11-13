@@ -57,12 +57,13 @@
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.termWidthTextBox = new System.Windows.Forms.ToolStripTextBox();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.typeToggleButton = new System.Windows.Forms.ToolStripButton();
             this.termIdToggle = new System.Windows.Forms.ToolStripButton();
-            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+            this.instantiationGraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -188,6 +189,7 @@
             this.colorVisualizationToolStripMenuItem,
             this.searchTreeVisualizationToolStripMenuItem,
             this.quantifierBlameVisualizationToolStripMenuItem,
+            this.instantiationGraphToolStripMenuItem,
             this.toolStripSeparator1,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -336,6 +338,11 @@
             this.toolStrip1.TabIndex = 6;
             this.toolStrip1.Text = "toolStrip1";
             // 
+            // toolStripSeparator4
+            // 
+            this.toolStripSeparator4.Name = "toolStripSeparator4";
+            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
+            // 
             // toolStripLabel1
             // 
             this.toolStripLabel1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
@@ -377,10 +384,12 @@
             this.termIdToggle.Text = "Hide Term Identifier";
             this.termIdToggle.Click += new System.EventHandler(this.termIdToggle_Click);
             // 
-            // toolStripSeparator4
+            // instantiationGraphToolStripMenuItem
             // 
-            this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
+            this.instantiationGraphToolStripMenuItem.Name = "instantiationGraphToolStripMenuItem";
+            this.instantiationGraphToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.instantiationGraphToolStripMenuItem.Text = "Instantiation Graph";
+            this.instantiationGraphToolStripMenuItem.Click += new System.EventHandler(this.instantiationGraphToolStripMenuItem_Click);
             // 
             // Z3AxiomProfiler
             // 
@@ -445,6 +454,7 @@
         private System.Windows.Forms.ToolStripButton typeToggleButton;
         private System.Windows.Forms.ToolStripButton termIdToggle;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
+        private System.Windows.Forms.ToolStripMenuItem instantiationGraphToolStripMenuItem;
     }
 }
 

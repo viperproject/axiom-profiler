@@ -42,7 +42,7 @@ namespace Z3AxiomProfiler
         }
 
         private ParameterConfiguration parameterConfiguration = null;
-        private Model model;
+        public Model model;
 
         private void Z3AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
         {
@@ -421,7 +421,7 @@ namespace Z3AxiomProfiler
                     expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>>(node, childNodes));
 
                     // add the cutoff node.
-                    List<TreeNode> cutoffNodeList= new List<TreeNode>
+                    List<TreeNode> cutoffNodeList = new List<TreeNode>
                     {
                         makeNode(new CallbackNode("... [Next 1000]", () => nodeTag.Children().Skip(1001)))
                     };
@@ -611,14 +611,20 @@ namespace Z3AxiomProfiler
             }
         }
 
+
+        public int getTermWidth()
+        {
+            int width;
+            int.TryParse(termWidthTextBox.Text, out width);
+            return width;
+        }
+
         private void SetToolTip(Common c)
         {
             if (c == null) return;
 
             lastToolTipCommon = c;
-            int width;
-            int.TryParse(termWidthTextBox.Text, out width);
-            toolTipBox.Lines = c.ToolTip(width, showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n');
+            toolTipBox.Lines = c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n');
         }
 
         private void SetInstantiationPath(Instantiation inst)
@@ -685,8 +691,7 @@ namespace Z3AxiomProfiler
                     ShowTree();
                     break;
                 case '\r':
-                    if (z3AxiomTree.SelectedNode != null)
-                        z3AxiomTree.SelectedNode.Expand();
+                    z3AxiomTree.SelectedNode?.Expand();
                     e.Handled = true;
                     break;
             }
@@ -739,14 +744,14 @@ namespace Z3AxiomProfiler
 
         private void termWidthKeyPressHandler(object sender, KeyPressEventArgs e)
         {
-            if (e.KeyChar == (char)Keys.Back 
+            if (e.KeyChar == (char)Keys.Back
                 || e.KeyChar == (char)Keys.Delete
                 || char.IsDigit(e.KeyChar))
             {
                 return;
             }
 
-            if (e.KeyChar == (char) Keys.Enter)
+            if (e.KeyChar == (char)Keys.Enter)
             {
                 SetToolTip(lastToolTipCommon);
             }
@@ -754,7 +759,7 @@ namespace Z3AxiomProfiler
             e.Handled = true;
         }
 
-        private bool showTypesButtonToggleState = true;
+        public bool showTypesButtonToggleState = true;
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             if (showTypesButtonToggleState)
@@ -770,7 +775,7 @@ namespace Z3AxiomProfiler
             SetToolTip(lastToolTipCommon);
         }
 
-        private bool showTermIdButtonToggleState = true;
+        public bool showTermIdButtonToggleState = true;
         private void termIdToggle_Click(object sender, EventArgs e)
         {
             if (showTermIdButtonToggleState)
@@ -789,6 +794,13 @@ namespace Z3AxiomProfiler
         private void termWidthTextBoxTriggerReprint(object sender, EventArgs e)
         {
             SetToolTip(lastToolTipCommon);
+        }
+
+        private void instantiationGraphToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (model == null) return;
+            var dagView = new DAGView(this);
+            dagView.Show();
         }
     }
 }

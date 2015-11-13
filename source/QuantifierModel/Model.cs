@@ -753,7 +753,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     }
                 }
                 if (!(scopeNo == ChildrenScopes.Count || scopeNo == ChildrenScopes.Count - 1))
-                    Debug.Fail("");
+                    Console.WriteLine("Scopes are inconsistent. Is this log incomplete?");
 
                 if (scopeNo > 0)
                 {
@@ -929,7 +929,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         int depth;
         int wdepth = -1;
         public int DeepestSubpathDepth;
-        public string FingerPrint;
+        public string FingerPrint = "None";
 
         public void CopyTo(Instantiation inst)
         {
