@@ -790,5 +790,13 @@ namespace Z3AxiomProfiler
         {
             SetToolTip(lastToolTipCommon);
         }
+
+        private void instantiationGraphToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (model == null) return;
+            var dagView = new DAGView();
+            dagView.Show();
+            
+        }
     }
 }

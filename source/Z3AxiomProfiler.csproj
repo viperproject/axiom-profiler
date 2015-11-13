@@ -66,13 +66,47 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="GraphX.Controls, Version=2.2.0.0, Culture=neutral, PublicKeyToken=bab23663f80c9e76, processorArchitecture=MSIL">
+      <HintPath>packages\GraphX.2.2.0.2\lib\net40-client\GraphX.Controls.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="GraphX.PCL.Common, Version=2.2.0.0, Culture=neutral, PublicKeyToken=a6cdb671d651b60a, processorArchitecture=MSIL">
+      <HintPath>packages\GraphX.2.2.0.2\lib\net40-client\GraphX.PCL.Common.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="GraphX.PCL.Logic, Version=2.2.0.0, Culture=neutral, PublicKeyToken=3b65ef85075e278f, processorArchitecture=MSIL">
+      <HintPath>packages\GraphX.2.2.0.2\lib\net40-client\GraphX.PCL.Logic.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="QuickGraph, Version=3.6.61114.0, Culture=neutral, PublicKeyToken=f3fb40175eec2af3, processorArchitecture=MSIL">
+      <HintPath>packages\QuickGraphPCL.3.6.61114.2\lib\net40-client\QuickGraph.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="QuickGraph.Data, Version=3.6.61114.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\QuickGraphPCL.3.6.61114.2\lib\net40-client\QuickGraph.Data.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="QuickGraph.Graphviz, Version=3.6.61114.0, Culture=neutral, PublicKeyToken=f3fb40175eec2af3, processorArchitecture=MSIL">
+      <HintPath>packages\QuickGraphPCL.3.6.61114.2\lib\net40-client\QuickGraph.Graphviz.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="QuickGraph.Serialization, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\QuickGraphPCL.3.6.61114.2\lib\net40-client\QuickGraph.Serialization.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AboutBox.cs">
@@ -87,12 +121,20 @@
     <Compile Include="ColorVisalizationForm.designer.cs">
       <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="DAGView.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DAGView.Designer.cs">
+      <DependentUpon>DAGView.cs</DependentUpon>
+    </Compile>
     <Compile Include="HelpWindow.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="HelpWindow.Designer.cs">
       <DependentUpon>HelpWindow.cs</DependentUpon>
     </Compile>
+    <Compile Include="InstantiationGraph\DataEdge.cs" />
+    <Compile Include="InstantiationGraph\DataVertex.cs" />
     <Compile Include="Loader.cs" />
     <Compile Include="LoadingProgressForm.cs">
       <SubType>Form</SubType>
@@ -149,6 +191,9 @@
       <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="DAGView.resx">
+      <DependentUpon>DAGView.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="HelpWindow.resx">
       <DependentUpon>HelpWindow.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -191,6 +236,7 @@
       <DesignTime>True</DesignTime>
     </Compile>
     <None Include="app.config" />
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -226,9 +272,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /Y ..\..\source\axiom-profiler.* .</PostBuildEvent>
+    <PostBuildEvent>copy /Y ..\..\source\axiom-profiler.* .
+copy /Y ..\..\source\InstantiationGraph\graph_template.xaml .</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
