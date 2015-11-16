@@ -4,10 +4,12 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Msagl.Core.Geometry;
+using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.Layout.MDS;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Microsoft.Msagl.Layout.Layered;
+using Microsoft.Msagl.Routing;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
@@ -57,8 +59,17 @@ namespace Z3AxiomProfiler
         {
             Text = $"Instantiations dependencies [{maxRenderDepth.Value} levels]";
 
-            var layoutSettings = new SugiyamaLayoutSettings();
-            layoutSettings.AspectRatio = 4;
+            var edgeRoutingSettings = new EdgeRoutingSettings
+            {
+                EdgeRoutingMode = EdgeRoutingMode.Spline,
+                BendPenalty = 50
+            };
+            var layoutSettings = new SugiyamaLayoutSettings
+            {
+                AspectRatio = 4,
+                LayerSeparation = 10,
+                EdgeRoutingSettings = edgeRoutingSettings
+            };
             //create a graph object
             Graph graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
             {
