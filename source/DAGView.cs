@@ -59,7 +59,7 @@ namespace Z3AxiomProfiler
             //create a graph object
             Graph graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
             {
-                LayoutAlgorithmSettings = new MdsLayoutSettings();
+                LayoutAlgorithmSettings = new MdsLayoutSettings()
             };
 
             foreach (var inst in _z3AxiomProfiler.model.instances.Where(inst => inst.Depth < maxRenderDepth.Value))
@@ -77,7 +77,6 @@ namespace Z3AxiomProfiler
                 var inst = _z3AxiomProfiler.model.fingerprints[currNode.Id];
                 var nodeColor = getColor(inst.Quant);
                 currNode.Attr.FillColor = nodeColor;
-                currNode.GeometryNode.Center = new Microsoft.Msagl.Core.Geometry.Point(counter, counter);
                 counter++;
                 if (nodeColor.R*0.299 + nodeColor.G*0.587 + nodeColor.B*0.114 <= 186)
                 {
