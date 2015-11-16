@@ -7,6 +7,7 @@ using Microsoft.Msagl.Core.Geometry;
 using Microsoft.Msagl.Layout.MDS;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
+using Microsoft.Msagl.Layout.Layered;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
@@ -56,10 +57,12 @@ namespace Z3AxiomProfiler
         {
             Text = $"Instantiations dependencies [{maxRenderDepth.Value} levels]";
 
+            var layoutSettings = new SugiyamaLayoutSettings();
+            layoutSettings.AspectRatio = 4;
             //create a graph object
             Graph graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
             {
-                LayoutAlgorithmSettings = new MdsLayoutSettings()
+                LayoutAlgorithmSettings = layoutSettings
             };
 
             foreach (var inst in _z3AxiomProfiler.model.instances.Where(inst => inst.Depth < maxRenderDepth.Value))
@@ -82,6 +85,7 @@ namespace Z3AxiomProfiler
                 {
                     currNode.Label.FontColor = Color.White;
                 }
+                counter++;
                 currNode.LabelText = inst.Quant.PrintName;
             }
 
