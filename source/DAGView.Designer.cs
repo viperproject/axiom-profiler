@@ -67,7 +67,7 @@
             this.maxRenderDepth.Size = new System.Drawing.Size(48, 20);
             this.maxRenderDepth.TabIndex = 0;
             this.maxRenderDepth.Value = new decimal(new int[] {
-            10,
+            2,
             0,
             0,
             0});

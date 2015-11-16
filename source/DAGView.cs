@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Msagl.Core.Geometry;
 using Microsoft.Msagl.Layout.MDS;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
+using MouseButtons = System.Windows.Forms.MouseButtons;
 
 namespace Z3AxiomProfiler
 {
@@ -25,7 +27,7 @@ namespace Z3AxiomProfiler
                 };
 
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
-        private int currColorIdx = 0;
+        private int currColorIdx;
 
         public DAGView(Z3AxiomProfiler profiler)
         {
@@ -36,6 +38,7 @@ namespace Z3AxiomProfiler
             {
                 AsyncLayout = true,
                 EdgeInsertButtonVisible = false,
+                LayoutEditingEnabled = false,
                 //LayoutAlgorithmSettingsButtonVisible = false,
                 NavigationVisible = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
@@ -43,7 +46,8 @@ namespace Z3AxiomProfiler
                 Left = Left,
                 Size = new Size(Right, Bottom - panel1.Bottom)
             };
-
+            _viewer.MouseMove += _ViewerMouseMove;
+            _viewer.MouseUp += _ViewerViewMouseUp;
             //associate the viewer with the form 
             Controls.Add(_viewer);
         }
@@ -55,7 +59,7 @@ namespace Z3AxiomProfiler
             //create a graph object
             Graph graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
             {
-                LayoutAlgorithmSettings = new MdsLayoutSettings()
+                LayoutAlgorithmSettings = new MdsLayoutSettings();
             };
 
             foreach (var inst in _z3AxiomProfiler.model.instances.Where(inst => inst.Depth < maxRenderDepth.Value))
@@ -67,12 +71,14 @@ namespace Z3AxiomProfiler
 
             }
 
-            foreach (var inst in _z3AxiomProfiler.model.instances.Where(inst => inst.Depth <= maxRenderDepth.Value))
+            int counter = 0;
+            foreach (var currNode in graph.Nodes)
             {
-                Node currNode = graph.FindNode(inst.FingerPrint);
+                var inst = _z3AxiomProfiler.model.fingerprints[currNode.Id];
                 var nodeColor = getColor(inst.Quant);
                 currNode.Attr.FillColor = nodeColor;
-
+                currNode.GeometryNode.Center = new Microsoft.Msagl.Core.Geometry.Point(counter, counter);
+                counter++;
                 if (nodeColor.R*0.299 + nodeColor.G*0.587 + nodeColor.B*0.114 <= 186)
                 {
                     currNode.Label.FontColor = Color.White;
@@ -105,6 +111,27 @@ namespace Z3AxiomProfiler
         private void DAGView_Load(object sender, EventArgs e)
         {
             drawGraph();
+        }
+
+
+        private int oldX = -1;
+        private int oldY = -1;
+        private void _ViewerMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right) return;
+            if (oldX != -1 && oldY != -1)
+            {
+                _viewer.Pan(e.X - oldX, e.Y - oldY);
+            }
+            oldX = e.X;
+            oldY = e.Y;
+        }
+
+        private void _ViewerViewMouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right) return;
+            oldX = -1;
+            oldY = -1;
         }
     }
 }
