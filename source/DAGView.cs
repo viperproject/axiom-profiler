@@ -241,9 +241,7 @@ namespace Z3AxiomProfiler
                 return;
             }
 
-            bool added = false;
             Instantiation inst = (Instantiation) previouslySelectedNode.UserData;
-
             foreach (var parentInst in inst.ResponsibleInstantiations
                 .Where(parentInst => graph.FindNode(parentInst.FingerPrint) == null))
             {
@@ -252,7 +250,6 @@ namespace Z3AxiomProfiler
                     .Where(childInst => graph.FindNode(childInst.FingerPrint) != null))
                 {
                     graph.AddEdge(parentInst.FingerPrint, childInst.FingerPrint);
-                    added = true;
                 }
 
                 // add in-edges for the parent's visible parents
@@ -262,10 +259,73 @@ namespace Z3AxiomProfiler
                     graph.AddEdge(resInst.FingerPrint, parentInst.FingerPrint);
                 }
 
-                if (added)
+                formatNode(graph.FindNode(parentInst.FingerPrint));
+            }
+
+            _viewer.NeedToCalculateLayout = true;
+            _viewer.Graph = graph;
+            selectNode(previouslySelectedNode);
+        }
+
+        private void showChildrenButton_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+
+            Instantiation currInst = (Instantiation) previouslySelectedNode.UserData;
+            foreach (var childInst in currInst.DependantInstantiations
+                .Where(childInst => graph.FindNode(childInst.FingerPrint) == null))
+            {
+                // add edges for the childs's visible parents
+                foreach (var parentInst in childInst.ResponsibleInstantiations
+                    .Where(inst => graph.FindNode(inst.FingerPrint) != null))
                 {
-                    formatNode(graph.FindNode(parentInst.FingerPrint));
+                    graph.AddEdge(parentInst.FingerPrint, childInst.FingerPrint);
                 }
+
+                // add in-edges for the childs's visible children
+                foreach (var child in childInst.DependantInstantiations
+                    .Where(inst => graph.FindNode(inst.FingerPrint) != null))
+                {
+                    graph.AddEdge(childInst.FingerPrint, child.FingerPrint);
+                }
+
+                formatNode(graph.FindNode(childInst.FingerPrint));
+            }
+
+            _viewer.NeedToCalculateLayout = true;
+            _viewer.Graph = graph;
+            selectNode(previouslySelectedNode);
+        }
+
+        private void childrenNextLevel_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+
+            Instantiation currInst = (Instantiation)previouslySelectedNode.UserData;
+            foreach (var childInst in currInst.DependantInstantiations
+                .Where(childInst => childInst.Depth == currInst.Depth + 1 && graph.FindNode(childInst.FingerPrint) == null))
+            {
+                // add edges for the childs's visible parents
+                foreach (var parentInst in childInst.ResponsibleInstantiations
+                    .Where(inst => graph.FindNode(inst.FingerPrint) != null))
+                {
+                    graph.AddEdge(parentInst.FingerPrint, childInst.FingerPrint);
+                }
+
+                // add in-edges for the childs's visible children
+                foreach (var child in childInst.DependantInstantiations
+                    .Where(inst => graph.FindNode(inst.FingerPrint) != null))
+                {
+                    graph.AddEdge(childInst.FingerPrint, child.FingerPrint);
+                }
+
+                formatNode(graph.FindNode(childInst.FingerPrint));
             }
 
             _viewer.NeedToCalculateLayout = true;

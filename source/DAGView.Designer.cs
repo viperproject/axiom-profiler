@@ -33,6 +33,8 @@
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
             this.showParentsButton = new System.Windows.Forms.Button();
+            this.showChildrenButton = new System.Windows.Forms.Button();
+            this.childrenNextLevel = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -41,6 +43,8 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.childrenNextLevel);
+            this.panel1.Controls.Add(this.showChildrenButton);
             this.panel1.Controls.Add(this.showParentsButton);
             this.panel1.Controls.Add(this.hideInstantiationButton);
             this.panel1.Controls.Add(this.label1);
@@ -97,6 +101,26 @@
             this.showParentsButton.UseVisualStyleBackColor = true;
             this.showParentsButton.Click += new System.EventHandler(this.showParentsButton_Click);
             // 
+            // showChildrenButton
+            // 
+            this.showChildrenButton.Location = new System.Drawing.Point(406, 3);
+            this.showChildrenButton.Name = "showChildrenButton";
+            this.showChildrenButton.Size = new System.Drawing.Size(100, 23);
+            this.showChildrenButton.TabIndex = 4;
+            this.showChildrenButton.Text = "Show All Children";
+            this.showChildrenButton.UseVisualStyleBackColor = true;
+            this.showChildrenButton.Click += new System.EventHandler(this.showChildrenButton_Click);
+            // 
+            // childrenNextLevel
+            // 
+            this.childrenNextLevel.Location = new System.Drawing.Point(250, 3);
+            this.childrenNextLevel.Name = "childrenNextLevel";
+            this.childrenNextLevel.Size = new System.Drawing.Size(150, 23);
+            this.childrenNextLevel.TabIndex = 5;
+            this.childrenNextLevel.Text = "Show Childern at next Level";
+            this.childrenNextLevel.UseVisualStyleBackColor = true;
+            this.childrenNextLevel.Click += new System.EventHandler(this.childrenNextLevel_Click);
+            // 
             // DAGView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -119,5 +143,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button hideInstantiationButton;
         private System.Windows.Forms.Button showParentsButton;
+        private System.Windows.Forms.Button showChildrenButton;
+        private System.Windows.Forms.Button childrenNextLevel;
     }
 }
