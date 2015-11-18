@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
+using System.Windows;
 using System.Windows.Forms;
 using Microsoft.Msagl.Core.Geometry;
 using Microsoft.Msagl.Core.Routing;
@@ -13,6 +13,7 @@ using Microsoft.Msagl.Routing;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
+using Size = System.Drawing.Size;
 
 namespace Z3AxiomProfiler
 {
@@ -24,10 +25,13 @@ namespace Z3AxiomProfiler
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
-                Color.Green, Color.Red, Color.Orange, Color.Cyan, Color.DarkGray, Color.Yellow,
+                Color.Green, Color.LawnGreen, Color.Orange, Color.Cyan, Color.DarkGray, Color.Moccasin,
                 Color.YellowGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
                 Color.ForestGreen, Color.Beige
                 };
+
+        private static readonly Color selectionColor = Color.Red;
+        private static readonly Color parentColor = Color.Yellow;
 
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
         private int currColorIdx;
@@ -51,6 +55,7 @@ namespace Z3AxiomProfiler
             };
             _viewer.MouseMove += _ViewerMouseMove;
             _viewer.MouseUp += _ViewerViewMouseUp;
+            _viewer.MouseClick += _ViewerViewClick;
             //associate the viewer with the form 
             Controls.Add(_viewer);
         }
@@ -85,23 +90,26 @@ namespace Z3AxiomProfiler
 
             }
 
-            int counter = 0;
             foreach (var currNode in graph.Nodes)
             {
-                var inst = _z3AxiomProfiler.model.fingerprints[currNode.Id];
-                var nodeColor = getColor(inst.Quant);
-                currNode.Attr.FillColor = nodeColor;
-                counter++;
-                if (nodeColor.R*0.299 + nodeColor.G*0.587 + nodeColor.B*0.114 <= 186)
-                {
-                    currNode.Label.FontColor = Color.White;
-                }
-                counter++;
-                currNode.LabelText = inst.Quant.PrintName;
+                formatNode(currNode);
             }
 
             //bind the graph to the viewer 
             _viewer.Graph = graph;
+        }
+
+        private void formatNode(Node currNode)
+        {
+            var inst = _z3AxiomProfiler.model.fingerprints[currNode.Id];
+            currNode.UserData = inst;
+            var nodeColor = getColor(inst.Quant);
+            currNode.Attr.FillColor = nodeColor;
+            if (nodeColor.R*0.299 + nodeColor.G*0.587 + nodeColor.B*0.114 <= 186)
+            {
+                currNode.Label.FontColor = Color.White;
+            }
+            currNode.LabelText = inst.Quant.PrintName;
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
@@ -146,6 +154,45 @@ namespace Z3AxiomProfiler
             if (e.Button != MouseButtons.Right) return;
             oldX = -1;
             oldY = -1;
+        }
+
+        private Node previouslySelectedNode;
+        private void _ViewerViewClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            if (previouslySelectedNode != null)
+            {
+                // restore old node
+                formatNode(previouslySelectedNode);
+
+                // plus all parents
+                foreach (var inEdge in previouslySelectedNode.InEdges)
+                {
+                    formatNode(inEdge.SourceNode);
+                }
+                previouslySelectedNode = null;
+            }
+
+            var node = _viewer.SelectedObject as Node;
+            if (node != null)
+            {
+                // format new one
+                node.Attr.FillColor = selectionColor;
+                node.Label.FontColor = Color.White;
+                // plus all parents
+                foreach (var inEdge in node.InEdges)
+                {
+                    inEdge.SourceNode.Attr.FillColor = parentColor;
+                    inEdge.SourceNode.Label.FontColor = Color.Black;
+                }
+                previouslySelectedNode = node;
+                _z3AxiomProfiler.SetToolTip((Instantiation) node.UserData);
+            }
+            _viewer.Invalidate();
         }
     }
 }

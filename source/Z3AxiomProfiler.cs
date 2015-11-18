@@ -619,7 +619,7 @@ namespace Z3AxiomProfiler
             return width;
         }
 
-        private void SetToolTip(Common c)
+        public void SetToolTip(Common c)
         {
             if (c == null) return;
 
