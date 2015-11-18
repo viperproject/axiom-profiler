@@ -35,6 +35,7 @@
             this.showParentsButton = new System.Windows.Forms.Button();
             this.showChildrenButton = new System.Windows.Forms.Button();
             this.childrenNextLevel = new System.Windows.Forms.Button();
+            this.showChainButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -43,6 +44,7 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.showChainButton);
             this.panel1.Controls.Add(this.childrenNextLevel);
             this.panel1.Controls.Add(this.showChildrenButton);
             this.panel1.Controls.Add(this.showParentsButton);
@@ -51,7 +53,7 @@
             this.panel1.Controls.Add(this.maxRenderDepth);
             this.panel1.Location = new System.Drawing.Point(0, -1);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(616, 27);
+            this.panel1.Size = new System.Drawing.Size(767, 27);
             this.panel1.TabIndex = 1;
             // 
             // hideInstantiationButton
@@ -121,11 +123,21 @@
             this.childrenNextLevel.UseVisualStyleBackColor = true;
             this.childrenNextLevel.Click += new System.EventHandler(this.childrenNextLevel_Click);
             // 
+            // showChainButton
+            // 
+            this.showChainButton.Location = new System.Drawing.Point(512, 3);
+            this.showChainButton.Name = "showChainButton";
+            this.showChainButton.Size = new System.Drawing.Size(125, 23);
+            this.showChainButton.TabIndex = 6;
+            this.showChainButton.Text = "Show a Longest Chain";
+            this.showChainButton.UseVisualStyleBackColor = true;
+            this.showChainButton.Click += new System.EventHandler(this.showChainButton_Click);
+            // 
             // DAGView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(616, 525);
+            this.ClientSize = new System.Drawing.Size(767, 576);
             this.Controls.Add(this.panel1);
             this.Name = "DAGView";
             this.Text = "DAGView";
@@ -145,5 +157,6 @@
         private System.Windows.Forms.Button showParentsButton;
         private System.Windows.Forms.Button showChildrenButton;
         private System.Windows.Forms.Button childrenNextLevel;
+        private System.Windows.Forms.Button showChainButton;
     }
 }
