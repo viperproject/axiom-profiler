@@ -29,8 +29,10 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
+            this.showParentsButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -39,12 +41,24 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.showParentsButton);
+            this.panel1.Controls.Add(this.hideInstantiationButton);
             this.panel1.Controls.Add(this.label1);
             this.panel1.Controls.Add(this.maxRenderDepth);
             this.panel1.Location = new System.Drawing.Point(0, -1);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(616, 27);
             this.panel1.TabIndex = 1;
+            // 
+            // hideInstantiationButton
+            // 
+            this.hideInstantiationButton.Location = new System.Drawing.Point(102, 3);
+            this.hideInstantiationButton.Name = "hideInstantiationButton";
+            this.hideInstantiationButton.Size = new System.Drawing.Size(39, 23);
+            this.hideInstantiationButton.TabIndex = 2;
+            this.hideInstantiationButton.Text = "Hide";
+            this.hideInstantiationButton.UseVisualStyleBackColor = true;
+            this.hideInstantiationButton.Click += new System.EventHandler(this.hideInstantiationButton_Click);
             // 
             // label1
             // 
@@ -73,6 +87,16 @@
             0});
             this.maxRenderDepth.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
             // 
+            // showParentsButton
+            // 
+            this.showParentsButton.Location = new System.Drawing.Point(147, 3);
+            this.showParentsButton.Name = "showParentsButton";
+            this.showParentsButton.Size = new System.Drawing.Size(97, 23);
+            this.showParentsButton.TabIndex = 3;
+            this.showParentsButton.Text = "Show All Parents";
+            this.showParentsButton.UseVisualStyleBackColor = true;
+            this.showParentsButton.Click += new System.EventHandler(this.showParentsButton_Click);
+            // 
             // DAGView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -93,5 +117,7 @@
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.NumericUpDown maxRenderDepth;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button hideInstantiationButton;
+        private System.Windows.Forms.Button showParentsButton;
     }
 }

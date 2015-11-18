@@ -22,6 +22,7 @@ namespace Z3AxiomProfiler
 
         private readonly Z3AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
+        private Graph graph;
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
@@ -76,7 +77,7 @@ namespace Z3AxiomProfiler
                 EdgeRoutingSettings = edgeRoutingSettings
             };
             //create a graph object
-            Graph graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
+            graph = new Graph($"Instantiations dependencies [{maxRenderDepth.Value} levels]")
             {
                 LayoutAlgorithmSettings = layoutSettings
             };
@@ -109,7 +110,7 @@ namespace Z3AxiomProfiler
             {
                 currNode.Label.FontColor = Color.White;
             }
-            currNode.LabelText = inst.Quant.PrintName;
+            currNode.LabelText = inst.Quant.PrintName + '\n' + inst.FingerPrint;
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
@@ -164,20 +165,18 @@ namespace Z3AxiomProfiler
                 return;
             }
 
+            var node = _viewer.SelectedObject as Node;
+            selectNode(node);
+        }
+
+        private void selectNode(Node node)
+        {
             if (previouslySelectedNode != null)
             {
-                // restore old node
-                formatNode(previouslySelectedNode);
-
-                // plus all parents
-                foreach (var inEdge in previouslySelectedNode.InEdges)
-                {
-                    formatNode(inEdge.SourceNode);
-                }
-                previouslySelectedNode = null;
+                unselectNode();
             }
 
-            var node = _viewer.SelectedObject as Node;
+            
             if (node != null)
             {
                 // format new one
@@ -193,6 +192,85 @@ namespace Z3AxiomProfiler
                 _z3AxiomProfiler.SetToolTip((Instantiation) node.UserData);
             }
             _viewer.Invalidate();
+        }
+
+        private void unselectNode()
+        {
+            // restore old node
+            formatNode(previouslySelectedNode);
+
+            // plus all parents
+            foreach (var inEdge in previouslySelectedNode.InEdges)
+            {
+                formatNode(inEdge.SourceNode);
+            }
+            previouslySelectedNode = null;
+        }
+
+        private void hideInstantiationButton_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+            var nodeToRemove = previouslySelectedNode;
+            unselectNode();
+
+            // delete subgraph dependent on only the node being deleted
+            Queue<Node> todoRemoveNodes = new Queue<Node>();
+            todoRemoveNodes.Enqueue(nodeToRemove);
+            while (todoRemoveNodes.Count > 0)
+            {
+                var currNode = todoRemoveNodes.Dequeue();
+                foreach (var edge in currNode.OutEdges.Where(edge => edge.TargetNode.InEdges.Count() == 1))
+                {
+                    todoRemoveNodes.Enqueue(edge.TargetNode);
+                }
+                graph.RemoveNode(currNode);
+            }
+            
+            _viewer.NeedToCalculateLayout = true;
+            _viewer.Graph = graph;
+            _viewer.Invalidate();
+        }
+
+        private void showParentsButton_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+
+            bool added = false;
+            Instantiation inst = (Instantiation) previouslySelectedNode.UserData;
+
+            foreach (var parentInst in inst.ResponsibleInstantiations
+                .Where(parentInst => graph.FindNode(parentInst.FingerPrint) == null))
+            {
+                // add eges to all visible children of this parent
+                foreach (var childInst in parentInst.DependantInstantiations
+                    .Where(childInst => graph.FindNode(childInst.FingerPrint) != null))
+                {
+                    graph.AddEdge(parentInst.FingerPrint, childInst.FingerPrint);
+                    added = true;
+                }
+
+                // add in-edges for the parent's visible parents
+                foreach (var resInst in parentInst.ResponsibleInstantiations
+                    .Where(i => graph.FindNode(i.FingerPrint) != null))
+                {
+                    graph.AddEdge(resInst.FingerPrint, parentInst.FingerPrint);
+                }
+
+                if (added)
+                {
+                    formatNode(graph.FindNode(parentInst.FingerPrint));
+                }
+            }
+
+            _viewer.NeedToCalculateLayout = true;
+            _viewer.Graph = graph;
+            selectNode(previouslySelectedNode);
         }
     }
 }
