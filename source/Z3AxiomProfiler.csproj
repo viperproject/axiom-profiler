@@ -116,6 +116,12 @@
     <Compile Include="HelpWindow.Designer.cs">
       <DependentUpon>HelpWindow.cs</DependentUpon>
     </Compile>
+    <Compile Include="InstantiationFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InstantiationFilter.Designer.cs">
+      <DependentUpon>InstantiationFilter.cs</DependentUpon>
+    </Compile>
     <Compile Include="Loader.cs" />
     <Compile Include="LoadingProgressForm.cs">
       <SubType>Form</SubType>
@@ -178,6 +184,9 @@
     <EmbeddedResource Include="HelpWindow.resx">
       <DependentUpon>HelpWindow.cs</DependentUpon>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="InstantiationFilter.resx">
+      <DependentUpon>InstantiationFilter.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="LoadingProgressForm.resx">
       <DependentUpon>LoadingProgressForm.cs</DependentUpon>

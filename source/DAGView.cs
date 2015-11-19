@@ -260,7 +260,8 @@ namespace Z3AxiomProfiler
             {
                 return;
             }
-
+            var filterBox = new InstantiationFilter();
+            filterBox.Show();
             Instantiation currInst = (Instantiation) previouslySelectedNode.UserData;
             foreach (var childInst in currInst.DependantInstantiations
                 .Where(childInst => graph.FindNode(childInst.FingerPrint) == null))
