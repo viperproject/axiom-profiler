@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 using System.Windows.Forms;
-using Microsoft.Msagl.Core.Geometry;
 using Microsoft.Msagl.Core.Routing;
-using Microsoft.Msagl.Layout.MDS;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Microsoft.Msagl.Layout.Layered;
-using Microsoft.Msagl.Routing;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
@@ -257,9 +253,11 @@ namespace Z3AxiomProfiler
             {
                 return;
             }
-            var filterBox = new InstantiationFilter();
-            filterBox.Show();
             Instantiation currInst = (Instantiation) previouslySelectedNode.UserData;
+            var filterBox = new InstantiationFilter(currInst.DependantInstantiations
+                                                            .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
+                                                            .ToList());
+            filterBox.ShowDialog();
             foreach (var childInst in currInst.DependantInstantiations
                 .Where(childInst => graph.FindNode(childInst.FingerPrint) == null))
             {

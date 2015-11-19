@@ -828,7 +828,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Quantifier[{PrintName}] Cost: {Cost}, #instances: {Instances.Count}, #conflicts: {GeneratedConflicts}";
+            string result = $"Quantifier[{PrintName}] Cost: {Cost.ToString("F")}, #instances: {Instances.Count}, #conflicts: {GeneratedConflicts}";
             return result;
         }
 
