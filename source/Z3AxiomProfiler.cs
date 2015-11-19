@@ -29,16 +29,18 @@ namespace Z3AxiomProfiler
         readonly Dictionary<TreeNode, Common> expanded = new Dictionary<TreeNode, Common>();
 
         // Needed to expand nodes with many children without freezing the GUI.
-        private readonly Timer treeUpdateTimer = new Timer();
+        private readonly Timer uiUpdateTimer = new Timer();
         private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
+        private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>(); 
         private int workCounter;
-        private Common lastToolTipCommon = null;
+        private Common lastToolTipCommon;
 
         public Z3AxiomProfiler()
         {
             InitializeComponent();
-            treeUpdateTimer.Interval = 5;
-            treeUpdateTimer.Tick += expandTimerTick;
+            uiUpdateTimer.Interval = 5;
+            uiUpdateTimer.Tick += treeUiUpdateTimerTick;
+            uiUpdateTimer.Tick += toolTipUpdateTick;
         }
 
         private ParameterConfiguration parameterConfiguration = null;
@@ -400,8 +402,8 @@ namespace Z3AxiomProfiler
             Task.Run(() => GenerateChildNodes(node, nodeTag));
 
             node.EnsureVisible();
-            treeUpdateTimer.Start();
             Interlocked.Increment(ref workCounter);
+            uiUpdateTimer.Start();
         }
 
         private void GenerateChildNodes(TreeNode node, Common nodeTag)
@@ -436,7 +438,7 @@ namespace Z3AxiomProfiler
         }
 
         private static int batchSize = 20;
-        private void expandTimerTick(object sender, EventArgs e)
+        private void treeUiUpdateTimerTick(object sender, EventArgs e)
         {
             Tuple<TreeNode, List<TreeNode>> currTuple;
             if (!expandQueue.TryPeek(out currTuple)) return;
@@ -455,11 +457,7 @@ namespace Z3AxiomProfiler
                 parentNode.Nodes.RemoveAt(0);
 
                 // done with a complete expand, check whether updating can be disabled.
-                int current_counter = Interlocked.Decrement(ref workCounter);
-                if (current_counter == 0)
-                {
-                    treeUpdateTimer.Stop();
-                }
+                checkStopCounter();
             }
             else
             {
@@ -468,6 +466,15 @@ namespace Z3AxiomProfiler
                 parentNode.Nodes[0].Text = $"Processing... [{parentNode.Nodes.Count}]";
             }
             z3AxiomTree.EndUpdate();
+        }
+
+        private void checkStopCounter()
+        {
+            int current_counter = Interlocked.Decrement(ref workCounter);
+            if (current_counter == 0)
+            {
+                uiUpdateTimer.Stop();
+            }
         }
 
         public TreeNode ExpandScope(Scope s)
@@ -619,12 +626,51 @@ namespace Z3AxiomProfiler
             return width;
         }
 
-        public async void SetToolTip(Common c)
+        public void SetToolTip(Common c)
         {
             if (c == null) return;
 
             lastToolTipCommon = c;
-            toolTipBox.Lines = await Task.Run(() => c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n'));
+            Interlocked.Increment(ref workCounter);
+            uiUpdateTimer.Start();
+            Task.Run(() => toolTipQueue.Enqueue(c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n')));
+        }
+
+        private int toolTipLineIdx = 0;
+        private void toolTipUpdateTick(object sender, EventArgs e)
+        {
+            string[] lines;
+            
+            // dequeue outdated tooltips
+            while (toolTipQueue.Count > 1)
+            {
+                toolTipQueue.TryDequeue(out lines);
+                toolTipLineIdx = 0;
+            }
+
+            // read the first entry if available
+            if (!toolTipQueue.TryPeek(out lines)) return;
+
+            // clear toolTipBox if this is a new toolTip.
+            if (toolTipLineIdx == 0)
+            {
+                toolTipBox.Clear();
+            }
+
+            // work a batch of lines
+            for (int i = 0; i < batchSize && toolTipLineIdx < lines.Length; i++)
+            {
+                toolTipBox.AppendText(lines[toolTipLineIdx] + '\n');
+                toolTipLineIdx++;
+            }
+
+            // check if finished
+            if (toolTipLineIdx == lines.Length)
+            {
+                toolTipQueue.TryDequeue(out lines);
+                toolTipLineIdx = 0;
+                checkStopCounter();
+            }
         }
 
         private void SetInstantiationPath(Instantiation inst)
