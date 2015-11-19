@@ -19,6 +19,7 @@ namespace Z3AxiomProfiler
         private readonly Z3AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
         private Graph graph;
+        private static int newNodeWarningThreshold = 20;
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
@@ -77,7 +78,7 @@ namespace Z3AxiomProfiler
             {
                 LayoutAlgorithmSettings = layoutSettings
             };
-            
+
             foreach (var inst in _z3AxiomProfiler.model.instances.Where(inst => inst.Depth < maxRenderDepth.Value))
             {
                 foreach (var dependentInst in inst.DependantInstantiations.Where(i => i.Depth <= maxRenderDepth.Value))
@@ -102,11 +103,11 @@ namespace Z3AxiomProfiler
             currNode.UserData = inst;
             var nodeColor = getColor(inst.Quant);
             currNode.Attr.FillColor = nodeColor;
-            if (nodeColor.R*0.299 + nodeColor.G*0.587 + nodeColor.B*0.114 <= 186)
+            if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186)
             {
                 currNode.Label.FontColor = Color.White;
             }
-            currNode.LabelText = inst.Quant.PrintName + '\n' + inst.FingerPrint;
+            currNode.LabelText = inst.SummaryInfo();
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
@@ -172,7 +173,7 @@ namespace Z3AxiomProfiler
                 unselectNode();
             }
 
-            
+
             if (node != null)
             {
                 // format new one
@@ -185,7 +186,7 @@ namespace Z3AxiomProfiler
                     inEdge.SourceNode.Label.FontColor = Color.Black;
                 }
                 previouslySelectedNode = node;
-                _z3AxiomProfiler.SetToolTip((Instantiation) node.UserData);
+                _z3AxiomProfiler.SetToolTip((Instantiation)node.UserData);
             }
             _viewer.Invalidate();
         }
@@ -236,7 +237,7 @@ namespace Z3AxiomProfiler
                 return;
             }
 
-            Instantiation inst = (Instantiation) previouslySelectedNode.UserData;
+            Instantiation inst = (Instantiation)previouslySelectedNode.UserData;
             foreach (var parentInst in inst.ResponsibleInstantiations
                 .Where(parentInst => graph.FindNode(parentInst.FingerPrint) == null))
             {
@@ -253,18 +254,42 @@ namespace Z3AxiomProfiler
             {
                 return;
             }
-            Instantiation currInst = (Instantiation) previouslySelectedNode.UserData;
-            var filterBox = new InstantiationFilter(currInst.DependantInstantiations
-                                                            .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
-                                                            .ToList());
-            filterBox.ShowDialog();
-            foreach (var childInst in currInst.DependantInstantiations
-                .Where(childInst => graph.FindNode(childInst.FingerPrint) == null))
+            var currInst = (Instantiation)previouslySelectedNode.UserData;
+            var newNodeInsts = currInst.DependantInstantiations
+                                       .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
+                                       .ToList();
+
+            if (newNodeInsts.Count > newNodeWarningThreshold)
+            {
+                var filterDecision = MessageBox.Show(
+                    $"This operation would add {newNodeInsts.Count} new nodes to the graph. It is recommended to reduce the number by filtering.\nWould you like to filter the new nodes now?",
+                    "Many new nodes warning",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning);
+                switch (filterDecision)
+                {
+                    case DialogResult.Yes:
+                        var filterBox = new InstantiationFilter(currInst.DependantInstantiations
+                            .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
+                            .ToList());
+                        if (filterBox.ShowDialog() == DialogResult.Cancel)
+                        {
+                            // just stop as well
+                            return;
+                        }
+                        newNodeInsts = filterBox.filtered;
+                        break;
+                    case DialogResult.Cancel:
+                        // just stop
+                        return;
+                }
+            }
+
+            foreach (var childInst in newNodeInsts)
             {
                 connectToVisibleNodes(childInst);
                 formatNode(graph.FindNode(childInst.FingerPrint));
             }
-
             redrawGraph();
         }
 
@@ -300,7 +325,7 @@ namespace Z3AxiomProfiler
                 return;
             }
             // other direction
-            var current = (Instantiation) previouslySelectedNode.UserData;
+            var current = (Instantiation)previouslySelectedNode.UserData;
             while (current.DependantInstantiations.Count > 0)
             {
                 var parent = current;

@@ -1009,11 +1009,10 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string SummaryInfo()
         {
             StringBuilder s = new StringBuilder();
-            s.Append("Instantiation Info:\n");
-            s.Append("===================\n\n");
+            s.Append("Instantiation ").Append(FingerPrint).Append(":\n");
+            s.Append("=======================\n");
             s.Append("Depth: ").Append(depth).Append('\n');
-            s.Append("Cost: ").Append(Cost).Append('\n');
-            s.Append("Fingerprint: ").Append(FingerPrint).Append('\n');
+            s.Append("Cost: ").Append(Cost.ToString("F")).Append('\n');
             s.Append("Line Number: ").Append(LineNo).Append('\n');
             return s.ToString();
         }

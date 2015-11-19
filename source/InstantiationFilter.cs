@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 using System.Windows.Forms;
 using Z3AxiomProfiler.QuantifierModel;
 
@@ -56,17 +50,12 @@ namespace Z3AxiomProfiler
             Close();
         }
 
-        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
-        {
-            doFilter();
-        }
-
-        private void maxDepthUpDown_ValueChanged(object sender, EventArgs e)
-        {
-            doFilter();
-        }
-
         private void quantSelectionBox_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            BeginInvoke((Action)doFilter);
+        }
+
+        private void updateFilter(object sender, EventArgs e)
         {
             doFilter();
         }

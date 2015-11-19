@@ -67,7 +67,7 @@
             0,
             0,
             0});
-            this.maxDepthUpDown.ValueChanged += new System.EventHandler(this.maxDepthUpDown_ValueChanged);
+            this.maxDepthUpDown.ValueChanged += new System.EventHandler(this.updateFilter);
             // 
             // quantSelectionBox
             // 
@@ -107,9 +107,9 @@
             this.numberNodesMatchingLabel.AutoSize = true;
             this.numberNodesMatchingLabel.Location = new System.Drawing.Point(132, 199);
             this.numberNodesMatchingLabel.Name = "numberNodesMatchingLabel";
-            this.numberNodesMatchingLabel.Size = new System.Drawing.Size(27, 13);
+            this.numberNodesMatchingLabel.Size = new System.Drawing.Size(67, 13);
             this.numberNodesMatchingLabel.TabIndex = 5;
-            this.numberNodesMatchingLabel.Text = "xxxx";
+            this.numberNodesMatchingLabel.Text = "calculating...";
             // 
             // label2
             // 
@@ -138,7 +138,7 @@
             0,
             0,
             0});
-            this.maxNewNodesUpDown.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
+            this.maxNewNodesUpDown.ValueChanged += new System.EventHandler(this.updateFilter);
             // 
             // okButton
             // 
