@@ -29,13 +29,12 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.showChainButton = new System.Windows.Forms.Button();
+            this.showChildrenButton = new System.Windows.Forms.Button();
+            this.showParentsButton = new System.Windows.Forms.Button();
             this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
-            this.showParentsButton = new System.Windows.Forms.Button();
-            this.showChildrenButton = new System.Windows.Forms.Button();
-            this.childrenNextLevel = new System.Windows.Forms.Button();
-            this.showChainButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -45,7 +44,6 @@
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.Controls.Add(this.showChainButton);
-            this.panel1.Controls.Add(this.childrenNextLevel);
             this.panel1.Controls.Add(this.showChildrenButton);
             this.panel1.Controls.Add(this.showParentsButton);
             this.panel1.Controls.Add(this.hideInstantiationButton);
@@ -55,6 +53,36 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(767, 27);
             this.panel1.TabIndex = 1;
+            // 
+            // showChainButton
+            // 
+            this.showChainButton.Location = new System.Drawing.Point(325, 3);
+            this.showChainButton.Name = "showChainButton";
+            this.showChainButton.Size = new System.Drawing.Size(125, 23);
+            this.showChainButton.TabIndex = 6;
+            this.showChainButton.Text = "Show a Longest Chain";
+            this.showChainButton.UseVisualStyleBackColor = true;
+            this.showChainButton.Click += new System.EventHandler(this.showChainButton_Click);
+            // 
+            // showChildrenButton
+            // 
+            this.showChildrenButton.Location = new System.Drawing.Point(236, 3);
+            this.showChildrenButton.Name = "showChildrenButton";
+            this.showChildrenButton.Size = new System.Drawing.Size(83, 23);
+            this.showChildrenButton.TabIndex = 4;
+            this.showChildrenButton.Text = "Show Children";
+            this.showChildrenButton.UseVisualStyleBackColor = true;
+            this.showChildrenButton.Click += new System.EventHandler(this.showChildrenButton_Click);
+            // 
+            // showParentsButton
+            // 
+            this.showParentsButton.Location = new System.Drawing.Point(147, 3);
+            this.showParentsButton.Name = "showParentsButton";
+            this.showParentsButton.Size = new System.Drawing.Size(83, 23);
+            this.showParentsButton.TabIndex = 3;
+            this.showParentsButton.Text = "Show Parents";
+            this.showParentsButton.UseVisualStyleBackColor = true;
+            this.showParentsButton.Click += new System.EventHandler(this.showParentsButton_Click);
             // 
             // hideInstantiationButton
             // 
@@ -83,55 +111,20 @@
             0,
             0,
             0});
+            this.maxRenderDepth.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
             this.maxRenderDepth.Name = "maxRenderDepth";
             this.maxRenderDepth.Size = new System.Drawing.Size(48, 20);
             this.maxRenderDepth.TabIndex = 0;
             this.maxRenderDepth.Value = new decimal(new int[] {
-            2,
+            1,
             0,
             0,
             0});
-            this.maxRenderDepth.ValueChanged += new System.EventHandler(this.numericUpDown1_ValueChanged);
-            // 
-            // showParentsButton
-            // 
-            this.showParentsButton.Location = new System.Drawing.Point(147, 3);
-            this.showParentsButton.Name = "showParentsButton";
-            this.showParentsButton.Size = new System.Drawing.Size(97, 23);
-            this.showParentsButton.TabIndex = 3;
-            this.showParentsButton.Text = "Show All Parents";
-            this.showParentsButton.UseVisualStyleBackColor = true;
-            this.showParentsButton.Click += new System.EventHandler(this.showParentsButton_Click);
-            // 
-            // showChildrenButton
-            // 
-            this.showChildrenButton.Location = new System.Drawing.Point(406, 3);
-            this.showChildrenButton.Name = "showChildrenButton";
-            this.showChildrenButton.Size = new System.Drawing.Size(100, 23);
-            this.showChildrenButton.TabIndex = 4;
-            this.showChildrenButton.Text = "Show All Children";
-            this.showChildrenButton.UseVisualStyleBackColor = true;
-            this.showChildrenButton.Click += new System.EventHandler(this.showChildrenButton_Click);
-            // 
-            // childrenNextLevel
-            // 
-            this.childrenNextLevel.Location = new System.Drawing.Point(250, 3);
-            this.childrenNextLevel.Name = "childrenNextLevel";
-            this.childrenNextLevel.Size = new System.Drawing.Size(150, 23);
-            this.childrenNextLevel.TabIndex = 5;
-            this.childrenNextLevel.Text = "Show Childern at next Level";
-            this.childrenNextLevel.UseVisualStyleBackColor = true;
-            this.childrenNextLevel.Click += new System.EventHandler(this.childrenNextLevel_Click);
-            // 
-            // showChainButton
-            // 
-            this.showChainButton.Location = new System.Drawing.Point(512, 3);
-            this.showChainButton.Name = "showChainButton";
-            this.showChainButton.Size = new System.Drawing.Size(125, 23);
-            this.showChainButton.TabIndex = 6;
-            this.showChainButton.Text = "Show a Longest Chain";
-            this.showChainButton.UseVisualStyleBackColor = true;
-            this.showChainButton.Click += new System.EventHandler(this.showChainButton_Click);
+            this.maxRenderDepth.ValueChanged += new System.EventHandler(this.maxRenderDepth_ValueChanged);
             // 
             // DAGView
             // 
@@ -156,7 +149,6 @@
         private System.Windows.Forms.Button hideInstantiationButton;
         private System.Windows.Forms.Button showParentsButton;
         private System.Windows.Forms.Button showChildrenButton;
-        private System.Windows.Forms.Button childrenNextLevel;
         private System.Windows.Forms.Button showChainButton;
     }
 }
