@@ -94,15 +94,15 @@
             this.NumNodesDescLabel.AutoSize = true;
             this.NumNodesDescLabel.Location = new System.Drawing.Point(12, 225);
             this.NumNodesDescLabel.Name = "NumNodesDescLabel";
-            this.NumNodesDescLabel.Size = new System.Drawing.Size(137, 13);
+            this.NumNodesDescLabel.Size = new System.Drawing.Size(163, 13);
             this.NumNodesDescLabel.TabIndex = 4;
-            this.NumNodesDescLabel.Text = "Number of nodes matching:";
+            this.NumNodesDescLabel.Text = "Number of instatiations matching:";
             // 
             // numberNodesMatchingLabel
             // 
             this.numberNodesMatchingLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.numberNodesMatchingLabel.AutoSize = true;
-            this.numberNodesMatchingLabel.Location = new System.Drawing.Point(174, 225);
+            this.numberNodesMatchingLabel.Location = new System.Drawing.Point(187, 225);
             this.numberNodesMatchingLabel.Name = "numberNodesMatchingLabel";
             this.numberNodesMatchingLabel.Size = new System.Drawing.Size(27, 13);
             this.numberNodesMatchingLabel.TabIndex = 5;
@@ -121,14 +121,14 @@
             // numericUpDown1
             // 
             this.numericUpDown1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.numericUpDown1.Location = new System.Drawing.Point(177, 248);
+            this.numericUpDown1.Location = new System.Drawing.Point(190, 248);
             this.numericUpDown1.Maximum = new decimal(new int[] {
             1000,
             0,
             0,
             0});
             this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(91, 20);
+            this.numericUpDown1.Size = new System.Drawing.Size(78, 20);
             this.numericUpDown1.TabIndex = 7;
             this.numericUpDown1.Value = new decimal(new int[] {
             20,
@@ -139,7 +139,7 @@
             // okButton
             // 
             this.okButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.okButton.Location = new System.Drawing.Point(141, 276);
+            this.okButton.Location = new System.Drawing.Point(58, 276);
             this.okButton.Name = "okButton";
             this.okButton.Size = new System.Drawing.Size(75, 23);
             this.okButton.TabIndex = 8;
@@ -149,7 +149,7 @@
             // cancelButton
             // 
             this.cancelButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.cancelButton.Location = new System.Drawing.Point(60, 276);
+            this.cancelButton.Location = new System.Drawing.Point(139, 276);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
             this.cancelButton.TabIndex = 9;

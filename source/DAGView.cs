@@ -228,10 +228,9 @@ namespace Z3AxiomProfiler
                 }
                 graph.RemoveNode(currNode);
             }
-            
-            _viewer.NeedToCalculateLayout = true;
+
             _viewer.Graph = graph;
-            _viewer.Invalidate();
+            redrawGraph();
         }
 
         private void showParentsButton_Click(object sender, EventArgs e)
@@ -249,9 +248,7 @@ namespace Z3AxiomProfiler
                 formatNode(graph.FindNode(parentInst.FingerPrint));
             }
 
-            _viewer.NeedToCalculateLayout = true;
-            _viewer.Graph = graph;
-            selectNode(previouslySelectedNode);
+            redrawGraph();
         }
 
         private void showChildrenButton_Click(object sender, EventArgs e)
@@ -270,9 +267,7 @@ namespace Z3AxiomProfiler
                 formatNode(graph.FindNode(childInst.FingerPrint));
             }
 
-            _viewer.NeedToCalculateLayout = true;
-            _viewer.Graph = graph;
-            selectNode(previouslySelectedNode);
+            redrawGraph();
         }
 
         private void childrenNextLevel_Click(object sender, EventArgs e)
@@ -290,6 +285,11 @@ namespace Z3AxiomProfiler
                 formatNode(graph.FindNode(childInst.FingerPrint));
             }
 
+            redrawGraph();
+        }
+
+        private void redrawGraph()
+        {
             _viewer.NeedToCalculateLayout = true;
             _viewer.Graph = graph;
             selectNode(previouslySelectedNode);

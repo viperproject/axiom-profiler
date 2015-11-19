@@ -619,12 +619,12 @@ namespace Z3AxiomProfiler
             return width;
         }
 
-        public void SetToolTip(Common c)
+        public async void SetToolTip(Common c)
         {
             if (c == null) return;
 
             lastToolTipCommon = c;
-            toolTipBox.Lines = c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n');
+            toolTipBox.Lines = await Task.Run(() => c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n'));
         }
 
         private void SetInstantiationPath(Instantiation inst)
@@ -632,7 +632,7 @@ namespace Z3AxiomProfiler
             // delete old content
             InstantiationPathView.BeginUpdate();
             InstantiationPathView.Items.Clear();
-
+            var date = DateTime.Now;
             List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
             foreach (Instantiation i in instantiationPath)
             {
@@ -647,6 +647,7 @@ namespace Z3AxiomProfiler
                 item.SubItems.Add(i.Quant.Instances.Count.ToString());
 
                 InstantiationPathView.Items.Add(item);
+                
 
                 if (i != inst) continue;
 
@@ -654,6 +655,7 @@ namespace Z3AxiomProfiler
                 item.Focused = true;
                 item.EnsureVisible();
             }
+            Console.WriteLine($"Path view update took: {(DateTime.Now - date).Milliseconds} ms");
             InstantiationPathView.EndUpdate();
         }
 
