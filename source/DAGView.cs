@@ -69,8 +69,8 @@ namespace Z3AxiomProfiler
             };
             var layoutSettings = new SugiyamaLayoutSettings
             {
-                AspectRatio = 4,
-                LayerSeparation = 10,
+                AspectRatio = 0.5f,
+                LayerSeparation = 20,
                 EdgeRoutingSettings = edgeRoutingSettings
             };
 
