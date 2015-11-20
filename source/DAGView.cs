@@ -80,9 +80,12 @@ namespace Z3AxiomProfiler
                 LayoutAlgorithmSettings = layoutSettings
             };
 
-            foreach (var node in _z3AxiomProfiler.model.instances
-                .Where(inst => inst.Depth <= maxRenderDepth.Value)
-                .Select(connectToVisibleNodes))
+            var newNodeInsts = _z3AxiomProfiler.model.instances
+                                    .Where(inst => inst.Depth <= maxRenderDepth.Value)
+                                    .ToList();
+            if (checkNumNodesWithDialog(ref newNodeInsts)) return;
+
+            foreach (var node in newNodeInsts.Select(connectToVisibleNodes))
             {
                 formatNode(node);
             }
@@ -104,7 +107,7 @@ namespace Z3AxiomProfiler
             currNode.LabelText = inst.SummaryInfo();
         }
 
-        private void maxRenderDepth_ValueChanged(object sender, EventArgs e)
+        private void redrawGraph_Click(object sender, EventArgs e)
         {
             drawGraph();
         }
@@ -252,7 +255,7 @@ namespace Z3AxiomProfiler
             var newNodeInsts = currInst.DependantInstantiations
                                        .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
                                        .ToList();
-            if (checkNumNodesWithDialog(currInst, ref newNodeInsts)) return;
+            if (checkNumNodesWithDialog(ref newNodeInsts)) return;
 
             foreach (var childInst in newNodeInsts)
             {
@@ -262,7 +265,7 @@ namespace Z3AxiomProfiler
             redrawGraph();
         }
 
-        private bool checkNumNodesWithDialog(Instantiation currInst, ref List<Instantiation> newNodeInsts)
+        private bool checkNumNodesWithDialog(ref List<Instantiation> newNodeInsts)
         {
             if (newNodeInsts.Count > newNodeWarningThreshold)
             {
@@ -274,9 +277,7 @@ namespace Z3AxiomProfiler
                 switch (filterDecision)
                 {
                     case DialogResult.Yes:
-                        var filterBox = new InstantiationFilter(currInst.DependantInstantiations
-                            .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
-                            .ToList());
+                        var filterBox = new InstantiationFilter(newNodeInsts);
                         if (filterBox.ShowDialog() == DialogResult.Cancel)
                         {
                             // just stop
@@ -305,6 +306,8 @@ namespace Z3AxiomProfiler
             {
                 return;
             }
+
+            List<Instantiation> pathInstantiations = new List<Instantiation>();
             // other direction
             var current = (Instantiation)previouslySelectedNode.UserData;
             while (current.DependantInstantiations.Count > 0)
@@ -314,13 +317,14 @@ namespace Z3AxiomProfiler
                 current = current.DependantInstantiations
                     .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
 
-                // add edge, implicitly add node
-                graph.AddEdge(parent.FingerPrint, current.FingerPrint);
+                pathInstantiations.Add(current);
+            }
 
-                // format node
-                var node = graph.FindNode(current.FingerPrint);
+            if (checkNumNodesWithDialog(ref pathInstantiations)) return;
+
+            foreach (var node in pathInstantiations.Select(connectToVisibleNodes))
+            {
                 formatNode(node);
-                connectToVisibleNodes(current);
             }
 
             _viewer.NeedToCalculateLayout = true;
