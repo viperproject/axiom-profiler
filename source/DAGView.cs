@@ -308,11 +308,9 @@ namespace Z3AxiomProfiler
             }
 
             List<Instantiation> pathInstantiations = new List<Instantiation>();
-            // other direction
             var current = (Instantiation)previouslySelectedNode.UserData;
             while (current.DependantInstantiations.Count > 0)
             {
-                var parent = current;
                 // follow the longest path
                 current = current.DependantInstantiations
                     .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
@@ -327,8 +325,7 @@ namespace Z3AxiomProfiler
                 formatNode(node);
             }
 
-            _viewer.NeedToCalculateLayout = true;
-            _viewer.Graph = graph;
+            redrawGraph();
         }
 
         private Node connectToVisibleNodes(Instantiation instantiation)
@@ -354,6 +351,41 @@ namespace Z3AxiomProfiler
                 graph.AddEdge(fingerprint, child.FingerPrint);
             }
             return instNode;
+        }
+
+        private void sourceTreeButton_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+
+            var treeInstantiations = new List<Instantiation>();
+            var todo = new Queue<Instantiation>();
+            todo.Enqueue((Instantiation) previouslySelectedNode.UserData);
+
+            // collect tree
+            while (todo.Count > 0)
+            {
+                var current = todo.Dequeue();
+
+                // add the not visible parents as new nodes
+                treeInstantiations.AddRange(current.ResponsibleInstantiations.Where(inst => graph.FindNode(inst.FingerPrint) == null));
+
+                // but use all nodes to build the complete tree
+                foreach (var inst in current.ResponsibleInstantiations)
+                {
+                    todo.Enqueue(inst);
+                }
+            }
+
+            // filtering and displaying
+            if (checkNumNodesWithDialog(ref treeInstantiations)) return;
+            foreach (var node in treeInstantiations.Select(connectToVisibleNodes))
+            {
+                formatNode(node);
+            }
+            redrawGraph();
         }
     }
 }

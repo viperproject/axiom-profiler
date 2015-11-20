@@ -29,13 +29,14 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.redrawCompleteGraphButton = new System.Windows.Forms.Button();
             this.showChainButton = new System.Windows.Forms.Button();
             this.showChildrenButton = new System.Windows.Forms.Button();
             this.showParentsButton = new System.Windows.Forms.Button();
             this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
-            this.redrawCompleteGraphButton = new System.Windows.Forms.Button();
+            this.sourceTreeButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -44,6 +45,7 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.sourceTreeButton);
             this.panel1.Controls.Add(this.redrawCompleteGraphButton);
             this.panel1.Controls.Add(this.showChainButton);
             this.panel1.Controls.Add(this.showChildrenButton);
@@ -55,6 +57,16 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(767, 27);
             this.panel1.TabIndex = 1;
+            // 
+            // redrawCompleteGraphButton
+            // 
+            this.redrawCompleteGraphButton.Location = new System.Drawing.Point(102, 1);
+            this.redrawCompleteGraphButton.Name = "redrawCompleteGraphButton";
+            this.redrawCompleteGraphButton.Size = new System.Drawing.Size(85, 23);
+            this.redrawCompleteGraphButton.TabIndex = 7;
+            this.redrawCompleteGraphButton.Text = "Redraw Graph";
+            this.redrawCompleteGraphButton.UseVisualStyleBackColor = true;
+            this.redrawCompleteGraphButton.Click += new System.EventHandler(this.redrawGraph_Click);
             // 
             // showChainButton
             // 
@@ -127,15 +139,15 @@
             0,
             0});
             // 
-            // redrawCompleteGraphButton
+            // sourceTreeButton
             // 
-            this.redrawCompleteGraphButton.Location = new System.Drawing.Point(102, 1);
-            this.redrawCompleteGraphButton.Name = "redrawCompleteGraphButton";
-            this.redrawCompleteGraphButton.Size = new System.Drawing.Size(85, 23);
-            this.redrawCompleteGraphButton.TabIndex = 7;
-            this.redrawCompleteGraphButton.Text = "Redraw Graph";
-            this.redrawCompleteGraphButton.UseVisualStyleBackColor = true;
-            this.redrawCompleteGraphButton.Click += new System.EventHandler(this.redrawGraph_Click);
+            this.sourceTreeButton.Location = new System.Drawing.Point(583, 1);
+            this.sourceTreeButton.Name = "sourceTreeButton";
+            this.sourceTreeButton.Size = new System.Drawing.Size(105, 23);
+            this.sourceTreeButton.TabIndex = 8;
+            this.sourceTreeButton.Text = "Show Source Tree";
+            this.sourceTreeButton.UseVisualStyleBackColor = true;
+            this.sourceTreeButton.Click += new System.EventHandler(this.sourceTreeButton_Click);
             // 
             // DAGView
             // 
@@ -162,5 +174,6 @@
         private System.Windows.Forms.Button showChildrenButton;
         private System.Windows.Forms.Button showChainButton;
         private System.Windows.Forms.Button redrawCompleteGraphButton;
+        private System.Windows.Forms.Button sourceTreeButton;
     }
 }
