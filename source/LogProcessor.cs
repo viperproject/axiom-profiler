@@ -230,7 +230,7 @@ namespace Z3AxiomProfiler
             for (int i = model.instances.Count - 1; i >= 0; i--)
             {
                 Instantiation inst = model.instances[i];
-                int deps = inst.Responsible.Count(t => t.Responsible != null);
+                double deps = inst.Responsible.Count(t => t.Responsible != null);
                 foreach (Term t in inst.Responsible.Where(t => t.Responsible != null))
                 {
                     t.Responsible.Cost += inst.Cost / deps;

@@ -929,6 +929,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         int wdepth = -1;
         public int DeepestSubpathDepth;
         public string FingerPrint = "None";
+        public string uniqueID => LineNo.ToString();
 
         public void CopyTo(Instantiation inst)
         {
@@ -979,7 +980,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Instantiation[{Quant.PrintName}] Fingerprint: {FingerPrint}, @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
+            string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
             return result;
         }
 
@@ -1023,11 +1024,10 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string SummaryInfo()
         {
             StringBuilder s = new StringBuilder();
-            s.Append("Instantiation ").Append(FingerPrint).Append(":\n\n");
+            s.Append("Instantiation ").Append('@').Append(LineNo).Append(":\n\n");
             s.Append(Quant.PrintName).Append('\n');
             s.Append("Depth: ").Append(depth).Append('\n');
             s.Append("Cost: ").Append(Cost.ToString("F")).Append('\n');
-            s.Append("Line Number: ").Append(LineNo).Append('\n');
             return s.ToString();
         }
 
@@ -1364,6 +1364,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             foreach (var arg in Args)
             {
                 yield return arg;
+            }
+            if (Responsible != null)
+            {
+                yield return new ForwardingNode("RESPONSIBLE INSTANTIATION", Responsible);
             }
 
             if (dependentTerms.Count > 0)

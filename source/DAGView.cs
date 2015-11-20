@@ -23,8 +23,8 @@ namespace Z3AxiomProfiler
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
-                Color.Green, Color.LawnGreen, Color.Orange, Color.Cyan, Color.DarkGray, Color.Moccasin,
-                Color.YellowGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
+                Color.Green, Color.LawnGreen, Color.Orange, Color.DarkKhaki, Color.DarkGray, Color.Moccasin,
+                Color.DarkSeaGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
                 Color.ForestGreen, Color.Beige
                 };
 
@@ -96,11 +96,10 @@ namespace Z3AxiomProfiler
 
         private void formatNode(Node currNode)
         {
-            var inst = _z3AxiomProfiler.model.fingerprints[currNode.Id];
-            currNode.UserData = inst;
+            var inst = (Instantiation) currNode.UserData;
             var nodeColor = getColor(inst.Quant);
             currNode.Attr.FillColor = nodeColor;
-            if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186)
+            if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186.0)
             {
                 currNode.Label.FontColor = Color.White;
             }
@@ -236,10 +235,10 @@ namespace Z3AxiomProfiler
 
             Instantiation inst = (Instantiation)previouslySelectedNode.UserData;
             foreach (var parentInst in inst.ResponsibleInstantiations
-                .Where(parentInst => graph.FindNode(parentInst.FingerPrint) == null))
+                .Where(parentInst => graph.FindNode(parentInst.uniqueID) == null))
             {
                 connectToVisibleNodes(parentInst);
-                formatNode(graph.FindNode(parentInst.FingerPrint));
+                formatNode(graph.FindNode(parentInst.uniqueID));
             }
 
             redrawGraph();
@@ -253,14 +252,14 @@ namespace Z3AxiomProfiler
             }
             var currInst = (Instantiation)previouslySelectedNode.UserData;
             var newNodeInsts = currInst.DependantInstantiations
-                                       .Where(childInst => graph.FindNode(childInst.FingerPrint) == null)
+                                       .Where(childInst => graph.FindNode(childInst.uniqueID) == null)
                                        .ToList();
             if (checkNumNodesWithDialog(ref newNodeInsts)) return;
 
             foreach (var childInst in newNodeInsts)
             {
                 connectToVisibleNodes(childInst);
-                formatNode(graph.FindNode(childInst.FingerPrint));
+                formatNode(graph.FindNode(childInst.uniqueID));
             }
             redrawGraph();
         }
@@ -317,7 +316,7 @@ namespace Z3AxiomProfiler
 
                 pathInstantiations.Add(current);
             }
-            pathInstantiations = pathInstantiations.Where(inst => graph.FindNode(inst.FingerPrint) == null).ToList();
+            pathInstantiations = pathInstantiations.Where(inst => graph.FindNode(inst.uniqueID) == null).ToList();
             if (checkNumNodesWithDialog(ref pathInstantiations)) return;
 
             foreach (var node in pathInstantiations.Select(connectToVisibleNodes))
@@ -330,25 +329,31 @@ namespace Z3AxiomProfiler
 
         private Node connectToVisibleNodes(Instantiation instantiation)
         {
-            var instNode = graph.FindNode(instantiation.FingerPrint) ?? graph.AddNode(instantiation.FingerPrint);
-            var fingerprint = instantiation.FingerPrint;
+            var instNode = graph.FindNode(instantiation.uniqueID);
+            if(instNode == null)
+            {
+                instNode = graph.AddNode(instantiation.uniqueID);
+                instNode.UserData = instantiation;
+
+            }
+            var currUniqueId = instantiation.uniqueID;
 
             // add edges for the instantiation's visible parents
             // if the edge is not already there
             foreach (var parentInst in instantiation.ResponsibleInstantiations
-                .Where(inst => graph.FindNode(inst.FingerPrint) != null)
-                .Where(parentInst => instNode.InEdges.All(edge => edge.Source != parentInst.FingerPrint)))
+                .Where(inst => graph.FindNode(inst.uniqueID) != null)
+                .Where(parentInst => instNode.InEdges.All(edge => edge.Source != parentInst.uniqueID)))
             {
-                graph.AddEdge(parentInst.FingerPrint, fingerprint);
+                graph.AddEdge(parentInst.uniqueID, currUniqueId);
             }
 
             // add in-edges for the instantiation's visible children
             // if the edge is not already there
             foreach (var child in instantiation.DependantInstantiations
-                .Where(inst => graph.FindNode(inst.FingerPrint) != null)
-                .Where(child => instNode.OutEdges.All(edge => edge.Target != child.FingerPrint)))
+                .Where(inst => graph.FindNode(inst.uniqueID) != null)
+                .Where(child => instNode.OutEdges.All(edge => edge.Target != child.uniqueID)))
             {
-                graph.AddEdge(fingerprint, child.FingerPrint);
+                graph.AddEdge(currUniqueId, child.uniqueID);
             }
             return instNode;
         }
@@ -370,7 +375,7 @@ namespace Z3AxiomProfiler
                 var current = todo.Dequeue();
 
                 // add the not visible parents as new nodes
-                treeInstantiations.AddRange(current.ResponsibleInstantiations.Where(inst => graph.FindNode(inst.FingerPrint) == null));
+                treeInstantiations.AddRange(current.ResponsibleInstantiations.Where(inst => graph.FindNode(inst.uniqueID) == null));
 
                 // but use all nodes to build the complete tree
                 foreach (var inst in current.ResponsibleInstantiations)
