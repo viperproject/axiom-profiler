@@ -904,8 +904,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string SummaryInfo()
         {
             StringBuilder s = new StringBuilder();
-            s.Append("Quantifier Info:\n");
-            s.Append("================\n\n");
+            s.Append("Quantifier Info:\n\n");
             s.Append("Print name: ").Append(PrintName).Append('\n');
             s.Append("QId: ").Append(Qid).Append('\n');
             s.Append("Cost: ").Append(Cost).Append('\n');
@@ -989,7 +988,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append("Instantiated because of:\n\n");
+            s.Append("Blamed terms:\n\n");
 
             foreach (var t in Responsible)
             {
@@ -1000,7 +999,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             s.Append('\n');
 
-            s.Append("The free variables were bound to:\n\n");
+            s.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
                 s.Append(t.SummaryInfo());
@@ -1021,8 +1020,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string SummaryInfo()
         {
             StringBuilder s = new StringBuilder();
-            s.Append("Instantiation ").Append(FingerPrint).Append(":\n");
-            s.Append("===============================\n");
+            s.Append("Instantiation ").Append(FingerPrint).Append(":\n\n");
             s.Append(Quant.PrintName).Append('\n');
             s.Append("Depth: ").Append(depth).Append('\n');
             s.Append("Cost: ").Append(Cost.ToString("F")).Append('\n');
@@ -1384,8 +1382,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override string SummaryInfo()
         {
             StringBuilder s = new StringBuilder();
-            s.Append("Term Info:\n");
-            s.Append("==========\n\n");
+            s.Append("Term Info:\n\n");
             s.Append("Identifier: ").Append(identifier).Append('\n');
             s.Append("Depth: ").Append(Depth).Append('\n');
             s.Append("Number of Children: ").Append(Args.Length).Append('\n');

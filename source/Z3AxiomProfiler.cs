@@ -31,7 +31,7 @@ namespace Z3AxiomProfiler
         // Needed to expand nodes with many children without freezing the GUI.
         private readonly Timer uiUpdateTimer = new Timer();
         private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
-        private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>(); 
+        private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>();
         private int workCounter;
         private Common lastToolTipCommon;
 
@@ -640,7 +640,7 @@ namespace Z3AxiomProfiler
         private void toolTipUpdateTick(object sender, EventArgs e)
         {
             string[] lines;
-            
+
             // dequeue outdated tooltips
             while (toolTipQueue.Count > 1)
             {
@@ -660,7 +660,25 @@ namespace Z3AxiomProfiler
             // work a batch of lines
             for (int i = 0; i < batchSize && toolTipLineIdx < lines.Length; i++)
             {
-                toolTipBox.AppendText(lines[toolTipLineIdx] + '\n');
+                var line = lines[toolTipLineIdx] + '\n';
+                const FontStyle markerStyle = FontStyle.Bold | FontStyle.Underline;
+                if (line.Contains("Term"))
+                {
+                    AppendToolTipInColor(line, Color.DarkMagenta, markerStyle);
+                }
+                else if (line.Contains("term"))
+                {
+                    AppendToolTipInColor(line, Color.DarkRed, markerStyle);
+                }
+                else if (line.Contains("Instantiation ") || line.Contains("uantifier"))
+                {
+                    AppendToolTipInColor(line, Color.DarkBlue, markerStyle);
+                }
+                else
+                {
+                    toolTipBox.AppendText(line);
+                }
+
                 toolTipLineIdx++;
             }
 
@@ -671,6 +689,18 @@ namespace Z3AxiomProfiler
                 toolTipLineIdx = 0;
                 checkStopCounter();
             }
+        }
+
+        private void AppendToolTipInColor(string text, Color color, FontStyle fontStyle)
+        {
+            toolTipBox.SelectionStart = toolTipBox.TextLength;
+            toolTipBox.SelectionLength = 0;
+
+            toolTipBox.SelectionFont = new Font(toolTipBox.Font, fontStyle);
+            toolTipBox.SelectionColor = color;
+            toolTipBox.AppendText(text);
+            toolTipBox.SelectionColor = toolTipBox.ForeColor;
+            toolTipBox.SelectionFont = new Font(toolTipBox.Font, FontStyle.Regular);
         }
 
         private void SetInstantiationPath(Instantiation inst)
@@ -692,7 +722,7 @@ namespace Z3AxiomProfiler
                 item.SubItems.Add(i.Quant.Instances.Count.ToString());
 
                 InstantiationPathView.Items.Add(item);
-                
+
 
                 if (i != inst) continue;
 
@@ -805,7 +835,7 @@ namespace Z3AxiomProfiler
             e.Handled = true;
         }
 
-        public bool showTypesButtonToggleState = true;
+        private bool showTypesButtonToggleState = true;
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             if (showTypesButtonToggleState)
@@ -821,7 +851,7 @@ namespace Z3AxiomProfiler
             SetToolTip(lastToolTipCommon);
         }
 
-        public bool showTermIdButtonToggleState = true;
+        private bool showTermIdButtonToggleState = true;
         private void termIdToggle_Click(object sender, EventArgs e)
         {
             if (showTermIdButtonToggleState)
