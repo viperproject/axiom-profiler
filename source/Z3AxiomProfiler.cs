@@ -678,7 +678,6 @@ namespace Z3AxiomProfiler
             // delete old content
             InstantiationPathView.BeginUpdate();
             InstantiationPathView.Items.Clear();
-            var date = DateTime.Now;
             List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
             foreach (Instantiation i in instantiationPath)
             {
@@ -701,7 +700,6 @@ namespace Z3AxiomProfiler
                 item.Focused = true;
                 item.EnsureVisible();
             }
-            Console.WriteLine($"Path view update took: {(DateTime.Now - date).Milliseconds} ms");
             InstantiationPathView.EndUpdate();
         }
 

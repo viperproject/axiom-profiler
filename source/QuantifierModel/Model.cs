@@ -954,6 +954,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
+        public Term MatchedPattern
+        {
+            get
+            {
+                return null;
+            }
+        }
+
         public int WDepth
         {
             get
@@ -1001,8 +1009,12 @@ namespace Z3AxiomProfiler.QuantifierModel
                 s.Append("\n\n");
             }
 
-            s.Append('\n');
-            s.Append(Quant.ToolTip(width, showId, typeInfo));
+            s.Append("The quantifier body:\n\n");
+            s.Append(Quant.BodyTerm.PrettyPrint(typeInfo, showId, width));
+            s.Append("\n\n");
+
+            s.Append("The resulting term:\n\n");
+            s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(typeInfo, showId, width));
             return s.ToString();
         }
 
@@ -1010,7 +1022,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             StringBuilder s = new StringBuilder();
             s.Append("Instantiation ").Append(FingerPrint).Append(":\n");
-            s.Append("=======================\n");
+            s.Append("===============================\n");
+            s.Append(Quant.PrintName).Append('\n');
             s.Append("Depth: ").Append(depth).Append('\n');
             s.Append("Cost: ").Append(Cost.ToString("F")).Append('\n');
             s.Append("Line Number: ").Append(LineNo).Append('\n');
