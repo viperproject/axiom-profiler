@@ -317,7 +317,7 @@ namespace Z3AxiomProfiler
 
                 pathInstantiations.Add(current);
             }
-
+            pathInstantiations = pathInstantiations.Where(inst => graph.FindNode(inst.FingerPrint) == null).ToList();
             if (checkNumNodesWithDialog(ref pathInstantiations)) return;
 
             foreach (var node in pathInstantiations.Select(connectToVisibleNodes))

@@ -1012,8 +1012,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             s.Append(Quant.BodyTerm.PrettyPrint(typeInfo, showId, width));
             s.Append("\n\n");
 
-            s.Append("The resulting term:\n\n");
-            s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(typeInfo, showId, width));
+            if (dependentTerms.Count > 0)
+            {
+                s.Append("The resulting term:\n\n");
+                s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(typeInfo, showId, width));
+            }
             return s.ToString();
         }
 
