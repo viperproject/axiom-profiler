@@ -6,10 +6,12 @@ using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler
 {
+
     public partial class InstantiationFilter : Form
     {
         // original, unfiltered list of instantiations
         private readonly List<Instantiation> original;
+        private Func<Instantiation, double> ordFunc = inst => inst.LineNo;
         public List<Instantiation> filtered; 
         public InstantiationFilter(List<Instantiation> instantiationsToFilter)
         {
@@ -32,7 +34,7 @@ namespace Z3AxiomProfiler
             filtered = original
                 .Where(inst => inst.Depth <= maxDepthUpDown.Value)
                 .Where(inst => quantSelectionBox.CheckedItems.Contains(inst.Quant))
-                .OrderByDescending(inst => inst.Cost)
+                .OrderBy(ordFunc)
                 .Take((int) maxNewNodesUpDown.Value)
                 .ToList();
             numberNodesMatchingLabel.Text = filtered.Count.ToString();
@@ -57,6 +59,43 @@ namespace Z3AxiomProfiler
 
         private void updateFilter(object sender, EventArgs e)
         {
+            doFilter();
+        }
+
+        private void InstantiationFilter_Resize(object sender, EventArgs e)
+        {
+            const int diff = 2;
+            var middle = Width/2;
+            okButton.Left = middle - okButton.Width - diff;
+            cancelButton.Left = middle + diff;
+        }
+
+        private void sortSelectionBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch ((string)sortSelectionBox.SelectedItem)
+            {
+                case "Line No":
+                    ordFunc = inst => inst.LineNo;
+                    break;
+                case "Line No (desc)":
+                    ordFunc = inst => -inst.LineNo;
+                    break;
+                case "Depth":
+                    ordFunc = inst => inst.Depth;
+                    break;
+                case "Depth (desc)":
+                    ordFunc = inst => -inst.Depth;
+                    break;
+                case "Cost":
+                    ordFunc = inst => inst.Cost;
+                    break;
+                case "Cost (desc)":
+                    ordFunc = inst => -inst.Cost;
+                    break;
+                default:
+                    ordFunc = inst => inst.LineNo;
+                    break;
+            }
             doFilter();
         }
     }
