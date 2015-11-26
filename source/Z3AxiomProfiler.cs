@@ -35,6 +35,20 @@ namespace Z3AxiomProfiler
         private int workCounter;
         private Common lastToolTipCommon;
 
+        private readonly TreeNode graphHistoryNode = new TreeNode
+        {
+            Text = "GRAPH HISTORY"
+        };
+
+        public void addInstantiationToHistory(Instantiation inst)
+        {
+            graphHistoryNode.Nodes.Insert(0, makeNode(inst));
+            if (graphHistoryNode.Nodes.Count > 100)
+            {
+                graphHistoryNode.Nodes.RemoveAt(100);
+            }
+        }
+
         public Z3AxiomProfiler()
         {
             InitializeComponent();
@@ -329,6 +343,7 @@ namespace Z3AxiomProfiler
             InstantiationPathView.Items.Clear();
             toolTipBox.Clear();
 
+            z3AxiomTree.Nodes.Add(graphHistoryNode);
             if (model.conflicts.Count > 0)
             {
                 AddTopNode(Common.Callback("CONFLICTS", () => model.conflicts));

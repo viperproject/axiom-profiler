@@ -160,6 +160,7 @@ namespace Z3AxiomProfiler
 
             var node = _viewer.SelectedObject as Node;
             selectNode(node);
+            if (node != null) _z3AxiomProfiler.addInstantiationToHistory((Instantiation) node.UserData);
         }
 
         private void selectNode(Node node)
