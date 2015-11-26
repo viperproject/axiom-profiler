@@ -17,6 +17,7 @@ namespace Z3AxiomProfiler
         {
             InitializeComponent();
             original = instantiationsToFilter;
+            sortSelectionBox.SelectedIndex = 5;
         }
 
         protected override void OnLoad(EventArgs e)
