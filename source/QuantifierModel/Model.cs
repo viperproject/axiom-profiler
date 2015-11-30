@@ -478,7 +478,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
     public abstract class Common
     {
-        public virtual string ToolTip(PrettyPrintFormat format) { return ToString(); }
+        public virtual string InfoPanelText(PrettyPrintFormat format) { return ToString(); }
 
         public virtual string SummaryInfo() { return ToString(); }
         public abstract IEnumerable<Common> Children();
@@ -532,9 +532,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.HasChildren();
         }
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
-            return Fwd.ToolTip(format);
+            return Fwd.InfoPanelText(format);
         }
         public override string ToString()
         {
@@ -738,9 +738,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             return res;
         }
 
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
-            return Conflict != null ? Conflict.ToolTip(format) : "No conflict";
+            return Conflict != null ? Conflict.InfoPanelText(format) : "No conflict";
         }
 
         public void PropagateImpliedByChildren()
@@ -849,7 +849,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
@@ -1003,7 +1003,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
@@ -1370,7 +1370,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return builder.ToString();
         }
 
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
@@ -1567,7 +1567,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         }
 
-        public override string ToolTip(PrettyPrintFormat format)
+        public override string InfoPanelText(PrettyPrintFormat format)
         {
             StringBuilder sb = new StringBuilder();
             foreach (Literal l in Literals)

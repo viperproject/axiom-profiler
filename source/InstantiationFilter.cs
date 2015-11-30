@@ -22,7 +22,8 @@ namespace Z3AxiomProfiler
 
         protected override void OnLoad(EventArgs e)
         {
-            var quantifiers = original.Select(inst => inst.Quant).Distinct().ToList();
+            var quantifiers = original.Select(inst => inst.Quant).Distinct()
+                .OrderByDescending(quant => quant.CrudeCost).ToList();
             foreach (var quant in quantifiers)
             {
                 quantSelectionBox.Items.Add(quant, true);

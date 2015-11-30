@@ -25,7 +25,7 @@ namespace Z3AxiomProfiler
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
                 Color.Green, Color.LawnGreen, Color.Orange, Color.DarkKhaki, Color.DarkGray, Color.Moccasin,
                 Color.DarkSeaGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
-                Color.ForestGreen, Color.Beige
+                Color.ForestGreen, Color.Beige, Color.AliceBlue, Color.MediumTurquoise, Color.Tomato
                 };
 
         private static readonly Color selectionColor = Color.Red;

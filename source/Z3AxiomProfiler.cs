@@ -649,7 +649,7 @@ namespace Z3AxiomProfiler
                     maxWidth = (int) maxTermWidthUD.Value,
                     maxDepth = (int) maxTermDepthUD.Value
                 };
-                toolTipQueue.Enqueue(c.ToolTip(prettyPrintFormat).Split('\n'));
+                toolTipQueue.Enqueue(c.InfoPanelText(prettyPrintFormat).Split('\n'));
             });
         }
 
