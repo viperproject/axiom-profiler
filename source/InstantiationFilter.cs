@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Navigation;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler
@@ -12,7 +14,8 @@ namespace Z3AxiomProfiler
         // original, unfiltered list of instantiations
         private readonly List<Instantiation> original;
         private Func<Instantiation, double> ordFunc = inst => inst.LineNo;
-        public List<Instantiation> filtered; 
+        public List<Instantiation> filtered;
+        private readonly Queue<List<Instantiation>> inProgress = new Queue<List<Instantiation>>();
         public InstantiationFilter(List<Instantiation> instantiationsToFilter)
         {
             InitializeComponent();
@@ -33,13 +36,34 @@ namespace Z3AxiomProfiler
 
         private void doFilter()
         {
-            filtered = original
-                .Where(inst => inst.Depth <= maxDepthUpDown.Value)
-                .Where(inst => quantSelectionBox.CheckedItems.Contains(inst.Quant))
-                .OrderBy(ordFunc)
-                .Take((int) maxNewNodesUpDown.Value)
-                .ToList();
-            numberNodesMatchingLabel.Text = filtered.Count.ToString();
+            var list = new List<Instantiation>();
+            inProgress.Enqueue(list);
+            numberNodesMatchingLabel.Text = "Recalculating...";
+            Task.Run(() =>
+            {
+                list.AddRange(original
+                    .Where(inst => inst.Depth <= maxDepthUpDown.Value)
+                    .Where(inst => quantSelectionBox.CheckedItems.Contains(inst.Quant))
+                    .OrderBy(ordFunc)
+                    .Take((int)maxNewNodesUpDown.Value));
+                updateFilteredNodes();
+            });
+            
+        }
+
+        private void updateFilteredNodes()
+        {
+            if (inProgress.Count == 0) return;
+            if (numberNodesMatchingLabel.InvokeRequired)
+            {
+                numberNodesMatchingLabel.Invoke(new Action(updateFilteredNodes));
+                return;
+            }
+            filtered = inProgress.Dequeue();
+            if (inProgress.Count == 0)
+            {
+                numberNodesMatchingLabel.Text = filtered.Count.ToString();
+            }
         }
 
         private void cancelButton_Click(object sender, EventArgs e)
@@ -67,7 +91,7 @@ namespace Z3AxiomProfiler
         private void InstantiationFilter_Resize(object sender, EventArgs e)
         {
             const int diff = 2;
-            var middle = Width/2;
+            var middle = Width / 2;
             okButton.Left = middle - okButton.Width - diff;
             cancelButton.Left = middle + diff;
         }
