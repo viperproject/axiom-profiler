@@ -97,7 +97,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-
         public List<Instantiation> LongestPathWithInstantiation(Instantiation inst)
         {
             List<Instantiation> path = new List<Instantiation>();
@@ -835,7 +834,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public string PrintName;
         public string BoogieBody;
         public Term BodyTerm;
-        public List<Instantiation> Instances;
+        public readonly List<Instantiation> Instances = new List<Instantiation>();
         public double CrudeCost;
 
         public int CurDepth;
@@ -847,6 +846,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             string result = $"Quantifier[{PrintName}] Cost: {Cost.ToString("F")}, #instances: {Instances.Count}, #conflicts: {GeneratedConflicts}";
             return result;
+        }
+
+        public List<Term> Patterns()
+        {
+            return BodyTerm.Args.Where(term => term.Name == "pattern").ToList();
         }
 
         public override string InfoPanelText(PrettyPrintFormat format)
@@ -1005,6 +1009,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string InfoPanelText(PrettyPrintFormat format)
         {
+            findPatternMatch();
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
@@ -1038,6 +1043,93 @@ namespace Z3AxiomProfiler.QuantifierModel
                 s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(format));
             }
             return s.ToString();
+        }
+
+        private void findPatternMatch()
+        {
+            var bindings = new Dictionary<Term, string>();
+            foreach (var pattern in Quant.Patterns())
+            {
+                foreach (var blamed in Responsible)
+                {
+                    if (matchBlameTermToPattern(pattern, blamed, bindings))
+                    {
+                        Console.WriteLine("Matched blameterm <-> pattern: ");
+                        foreach (var binding in bindings)
+                        {
+                            Console.WriteLine(binding.Key + " binds to " + binding.Value);
+                        }
+                        bindings.Clear();
+                    }
+                }
+            }
+        }
+
+        public bool matchBlameTermToPattern(Term pattern, Term blamed, Dictionary<Term, string> bindingDictionary)
+        {
+            var todo = new Queue<Term>();
+            foreach (var term in pattern.Args)
+            {
+                todo.Enqueue(term);
+            }
+
+
+            while (todo.Count > 0)
+            {
+                var currentSubPattern = todo.Dequeue();
+
+                if (checkTermMatch(currentSubPattern, blamed, bindingDictionary))
+                {
+                    return true;
+                }
+
+                // reset bindings, check the next subpattern
+                bindingDictionary.Clear();
+            }
+            return false;
+        }
+
+        private readonly Regex freeVarRegex = new Regex(@"#\d+");
+        private bool checkTermMatch(Term pattern, Term blamed, Dictionary<Term, string> bindingDictionary)
+        {
+            var patternTerms = new Queue<Term>();
+            patternTerms.Enqueue(pattern);
+
+            var blameTerms = new Queue<Term>();
+            blameTerms.Enqueue(blamed);
+
+            while (patternTerms.Count > 0 && blameTerms.Count > 0)
+            {
+                var currPatternChild = patternTerms.Dequeue();
+                var currBlameChild = blameTerms.Dequeue();
+
+                if (freeVarRegex.IsMatch(currPatternChild.Name))
+                {
+                    // a free variable is bound
+                    bindingDictionary.Add(currBlameChild, currPatternChild.Name);
+                    continue;
+                }
+
+                if (currPatternChild.Name != currBlameChild.Name)
+                {
+                    // does not match -> abort
+                    return false;
+                }
+
+                // size mismatch -> abort
+                if (patternTerms.Count != blameTerms.Count) return false;
+
+                // add terms of next level
+                foreach (var term in currPatternChild.Args)
+                {
+                    patternTerms.Enqueue(term);
+                }
+                foreach (var term in currBlameChild.Args)
+                {
+                    blameTerms.Enqueue(term);
+                }
+            }
+            return true;
         }
 
         public override string SummaryInfo()

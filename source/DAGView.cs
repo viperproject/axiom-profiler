@@ -60,6 +60,8 @@ namespace Z3AxiomProfiler
 
         private void drawGraph()
         {
+            colorMap.Clear();
+            currColorIdx = 0;
             Text = $"Instantiations dependencies [{maxRenderDepth.Value} levels]";
 
             var edgeRoutingSettings = new EdgeRoutingSettings

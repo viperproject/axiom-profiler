@@ -1007,8 +1007,7 @@ namespace Z3AxiomProfiler
 
             quant = new Quantifier
             {
-                Qid = qid,
-                Instances = new List<Instantiation>()
+                Qid = qid
             };
             model.quantifiers[name] = quant;
             loadBoogieToken(quant);

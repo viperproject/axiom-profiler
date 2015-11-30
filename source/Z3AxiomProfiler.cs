@@ -30,7 +30,7 @@ namespace Z3AxiomProfiler
 
         // Needed to expand nodes with many children without freezing the GUI.
         private readonly Timer uiUpdateTimer = new Timer();
-        private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>>>();
+        private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>>();
         private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>();
         private int workCounter;
         private Common lastToolTipCommon;
@@ -435,31 +435,32 @@ namespace Z3AxiomProfiler
                     Interlocked.Increment(ref workCounter);
 
                     // add the 1000 nodes.
-                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>>(node, childNodes));
+                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node, childNodes, true));
 
                     // add the cutoff node.
                     List<TreeNode> cutoffNodeList = new List<TreeNode>
                     {
                         makeNode(new CallbackNode("... [Next 1000]", () => nodeTag.Children().Skip(1001)))
                     };
-                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>>(node.Parent, cutoffNodeList));
+                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node.Parent, cutoffNodeList, false));
                     return;
                 }
                 i++;
             }
 
             // end of work batch
-            expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>>(node, childNodes));
+            expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node, childNodes, true));
         }
 
         private static int batchSize = 20;
         private void treeUiUpdateTimerTick(object sender, EventArgs e)
         {
-            Tuple<TreeNode, List<TreeNode>> currTuple;
+            Tuple<TreeNode, List<TreeNode>, bool> currTuple;
             if (!expandQueue.TryPeek(out currTuple)) return;
 
             var parentNode = currTuple.Item1;
             var nodes = currTuple.Item2;
+            var hasProcessingNode = currTuple.Item3;
             z3AxiomTree.BeginUpdate();
             parentNode.Nodes.AddRange(nodes.Take(batchSize).ToArray());
 
@@ -468,8 +469,11 @@ namespace Z3AxiomProfiler
                 // finished, remove from work queue.
                 expandQueue.TryDequeue(out currTuple);
 
-                // Remove the "Processing..." dummy node.
-                parentNode.Nodes.RemoveAt(0);
+                if (hasProcessingNode)
+                {
+                    // Remove the "Processing..." dummy node.
+                    parentNode.Nodes.RemoveAt(0);
+                }
 
                 // done with a complete expand, check whether updating can be disabled.
                 checkStopCounter();
@@ -478,7 +482,10 @@ namespace Z3AxiomProfiler
             {
                 // otherwise remove just the first batch and leave the rest for next tick.
                 nodes.RemoveRange(0, batchSize);
-                parentNode.Nodes[0].Text = $"Processing... [{parentNode.Nodes.Count}]";
+                if (hasProcessingNode)
+                {
+                    parentNode.Nodes[0].Text = $"Processing... [{parentNode.Nodes.Count}]";
+                }
             }
             z3AxiomTree.EndUpdate();
         }
