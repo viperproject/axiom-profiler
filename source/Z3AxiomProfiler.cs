@@ -442,7 +442,7 @@ namespace Z3AxiomProfiler
                     {
                         makeNode(new CallbackNode("... [Next 1000]", () => nodeTag.Children().Skip(1001)))
                     };
-                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node.Parent, cutoffNodeList, false));
+                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node, cutoffNodeList, false));
                     return;
                 }
                 i++;
@@ -530,7 +530,6 @@ namespace Z3AxiomProfiler
                 Tag = common,
                 ForeColor = common.ForeColor()
             };
-
             if (common.HasChildren())
                 cNode.Nodes.Add(new TreeNode("Processing..."));
             if (common.AutoExpand())

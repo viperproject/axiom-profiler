@@ -1183,7 +1183,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly Term[] Args;
         public Instantiation Responsible;
         public string identifier = "None";
-        private readonly int Size;
         private readonly int Depth;
         public Term NegatedVersion;
         private readonly List<Term> dependentTerms = new List<Term>();
@@ -1208,11 +1207,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             Args = args;
             foreach (Term t in Args)
             {
-                Size += t.Size;
                 Depth = Depth > t.Depth ? Depth : t.Depth;
                 t.dependentTerms.Add(this);
             }
-            Size++;
             Depth++;
         }
 
@@ -1220,7 +1217,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             Name = t.Name;
             Args = t.Args;
-            Size = t.Size;
             Depth = t.Depth;
             Responsible = t.Responsible;
             identifier = t.identifier;
@@ -1473,8 +1469,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override bool HasChildren()
         {
-            return ((Args.Length > 0) && (Size > 3))
-                || dependentTerms.Count > 0;
+            return Args.Length > 0 || dependentTerms.Count > 0;
         }
 
         public override IEnumerable<Common> Children()
