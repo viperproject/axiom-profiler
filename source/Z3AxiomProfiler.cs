@@ -434,16 +434,9 @@ namespace Z3AxiomProfiler
                     // new sequence so that the parent is reevaluated again.
                     Interlocked.Increment(ref workCounter);
 
-                    // add the 1000 nodes.
-                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node, childNodes, true));
-
                     // add the cutoff node.
-                    List<TreeNode> cutoffNodeList = new List<TreeNode>
-                    {
-                        makeNode(new CallbackNode("... [Next 1000]", () => nodeTag.Children().Skip(1001)))
-                    };
-                    expandQueue.Enqueue(new Tuple<TreeNode, List<TreeNode>, bool>(node, cutoffNodeList, false));
-                    return;
+                    childNodes.Add(makeNode(new CallbackNode("... [Next 1000]", () => nodeTag.Children().Skip(1001))));
+                    break;
                 }
                 i++;
             }
