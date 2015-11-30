@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.sourceTreeButton = new System.Windows.Forms.Button();
             this.redrawCompleteGraphButton = new System.Windows.Forms.Button();
             this.showChainButton = new System.Windows.Forms.Button();
             this.showChildrenButton = new System.Windows.Forms.Button();
@@ -36,7 +37,6 @@
             this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
-            this.sourceTreeButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -53,14 +53,24 @@
             this.panel1.Controls.Add(this.hideInstantiationButton);
             this.panel1.Controls.Add(this.label1);
             this.panel1.Controls.Add(this.maxRenderDepth);
-            this.panel1.Location = new System.Drawing.Point(0, -1);
+            this.panel1.Location = new System.Drawing.Point(0, 0);
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(767, 27);
             this.panel1.TabIndex = 1;
             // 
+            // sourceTreeButton
+            // 
+            this.sourceTreeButton.Location = new System.Drawing.Point(583, 2);
+            this.sourceTreeButton.Name = "sourceTreeButton";
+            this.sourceTreeButton.Size = new System.Drawing.Size(105, 23);
+            this.sourceTreeButton.TabIndex = 8;
+            this.sourceTreeButton.Text = "Show Source Tree";
+            this.sourceTreeButton.UseVisualStyleBackColor = true;
+            this.sourceTreeButton.Click += new System.EventHandler(this.sourceTreeButton_Click);
+            // 
             // redrawCompleteGraphButton
             // 
-            this.redrawCompleteGraphButton.Location = new System.Drawing.Point(102, 1);
+            this.redrawCompleteGraphButton.Location = new System.Drawing.Point(102, 2);
             this.redrawCompleteGraphButton.Name = "redrawCompleteGraphButton";
             this.redrawCompleteGraphButton.Size = new System.Drawing.Size(85, 23);
             this.redrawCompleteGraphButton.TabIndex = 7;
@@ -70,7 +80,7 @@
             // 
             // showChainButton
             // 
-            this.showChainButton.Location = new System.Drawing.Point(452, 1);
+            this.showChainButton.Location = new System.Drawing.Point(452, 2);
             this.showChainButton.Name = "showChainButton";
             this.showChainButton.Size = new System.Drawing.Size(125, 23);
             this.showChainButton.TabIndex = 6;
@@ -80,7 +90,7 @@
             // 
             // showChildrenButton
             // 
-            this.showChildrenButton.Location = new System.Drawing.Point(363, 1);
+            this.showChildrenButton.Location = new System.Drawing.Point(363, 2);
             this.showChildrenButton.Name = "showChildrenButton";
             this.showChildrenButton.Size = new System.Drawing.Size(83, 23);
             this.showChildrenButton.TabIndex = 4;
@@ -90,7 +100,7 @@
             // 
             // showParentsButton
             // 
-            this.showParentsButton.Location = new System.Drawing.Point(274, 1);
+            this.showParentsButton.Location = new System.Drawing.Point(274, 2);
             this.showParentsButton.Name = "showParentsButton";
             this.showParentsButton.Size = new System.Drawing.Size(83, 23);
             this.showParentsButton.TabIndex = 3;
@@ -100,7 +110,7 @@
             // 
             // hideInstantiationButton
             // 
-            this.hideInstantiationButton.Location = new System.Drawing.Point(193, 1);
+            this.hideInstantiationButton.Location = new System.Drawing.Point(193, 2);
             this.hideInstantiationButton.Name = "hideInstantiationButton";
             this.hideInstantiationButton.Size = new System.Drawing.Size(75, 23);
             this.hideInstantiationButton.TabIndex = 2;
@@ -138,16 +148,6 @@
             0,
             0,
             0});
-            // 
-            // sourceTreeButton
-            // 
-            this.sourceTreeButton.Location = new System.Drawing.Point(583, 1);
-            this.sourceTreeButton.Name = "sourceTreeButton";
-            this.sourceTreeButton.Size = new System.Drawing.Size(105, 23);
-            this.sourceTreeButton.TabIndex = 8;
-            this.sourceTreeButton.Text = "Show Source Tree";
-            this.sourceTreeButton.UseVisualStyleBackColor = true;
-            this.sourceTreeButton.Click += new System.EventHandler(this.sourceTreeButton_Click);
             // 
             // DAGView
             // 

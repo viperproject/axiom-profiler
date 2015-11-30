@@ -294,7 +294,7 @@ namespace Z3AxiomProfiler {
     private void PrintCycle(KeyValuePair<List<Quantifier>, int> cycle) {
       Console.WriteLine("Cycle found! {0} instances, length {1}", cycle.Value, cycle.Key.Count);
       foreach (Quantifier q in cycle.Key)
-        Console.WriteLine(q.ToolTip(80, true, true));
+        Console.WriteLine(q.ToolTip(new PrettyPrintFormat {maxWidth = 80}));
       Console.WriteLine();
     }
 

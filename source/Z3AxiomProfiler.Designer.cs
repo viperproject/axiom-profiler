@@ -28,7 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Z3AxiomProfiler));
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.toolTipBox = new System.Windows.Forms.RichTextBox();
@@ -47,6 +46,7 @@
             this.colorVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchTreeVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.quantifierBlameVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.instantiationGraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cSVToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
@@ -56,14 +56,13 @@
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-            this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
-            this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
-            this.termWidthTextBox = new System.Windows.Forms.ToolStripTextBox();
-            this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-            this.typeToggleButton = new System.Windows.Forms.ToolStripButton();
-            this.termIdToggle = new System.Windows.Forms.ToolStripButton();
-            this.instantiationGraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolsPanel = new System.Windows.Forms.Panel();
+            this.showTermIdCB = new System.Windows.Forms.CheckBox();
+            this.showTypesCB = new System.Windows.Forms.CheckBox();
+            this.maxTermDepthUD = new System.Windows.Forms.NumericUpDown();
+            this.maxTermDepthLabel = new System.Windows.Forms.Label();
+            this.maxTermWidthUD = new System.Windows.Forms.NumericUpDown();
+            this.widthLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -73,13 +72,17 @@
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
+            this.toolsPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).BeginInit();
             this.SuspendLayout();
             // 
             // splitContainer1
             // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 24);
+            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.splitContainer1.Location = new System.Drawing.Point(0, 56);
             this.splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -89,7 +92,7 @@
             // splitContainer1.Panel2
             // 
             this.splitContainer1.Panel2.Controls.Add(this.InstantiationPathView);
-            this.splitContainer1.Size = new System.Drawing.Size(1184, 687);
+            this.splitContainer1.Size = new System.Drawing.Size(1184, 655);
             this.splitContainer1.SplitterDistance = 894;
             this.splitContainer1.TabIndex = 3;
             // 
@@ -106,7 +109,7 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.z3AxiomTree);
-            this.splitContainer2.Size = new System.Drawing.Size(894, 687);
+            this.splitContainer2.Size = new System.Drawing.Size(894, 655);
             this.splitContainer2.SplitterDistance = 281;
             this.splitContainer2.TabIndex = 3;
             // 
@@ -119,7 +122,7 @@
             this.toolTipBox.Location = new System.Drawing.Point(0, 0);
             this.toolTipBox.Name = "toolTipBox";
             this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(281, 687);
+            this.toolTipBox.Size = new System.Drawing.Size(281, 655);
             this.toolTipBox.TabIndex = 0;
             this.toolTipBox.Text = "";
             this.toolTipBox.WordWrap = false;
@@ -131,7 +134,7 @@
             this.z3AxiomTree.HideSelection = false;
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(609, 687);
+            this.z3AxiomTree.Size = new System.Drawing.Size(609, 655);
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
@@ -151,7 +154,7 @@
             this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
             this.InstantiationPathView.MultiSelect = false;
             this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(286, 687);
+            this.InstantiationPathView.Size = new System.Drawing.Size(286, 655);
             this.InstantiationPathView.TabIndex = 2;
             this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
             this.InstantiationPathView.View = System.Windows.Forms.View.Details;
@@ -250,6 +253,13 @@
             this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
             this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
             // 
+            // instantiationGraphToolStripMenuItem
+            // 
+            this.instantiationGraphToolStripMenuItem.Name = "instantiationGraphToolStripMenuItem";
+            this.instantiationGraphToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.instantiationGraphToolStripMenuItem.Text = "Instantiation Graph";
+            this.instantiationGraphToolStripMenuItem.Click += new System.EventHandler(this.instantiationGraphToolStripMenuItem_Click);
+            // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
@@ -320,83 +330,107 @@
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
-            // toolStrip1
+            // toolsPanel
             // 
-            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
-            this.toolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripSeparator4,
-            this.toolStripLabel1,
-            this.termWidthTextBox,
-            this.toolStripSeparator3,
-            this.typeToggleButton,
-            this.termIdToggle});
-            this.toolStrip1.Location = new System.Drawing.Point(135, 0);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.RenderMode = System.Windows.Forms.ToolStripRenderMode.System;
-            this.toolStrip1.Size = new System.Drawing.Size(339, 25);
-            this.toolStrip1.TabIndex = 6;
-            this.toolStrip1.Text = "toolStrip1";
+            this.toolsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolsPanel.Controls.Add(this.showTermIdCB);
+            this.toolsPanel.Controls.Add(this.showTypesCB);
+            this.toolsPanel.Controls.Add(this.maxTermDepthUD);
+            this.toolsPanel.Controls.Add(this.maxTermDepthLabel);
+            this.toolsPanel.Controls.Add(this.maxTermWidthUD);
+            this.toolsPanel.Controls.Add(this.widthLabel);
+            this.toolsPanel.Location = new System.Drawing.Point(0, 27);
+            this.toolsPanel.Name = "toolsPanel";
+            this.toolsPanel.Size = new System.Drawing.Size(1184, 25);
+            this.toolsPanel.TabIndex = 7;
             // 
-            // toolStripSeparator4
+            // showTermIdCB
             // 
-            this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(6, 25);
+            this.showTermIdCB.AutoSize = true;
+            this.showTermIdCB.Checked = true;
+            this.showTermIdCB.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.showTermIdCB.Location = new System.Drawing.Point(404, 4);
+            this.showTermIdCB.Name = "showTermIdCB";
+            this.showTermIdCB.Size = new System.Drawing.Size(123, 17);
+            this.showTermIdCB.TabIndex = 5;
+            this.showTermIdCB.Text = "Show Term Identifier";
+            this.showTermIdCB.UseVisualStyleBackColor = true;
+            this.showTermIdCB.CheckedChanged += new System.EventHandler(this.showTermIdCB_CheckedChanged);
             // 
-            // toolStripLabel1
+            // showTypesCB
             // 
-            this.toolStripLabel1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.toolStripLabel1.Name = "toolStripLabel1";
-            this.toolStripLabel1.Size = new System.Drawing.Size(97, 22);
-            this.toolStripLabel1.Text = "Max Term Width:";
+            this.showTypesCB.AutoSize = true;
+            this.showTypesCB.Checked = true;
+            this.showTypesCB.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.showTypesCB.Location = new System.Drawing.Point(313, 4);
+            this.showTypesCB.Name = "showTypesCB";
+            this.showTypesCB.Size = new System.Drawing.Size(85, 17);
+            this.showTypesCB.TabIndex = 4;
+            this.showTypesCB.Text = "Show Types";
+            this.showTypesCB.UseVisualStyleBackColor = true;
+            this.showTypesCB.CheckedChanged += new System.EventHandler(this.showTypesCB_CheckedChanged);
             // 
-            // termWidthTextBox
+            // maxTermDepthUD
             // 
-            this.termWidthTextBox.Name = "termWidthTextBox";
-            this.termWidthTextBox.Size = new System.Drawing.Size(40, 25);
-            this.termWidthTextBox.Text = "80";
-            this.termWidthTextBox.TextBoxTextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.termWidthTextBox.Leave += new System.EventHandler(this.termWidthTextBoxTriggerReprint);
-            this.termWidthTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.termWidthKeyPressHandler);
-            this.termWidthTextBox.Validated += new System.EventHandler(this.termWidthTextBoxTriggerReprint);
+            this.maxTermDepthUD.Location = new System.Drawing.Point(257, 3);
+            this.maxTermDepthUD.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.maxTermDepthUD.Name = "maxTermDepthUD";
+            this.maxTermDepthUD.Size = new System.Drawing.Size(50, 20);
+            this.maxTermDepthUD.TabIndex = 3;
+            this.maxTermDepthUD.Value = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            this.maxTermDepthUD.ValueChanged += new System.EventHandler(this.maxTermDepthUD_ValueChanged);
             // 
-            // toolStripSeparator3
+            // maxTermDepthLabel
             // 
-            this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            this.maxTermDepthLabel.AutoSize = true;
+            this.maxTermDepthLabel.Location = new System.Drawing.Point(162, 6);
+            this.maxTermDepthLabel.Name = "maxTermDepthLabel";
+            this.maxTermDepthLabel.Size = new System.Drawing.Size(89, 13);
+            this.maxTermDepthLabel.TabIndex = 2;
+            this.maxTermDepthLabel.Text = "Max Term Depth:";
             // 
-            // typeToggleButton
+            // maxTermWidthUD
             // 
-            this.typeToggleButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.typeToggleButton.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.typeToggleButton.Name = "typeToggleButton";
-            this.typeToggleButton.Size = new System.Drawing.Size(69, 22);
-            this.typeToggleButton.Text = "Hide Types";
-            this.typeToggleButton.Click += new System.EventHandler(this.toolStripButton1_Click);
+            this.maxTermWidthUD.Location = new System.Drawing.Point(106, 3);
+            this.maxTermWidthUD.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.maxTermWidthUD.Name = "maxTermWidthUD";
+            this.maxTermWidthUD.Size = new System.Drawing.Size(50, 20);
+            this.maxTermWidthUD.TabIndex = 1;
+            this.maxTermWidthUD.Value = new decimal(new int[] {
+            80,
+            0,
+            0,
+            0});
+            this.maxTermWidthUD.ValueChanged += new System.EventHandler(this.maxTermWidthUD_ValueChanged);
             // 
-            // termIdToggle
+            // widthLabel
             // 
-            this.termIdToggle.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this.termIdToggle.Image = ((System.Drawing.Image)(resources.GetObject("termIdToggle.Image")));
-            this.termIdToggle.ImageTransparentColor = System.Drawing.Color.Magenta;
-            this.termIdToggle.Name = "termIdToggle";
-            this.termIdToggle.Size = new System.Drawing.Size(116, 22);
-            this.termIdToggle.Text = "Hide Term Identifier";
-            this.termIdToggle.Click += new System.EventHandler(this.termIdToggle_Click);
-            // 
-            // instantiationGraphToolStripMenuItem
-            // 
-            this.instantiationGraphToolStripMenuItem.Name = "instantiationGraphToolStripMenuItem";
-            this.instantiationGraphToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.instantiationGraphToolStripMenuItem.Text = "Instantiation Graph";
-            this.instantiationGraphToolStripMenuItem.Click += new System.EventHandler(this.instantiationGraphToolStripMenuItem_Click);
+            this.widthLabel.AutoSize = true;
+            this.widthLabel.Location = new System.Drawing.Point(12, 6);
+            this.widthLabel.Name = "widthLabel";
+            this.widthLabel.Size = new System.Drawing.Size(88, 13);
+            this.widthLabel.TabIndex = 0;
+            this.widthLabel.Text = "Max Term Width:";
             // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1184, 711);
-            this.Controls.Add(this.toolStrip1);
+            this.Controls.Add(this.toolsPanel);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
             this.Name = "Z3AxiomProfiler";
@@ -412,8 +446,10 @@
             this.splitContainer2.ResumeLayout(false);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
+            this.toolsPanel.ResumeLayout(false);
+            this.toolsPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -447,14 +483,14 @@
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem1;
         private System.Windows.Forms.MenuStrip menuStrip1;
-        private System.Windows.Forms.ToolStrip toolStrip1;
-        private System.Windows.Forms.ToolStripLabel toolStripLabel1;
-        private System.Windows.Forms.ToolStripTextBox termWidthTextBox;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
-        private System.Windows.Forms.ToolStripButton typeToggleButton;
-        private System.Windows.Forms.ToolStripButton termIdToggle;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem instantiationGraphToolStripMenuItem;
+        private System.Windows.Forms.Panel toolsPanel;
+        private System.Windows.Forms.NumericUpDown maxTermWidthUD;
+        private System.Windows.Forms.Label widthLabel;
+        private System.Windows.Forms.CheckBox showTermIdCB;
+        private System.Windows.Forms.CheckBox showTypesCB;
+        private System.Windows.Forms.NumericUpDown maxTermDepthUD;
+        private System.Windows.Forms.Label maxTermDepthLabel;
     }
 }
 

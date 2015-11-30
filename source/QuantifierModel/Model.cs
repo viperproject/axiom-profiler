@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
@@ -456,9 +457,28 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
     }
 
+    public class PrettyPrintFormat
+    {
+        public int maxWidth;
+        public int maxDepth;
+        public bool showType;
+        public bool showTermId;
+
+        public PrettyPrintFormat nextDepth()
+        {
+            return new PrettyPrintFormat
+            {
+                maxWidth = maxWidth,
+                maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
+                showTermId = showTermId,
+                showType = showType
+            };
+        }
+    }
+
     public abstract class Common
     {
-        public virtual string ToolTip(int width, bool typeInfo, bool showId) { return ToString(); }
+        public virtual string ToolTip(PrettyPrintFormat format) { return ToString(); }
 
         public virtual string SummaryInfo() { return ToString(); }
         public abstract IEnumerable<Common> Children();
@@ -512,9 +532,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.HasChildren();
         }
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
-            return Fwd.ToolTip(width, typeInfo, showId);
+            return Fwd.ToolTip(format);
         }
         public override string ToString()
         {
@@ -718,11 +738,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             return res;
         }
 
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
-            if (Conflict != null)
-                return Conflict.ToolTip(width, typeInfo, showId);
-            return "No conflict";
+            return Conflict != null ? Conflict.ToolTip(format) : "No conflict";
         }
 
         public void PropagateImpliedByChildren()
@@ -815,7 +833,6 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
         public string Qid;
         public string PrintName;
-        public string Body => BodyTerm.PrettyPrint(true, true, 80);
         public string BoogieBody;
         public Term BodyTerm;
         public List<Instantiation> Instances;
@@ -832,16 +849,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append(BodyTerm.PrettyPrint(typeInfo, showId, width));
+            s.Append(BodyTerm.PrettyPrint(format));
             return s.ToString();
         }
 
-        public int Weight => Body.Contains("{:weight 0") ? 0 : 1;
+        // ToDo: is this not always false?
+        // Expensive(!) For large terms
+        public int Weight => BodyTerm.PrettyPrint(new PrettyPrintFormat()).Contains("{:weight 0") ? 0 : 1;
 
         private Common TheMost(string tag, Comparison<Instantiation> cmp)
         {
@@ -984,7 +1003,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
@@ -995,7 +1014,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 s.Append(t.SummaryInfo());
                 s.Append('\n');
-                s.Append(t.PrettyPrint(typeInfo, showId, width));
+                s.Append(t.PrettyPrint(format));
                 s.Append("\n\n");
             }
             s.Append('\n');
@@ -1005,18 +1024,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 s.Append(t.SummaryInfo());
                 s.Append('\n');
-                s.Append(t.PrettyPrint(typeInfo, showId, width));
+                s.Append(t.PrettyPrint(format));
                 s.Append("\n\n");
             }
 
             s.Append("The quantifier body:\n\n");
-            s.Append(Quant.BodyTerm.PrettyPrint(typeInfo, showId, width));
+            s.Append(Quant.BodyTerm.PrettyPrint(format));
             s.Append("\n\n");
 
             if (dependentTerms.Count > 0)
             {
                 s.Append("The resulting term:\n\n");
-                s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(typeInfo, showId, width));
+                s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(format));
             }
             return s.ToString();
         }
@@ -1272,7 +1291,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static string indentDiff = "¦ ";
 
-        private bool PrettyPrint(StringBuilder builder, int maxTermWidth, StringBuilder indentBuilder, bool withType, bool withId)
+        private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
             bool isMultiline = false;
             int[] breakIndices = new int[Args.Length + 1];
@@ -1281,34 +1300,41 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             // header of this Term.
             builder.Append(Name);
-            if (withType)
+            if (format.showType)
             {
                 builder.Append(GenericType);
             }
-            if (withId)
+            if (format.showTermId)
             {
                 builder.Append('[').Append(identifier).Append(']');
             }
             builder.Append('(');
             
             breakIndices[0] = builder.Length;
-            for (int i = 0; i < Args.Length; i++)
+            if (format.maxDepth == 0 || format.maxDepth > 1)
             {
-                // Note: DO NOT CHANGE ORDER (-> short circuit)
-                isMultiline = Args[i].PrettyPrint(builder, maxTermWidth, indentBuilder, withType, withId)
-                    || isMultiline;
-
-                if (i != Args.Length - 1)
+                for (int i = 0; i < Args.Length; i++)
                 {
-                    builder.Append(", ");
-                }
+                    // Note: DO NOT CHANGE ORDER (-> short circuit)
+                    isMultiline = Args[i].PrettyPrint(builder, indentBuilder, format.nextDepth())
+                                  || isMultiline;
 
-                breakIndices[i + 1] = builder.Length;
+                    if (i != Args.Length - 1)
+                    {
+                        builder.Append(", ");
+                    }
+
+                    breakIndices[i + 1] = builder.Length;
+                }
+            }
+            else
+            {
+                builder.Append("...");
             }
             builder.Append(')');
 
-            if (!isMultiline && builder.Length - startLength <= maxTermWidth 
-                || maxTermWidth == 0)
+            if (!isMultiline && builder.Length - startLength <= format.maxWidth 
+                || format.maxWidth == 0 || format.maxDepth == 1)
             {
                 // unindent again
                 indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
@@ -1337,19 +1363,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             return $"Term[{Name}] Identifier:{identifier}, Depth:{Depth}, #Children:{Args.Length}";
         }
 
-        public string PrettyPrint(bool withType, bool withId, int maxTermWidth)
+        public string PrettyPrint(PrettyPrintFormat format)
         {
             StringBuilder builder = new StringBuilder();
-            PrettyPrint(builder, maxTermWidth, new StringBuilder(), withType, withId);
+            PrettyPrint(builder, new StringBuilder(), format);
             return builder.ToString();
         }
 
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
-            s.Append(PrettyPrint(typeInfo, showId, width));
+            s.Append(PrettyPrint(format));
             return s.ToString();
         }
 
@@ -1541,7 +1567,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         }
 
-        public override string ToolTip(int width, bool typeInfo, bool showId)
+        public override string ToolTip(PrettyPrintFormat format)
         {
             StringBuilder sb = new StringBuilder();
             foreach (Literal l in Literals)

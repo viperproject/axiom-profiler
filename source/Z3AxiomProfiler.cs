@@ -633,14 +633,6 @@ namespace Z3AxiomProfiler
             }
         }
 
-
-        public int getTermWidth()
-        {
-            int width;
-            int.TryParse(termWidthTextBox.Text, out width);
-            return width;
-        }
-
         public void SetToolTip(Common c)
         {
             if (c == null) return;
@@ -648,10 +640,20 @@ namespace Z3AxiomProfiler
             lastToolTipCommon = c;
             Interlocked.Increment(ref workCounter);
             uiUpdateTimer.Start();
-            Task.Run(() => toolTipQueue.Enqueue(c.ToolTip(getTermWidth(), showTypesButtonToggleState, showTermIdButtonToggleState).Split('\n')));
+            Task.Run(() =>
+            {
+                var prettyPrintFormat = new PrettyPrintFormat
+                {
+                    showType = showTypesCB.Checked,
+                    showTermId = showTermIdCB.Checked,
+                    maxWidth = (int) maxTermWidthUD.Value,
+                    maxDepth = (int) maxTermDepthUD.Value
+                };
+                toolTipQueue.Enqueue(c.ToolTip(prettyPrintFormat).Split('\n'));
+            });
         }
 
-        private int toolTipLineIdx = 0;
+        private int toolTipLineIdx;
         private void toolTipUpdateTick(object sender, EventArgs e)
         {
             string[] lines;
@@ -833,65 +835,31 @@ namespace Z3AxiomProfiler
             }
         }
 
-        private void termWidthKeyPressHandler(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == (char)Keys.Back
-                || e.KeyChar == (char)Keys.Delete
-                || char.IsDigit(e.KeyChar))
-            {
-                return;
-            }
-
-            if (e.KeyChar == (char)Keys.Enter)
-            {
-                SetToolTip(lastToolTipCommon);
-            }
-
-            e.Handled = true;
-        }
-
-        private bool showTypesButtonToggleState = true;
-        private void toolStripButton1_Click(object sender, EventArgs e)
-        {
-            if (showTypesButtonToggleState)
-            {
-                showTypesButtonToggleState = false;
-                typeToggleButton.Text = "Show Types";
-            }
-            else
-            {
-                showTypesButtonToggleState = true;
-                typeToggleButton.Text = "Hide Types";
-            }
-            SetToolTip(lastToolTipCommon);
-        }
-
-        private bool showTermIdButtonToggleState = true;
-        private void termIdToggle_Click(object sender, EventArgs e)
-        {
-            if (showTermIdButtonToggleState)
-            {
-                showTermIdButtonToggleState = false;
-                termIdToggle.Text = "Show Term Identifiers";
-            }
-            else
-            {
-                showTermIdButtonToggleState = true;
-                termIdToggle.Text = "Hide Term Identifiers";
-            }
-            SetToolTip(lastToolTipCommon);
-        }
-
-        private void termWidthTextBoxTriggerReprint(object sender, EventArgs e)
-        {
-            SetToolTip(lastToolTipCommon);
-        }
-
         private void instantiationGraphToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (model == null) return;
             var dagView = new DAGView(this);
             dagView.Show();
+        }
+
+        private void showTypesCB_CheckedChanged(object sender, EventArgs e)
+        {
+            SetToolTip(lastToolTipCommon);
+        }
+
+        private void showTermIdCB_CheckedChanged(object sender, EventArgs e)
+        {
+            SetToolTip(lastToolTipCommon);
+        }
+
+        private void maxTermWidthUD_ValueChanged(object sender, EventArgs e)
+        {
+            SetToolTip(lastToolTipCommon);
+        }
+
+        private void maxTermDepthUD_ValueChanged(object sender, EventArgs e)
+        {
+            SetToolTip(lastToolTipCommon);
         }
     }
 }
