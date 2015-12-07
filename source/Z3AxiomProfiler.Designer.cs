@@ -63,6 +63,8 @@
             this.maxTermDepthLabel = new System.Windows.Forms.Label();
             this.maxTermWidthUD = new System.Windows.Forms.NumericUpDown();
             this.widthLabel = new System.Windows.Forms.Label();
+            this.enableRewritingCB = new System.Windows.Forms.CheckBox();
+            this.rewritingRulesButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -334,6 +336,8 @@
             // 
             this.toolsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolsPanel.Controls.Add(this.rewritingRulesButton);
+            this.toolsPanel.Controls.Add(this.enableRewritingCB);
             this.toolsPanel.Controls.Add(this.showTermIdCB);
             this.toolsPanel.Controls.Add(this.showTypesCB);
             this.toolsPanel.Controls.Add(this.maxTermDepthUD);
@@ -425,6 +429,27 @@
             this.widthLabel.TabIndex = 0;
             this.widthLabel.Text = "Max Term Width:";
             // 
+            // enableRewritingCB
+            // 
+            this.enableRewritingCB.AutoSize = true;
+            this.enableRewritingCB.Checked = true;
+            this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.enableRewritingCB.Location = new System.Drawing.Point(533, 4);
+            this.enableRewritingCB.Name = "enableRewritingCB";
+            this.enableRewritingCB.Size = new System.Drawing.Size(133, 17);
+            this.enableRewritingCB.TabIndex = 6;
+            this.enableRewritingCB.Text = "Enable Term Rewriting";
+            this.enableRewritingCB.UseVisualStyleBackColor = true;
+            // 
+            // rewritingRulesButton
+            // 
+            this.rewritingRulesButton.Location = new System.Drawing.Point(672, 1);
+            this.rewritingRulesButton.Name = "rewritingRulesButton";
+            this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
+            this.rewritingRulesButton.TabIndex = 7;
+            this.rewritingRulesButton.Text = "Rewriting Rules";
+            this.rewritingRulesButton.UseVisualStyleBackColor = true;
+            // 
             // Z3AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -491,6 +516,8 @@
         private System.Windows.Forms.CheckBox showTypesCB;
         private System.Windows.Forms.NumericUpDown maxTermDepthUD;
         private System.Windows.Forms.Label maxTermDepthLabel;
+        private System.Windows.Forms.CheckBox enableRewritingCB;
+        private System.Windows.Forms.Button rewritingRulesButton;
     }
 }
 

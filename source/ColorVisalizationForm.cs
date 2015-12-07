@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 using Z3AxiomProfiler.QuantifierModel;
+using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler
 {

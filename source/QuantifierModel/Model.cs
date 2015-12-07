@@ -6,13 +6,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Security.Permissions;
 using System.Text;
 using System.Text.RegularExpressions;
+using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
@@ -453,25 +452,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         public ScopeDesc(int checkNo)
         {
             checkNumber = checkNo;
-        }
-    }
-
-    public class PrettyPrintFormat
-    {
-        public int maxWidth;
-        public int maxDepth;
-        public bool showType;
-        public bool showTermId;
-
-        public PrettyPrintFormat nextDepth()
-        {
-            return new PrettyPrintFormat
-            {
-                maxWidth = maxWidth,
-                maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
-                showTermId = showTermId,
-                showType = showType
-            };
         }
     }
 
@@ -1169,7 +1149,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             if (DependantInstantiations.Count <= 0) yield break;
-            
+
             DependantInstantiations.Sort((i1, i2) => i1.LineNo.CompareTo(i2.LineNo));
             yield return Callback($"YIELDS INSTANTIATIONS [{DependantInstantiations.Count}]", () => DependantInstantiations);
         }
@@ -1179,7 +1159,7 @@ namespace Z3AxiomProfiler.QuantifierModel
     public class Term : Common
     {
         public readonly string Name;
-        private readonly string GenericType;
+        public readonly string GenericType;
         public readonly Term[] Args;
         public Instantiation Responsible;
         public string identifier = "None";
@@ -1384,24 +1364,26 @@ namespace Z3AxiomProfiler.QuantifierModel
             bool isMultiline = false;
             int[] breakIndices = new int[Args.Length + 1];
             int startLength = builder.Length;
+            RewriteRule rewriteRule;
+            var rewrite = format.getRewriteRule(this, out rewriteRule);
             indentBuilder.Append(indentDiff);
 
-            // header of this Term.
-            builder.Append(Name);
-            if (format.showType)
+            if (rewrite)
             {
-                builder.Append(GenericType);
+                builder.Append(rewriteRule.prefix);
             }
-            if (format.showTermId)
+            else
             {
-                builder.Append('[').Append(identifier).Append(']');
+                addStandardHeader(builder, format);
             }
-            builder.Append('(');
-            
+
             breakIndices[0] = builder.Length;
-            if (format.maxDepth == 0 || format.maxDepth > 1)
+            var printChildren = (!rewrite && (format.maxDepth == 0 || format.maxDepth > 1)) ||
+                                (rewrite && rewriteRule.printChildren);
+
+            if (printChildren)
             {
-                for (int i = 0; i < Args.Length; i++)
+                for (var i = 0; i < Args.Length; i++)
                 {
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
                     isMultiline = Args[i].PrettyPrint(builder, indentBuilder, format.nextDepth())
@@ -1409,22 +1391,26 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                     if (i != Args.Length - 1)
                     {
-                        builder.Append(", ");
+                        builder.Append(rewrite ? rewriteRule.infix : ", ");
                     }
 
                     breakIndices[i + 1] = builder.Length;
                 }
             }
-            else
+            else if (!rewrite)
             {
+                // only use this in standard mode
                 builder.Append("...");
             }
-            builder.Append(')');
 
-            if (!isMultiline && builder.Length - startLength <= format.maxWidth 
+            builder.Append(rewrite ? rewriteRule.postfix: ")");
+
+            // check if line split is necessary
+            if (!isMultiline && builder.Length - startLength <= format.maxWidth
                 || format.maxWidth == 0 || format.maxDepth == 1)
             {
-                // unindent again
+                // not necessary
+                // unindent again for the return to parent level
                 indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 return false;
             }
@@ -1432,7 +1418,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             // split necessary
             int offset = 0;
             int oldLength = builder.Length;
-            for(int i = 0; i < breakIndices.Length; i++)
+            for (int i = 0; i < breakIndices.Length; i++)
             {
                 if (i == breakIndices.Length - 1)
                 {
@@ -1444,6 +1430,20 @@ namespace Z3AxiomProfiler.QuantifierModel
                 oldLength = builder.Length;
             }
             return true;
+        }
+
+        private void addStandardHeader(StringBuilder builder, PrettyPrintFormat format)
+        {
+            builder.Append(Name);
+            if (format.showType)
+            {
+                builder.Append(GenericType);
+            }
+            if (format.showTermId)
+            {
+                builder.Append('[').Append(identifier).Append(']');
+            }
+            builder.Append('(');
         }
 
         public override string ToString()

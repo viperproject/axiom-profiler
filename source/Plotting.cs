@@ -8,6 +8,7 @@ using System.Runtime.Serialization.Json;
 using System.IO;
 using Z3AxiomProfiler.QuantifierModel;
 using System.Text.RegularExpressions;
+using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler {
   class Utils {

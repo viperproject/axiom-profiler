@@ -15,6 +15,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Timer = System.Windows.Forms.Timer;
+using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler
 {
@@ -34,6 +35,7 @@ namespace Z3AxiomProfiler
         private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>();
         private int workCounter;
         private Common lastToolTipCommon;
+        private RewriteDictionary rewriteDict = new RewriteDictionary();
 
         private readonly TreeNode graphHistoryNode = new TreeNode
         {
