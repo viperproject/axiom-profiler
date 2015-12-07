@@ -1360,12 +1360,25 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
-            bool isMultiline = false;
-            int[] breakIndices = new int[Args.Length + 1];
-            int startLength = builder.Length;
             RewriteRule rewriteRule;
             var rewrite = format.getRewriteRule(this, out rewriteRule);
-            indentBuilder.Append(indentDiff);
+            bool isMultiline = false;
+            int[] breakIndices;
+            int breakIndex = 0;
+            int startLength = builder.Length;
+            var indent = true;
+            if (rewrite)
+            {
+                indent = !string.IsNullOrWhiteSpace(rewriteRule.prefix);
+                breakIndices = new int[Args.Length + (indent ? 1 : 0)];
+            }
+            else
+            {
+                breakIndices = new int[Args.Length + 1];
+            }
+            
+            
+            
 
             if (rewrite)
             {
@@ -1376,7 +1389,13 @@ namespace Z3AxiomProfiler.QuantifierModel
                 addStandardHeader(builder, format);
             }
 
-            breakIndices[0] = builder.Length;
+            // do not record break index if no break is necessary (because prefix is omitted
+            if (indent)
+            {
+                indentBuilder.Append(indentDiff);
+                breakIndices[breakIndex] = builder.Length;
+                breakIndex++;
+            }
             var printChildren = (!rewrite && (format.maxDepth == 0 || format.maxDepth > 1)) ||
                                 (rewrite && rewriteRule.printChildren);
 
@@ -1393,7 +1412,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                         builder.Append(rewrite ? rewriteRule.infix : ", ");
                     }
 
-                    breakIndices[i + 1] = builder.Length;
+                    breakIndices[breakIndex] = builder.Length;
+                    breakIndex++;
                 }
             }
             else if (!rewrite)
@@ -1408,9 +1428,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (!isMultiline && builder.Length - startLength <= format.maxWidth
                 || format.maxWidth == 0 || format.maxDepth == 1)
             {
-                // not necessary
+                // split not necessary
                 // unindent again for the return to parent level
-                indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                if (indent)
+                {
+                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                }
                 return false;
             }
 
@@ -1422,7 +1445,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (i == breakIndices.Length - 1)
                 {
                     // unindent again
-                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                    if (indent)
+                    {
+                        indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                    }
                 }
                 builder.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
                 offset += builder.Length - oldLength;
