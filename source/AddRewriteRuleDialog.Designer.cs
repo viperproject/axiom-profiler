@@ -32,7 +32,7 @@
             this.prefixLabel = new System.Windows.Forms.Label();
             this.printChildrenCB = new System.Windows.Forms.CheckBox();
             this.infixTextBox = new System.Windows.Forms.TextBox();
-            this.postFixTextBox = new System.Windows.Forms.TextBox();
+            this.postfixTextBox = new System.Windows.Forms.TextBox();
             this.infixLabel = new System.Windows.Forms.Label();
             this.postfixLabel = new System.Windows.Forms.Label();
             this.matchTextBox = new System.Windows.Forms.TextBox();
@@ -83,14 +83,14 @@
             this.infixTextBox.Size = new System.Drawing.Size(215, 20);
             this.infixTextBox.TabIndex = 3;
             // 
-            // postFixTextBox
+            // postfixTextBox
             // 
-            this.postFixTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.postfixTextBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.postFixTextBox.Location = new System.Drawing.Point(77, 85);
-            this.postFixTextBox.Name = "postFixTextBox";
-            this.postFixTextBox.Size = new System.Drawing.Size(215, 20);
-            this.postFixTextBox.TabIndex = 4;
+            this.postfixTextBox.Location = new System.Drawing.Point(77, 85);
+            this.postfixTextBox.Name = "postfixTextBox";
+            this.postfixTextBox.Size = new System.Drawing.Size(215, 20);
+            this.postfixTextBox.TabIndex = 4;
             // 
             // infixLabel
             // 
@@ -162,7 +162,7 @@
             this.Controls.Add(this.matchTextBox);
             this.Controls.Add(this.postfixLabel);
             this.Controls.Add(this.infixLabel);
-            this.Controls.Add(this.postFixTextBox);
+            this.Controls.Add(this.postfixTextBox);
             this.Controls.Add(this.infixTextBox);
             this.Controls.Add(this.printChildrenCB);
             this.Controls.Add(this.prefixLabel);
@@ -184,7 +184,7 @@
         private System.Windows.Forms.Label prefixLabel;
         private System.Windows.Forms.CheckBox printChildrenCB;
         private System.Windows.Forms.TextBox infixTextBox;
-        private System.Windows.Forms.TextBox postFixTextBox;
+        private System.Windows.Forms.TextBox postfixTextBox;
         private System.Windows.Forms.Label infixLabel;
         private System.Windows.Forms.Label postfixLabel;
         private System.Windows.Forms.TextBox matchTextBox;

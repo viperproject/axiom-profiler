@@ -20,13 +20,13 @@ namespace Z3AxiomProfiler
             {
                 prefixLabel.Text = "Prefix:";
                 infixTextBox.Enabled = true;
-                postFixTextBox.Enabled = true;
+                postfixTextBox.Enabled = true;
             }
             else
             {
                 prefixLabel.Text = "New value:";
                 infixTextBox.Enabled = false;
-                postFixTextBox.Enabled = false;
+                postfixTextBox.Enabled = false;
             }
         }
 
@@ -44,6 +44,17 @@ namespace Z3AxiomProfiler
                 MessageBox.Show("The form is missing required values. " +
                                 "Please fill in all values and try again.",
                                 "Missing or blank values!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (matchTextBox.Text.Contains(";") ||
+                prefixTextBox.Text.Contains(";") ||
+                infixTextBox.Text.Contains(";") ||
+                postfixTextBox.Text.Contains(";"))
+            {
+                MessageBox.Show("The form contains an invalid character (;). " +
+                                "Please remove all these characters and try again.",
+                                "Invalid character!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -75,7 +86,7 @@ namespace Z3AxiomProfiler
             {
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
-                postfix = postFixTextBox.Text,
+                postfix = postfixTextBox.Text,
                 printChildren = printChildrenCB.Checked
             };
         }
