@@ -344,6 +344,7 @@ namespace Z3AxiomProfiler
             z3AxiomTree.Nodes.Clear();
             InstantiationPathView.Items.Clear();
             toolTipBox.Clear();
+            rewriteDict = new RewriteDictionary();
 
             z3AxiomTree.Nodes.Add(graphHistoryNode);
             if (model.conflicts.Count > 0)
@@ -619,7 +620,7 @@ namespace Z3AxiomProfiler
         {
             TreeNode t = z3AxiomTree.SelectedNode;
             Common c = t.Tag as Common;
-            SetToolTip(c);
+            SetInfoPanel(c);
 
             Scope scope = c as Scope;
             if (scope != null)
@@ -634,7 +635,7 @@ namespace Z3AxiomProfiler
             }
         }
 
-        public void SetToolTip(Common c)
+        public void SetInfoPanel(Common c)
         {
             if (c == null) return;
 
@@ -808,7 +809,7 @@ namespace Z3AxiomProfiler
             Common c = e.Item.Tag as Common;
             if (c != null)
             {
-                SetToolTip(c);
+                SetInfoPanel(c);
             }
         }
 
@@ -817,14 +818,14 @@ namespace Z3AxiomProfiler
             TreeNode t = z3AxiomTree.SelectedNode;
             if (t == null) return;
             Common c = t.Tag as Common;
-            SetToolTip(c);
+            SetInfoPanel(c);
         }
 
         private void InstantiationPathView_Enter(object sender, EventArgs e)
         {
             if (InstantiationPathView.SelectedItems.Count <= 0) return;
             Common c = InstantiationPathView.SelectedItems[0].Tag as Common;
-            SetToolTip(c);
+            SetInfoPanel(c);
         }
 
         private void quantifierBlameVisualizationToolStripMenuItem_Click(object sender, EventArgs e)
@@ -845,22 +846,34 @@ namespace Z3AxiomProfiler
 
         private void showTypesCB_CheckedChanged(object sender, EventArgs e)
         {
-            SetToolTip(lastToolTipCommon);
+            SetInfoPanel(lastToolTipCommon);
         }
 
         private void showTermIdCB_CheckedChanged(object sender, EventArgs e)
         {
-            SetToolTip(lastToolTipCommon);
+            SetInfoPanel(lastToolTipCommon);
         }
 
         private void maxTermWidthUD_ValueChanged(object sender, EventArgs e)
         {
-            SetToolTip(lastToolTipCommon);
+            SetInfoPanel(lastToolTipCommon);
         }
 
         private void maxTermDepthUD_ValueChanged(object sender, EventArgs e)
         {
-            SetToolTip(lastToolTipCommon);
+            SetInfoPanel(lastToolTipCommon);
+        }
+
+        private RewriteRuleViewer rewriteRuleViewer = null;
+        private void rewritingRulesButton_Click(object sender, EventArgs e)
+        {
+            if (rewriteRuleViewer != null && rewriteRuleViewer.IsDisposed)
+            {
+                rewriteRuleViewer = null;
+            }
+            if (rewriteRuleViewer != null) return;
+            rewriteRuleViewer = new RewriteRuleViewer(rewriteDict);
+            rewriteRuleViewer.Show();
         }
     }
 }

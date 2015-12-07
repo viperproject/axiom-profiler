@@ -59,16 +59,15 @@ namespace Z3AxiomProfiler
                     "Rule already exists!",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information);
-                if (overwriteDecision == DialogResult.Yes)
-                {
-                    termTranslations.Add(matchTextBox.Text, buildRuleFromForm());
-                }
-                else
+                if (overwriteDecision == DialogResult.No)
                 {
                     // do not close yet, as the user must have the possibility to correct the match value.
                     return;
                 }
+                // remove the old one
+                termTranslations.Remove(matchTextBox.Text);
             }
+            termTranslations.Add(matchTextBox.Text, buildRuleFromForm());
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -82,6 +81,14 @@ namespace Z3AxiomProfiler
                 postfix = postFixTextBox.Text,
                 printChildren = printChildrenCB.Checked
             };
+        }
+
+        private void printChildrenCB_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                printChildrenCB.Checked = !printChildrenCB.Checked;
+            }
         }
     }
 }

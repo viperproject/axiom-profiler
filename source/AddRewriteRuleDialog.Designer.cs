@@ -48,7 +48,7 @@
             this.prefixTextBox.Location = new System.Drawing.Point(77, 32);
             this.prefixTextBox.Name = "prefixTextBox";
             this.prefixTextBox.Size = new System.Drawing.Size(215, 20);
-            this.prefixTextBox.TabIndex = 0;
+            this.prefixTextBox.TabIndex = 2;
             // 
             // prefixLabel
             // 
@@ -68,10 +68,11 @@
             this.printChildrenCB.Location = new System.Drawing.Point(197, 8);
             this.printChildrenCB.Name = "printChildrenCB";
             this.printChildrenCB.Size = new System.Drawing.Size(88, 17);
-            this.printChildrenCB.TabIndex = 4;
+            this.printChildrenCB.TabIndex = 1;
             this.printChildrenCB.Text = "Print Children";
             this.printChildrenCB.UseVisualStyleBackColor = true;
             this.printChildrenCB.CheckedChanged += new System.EventHandler(this.printChildrenCB_CheckedChanged);
+            this.printChildrenCB.KeyDown += new System.Windows.Forms.KeyEventHandler(this.printChildrenCB_KeyDown);
             // 
             // infixTextBox
             // 
@@ -80,7 +81,7 @@
             this.infixTextBox.Location = new System.Drawing.Point(77, 58);
             this.infixTextBox.Name = "infixTextBox";
             this.infixTextBox.Size = new System.Drawing.Size(215, 20);
-            this.infixTextBox.TabIndex = 5;
+            this.infixTextBox.TabIndex = 3;
             // 
             // postFixTextBox
             // 
@@ -89,7 +90,7 @@
             this.postFixTextBox.Location = new System.Drawing.Point(77, 85);
             this.postFixTextBox.Name = "postFixTextBox";
             this.postFixTextBox.Size = new System.Drawing.Size(215, 20);
-            this.postFixTextBox.TabIndex = 6;
+            this.postFixTextBox.TabIndex = 4;
             // 
             // infixLabel
             // 
@@ -116,7 +117,7 @@
             this.matchTextBox.Location = new System.Drawing.Point(77, 6);
             this.matchTextBox.Name = "matchTextBox";
             this.matchTextBox.Size = new System.Drawing.Size(99, 20);
-            this.matchTextBox.TabIndex = 9;
+            this.matchTextBox.TabIndex = 0;
             // 
             // matchLabel
             // 
@@ -133,7 +134,7 @@
             this.addButton.Location = new System.Drawing.Point(76, 114);
             this.addButton.Name = "addButton";
             this.addButton.Size = new System.Drawing.Size(75, 23);
-            this.addButton.TabIndex = 11;
+            this.addButton.TabIndex = 5;
             this.addButton.Text = "Add Rule";
             this.addButton.UseVisualStyleBackColor = true;
             this.addButton.Click += new System.EventHandler(this.addButton_Click);
@@ -144,7 +145,7 @@
             this.cancelButton.Location = new System.Drawing.Point(161, 114);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
-            this.cancelButton.TabIndex = 12;
+            this.cancelButton.TabIndex = 6;
             this.cancelButton.Text = "Cancel";
             this.cancelButton.UseVisualStyleBackColor = true;
             this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);

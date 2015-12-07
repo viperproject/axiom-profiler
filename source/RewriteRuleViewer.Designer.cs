@@ -52,7 +52,7 @@
             this.toolBar.Controls.Add(this.addRuleButton);
             this.toolBar.Location = new System.Drawing.Point(0, 0);
             this.toolBar.Name = "toolBar";
-            this.toolBar.Size = new System.Drawing.Size(532, 25);
+            this.toolBar.Size = new System.Drawing.Size(500, 25);
             this.toolBar.TabIndex = 0;
             // 
             // deleteRuleButton
@@ -60,9 +60,10 @@
             this.deleteRuleButton.Location = new System.Drawing.Point(76, 1);
             this.deleteRuleButton.Name = "deleteRuleButton";
             this.deleteRuleButton.Size = new System.Drawing.Size(75, 23);
-            this.deleteRuleButton.TabIndex = 4;
+            this.deleteRuleButton.TabIndex = 1;
             this.deleteRuleButton.Text = "Delete Rule";
             this.deleteRuleButton.UseVisualStyleBackColor = true;
+            this.deleteRuleButton.Click += new System.EventHandler(this.deleteRuleButton_Click);
             // 
             // exportButton
             // 
@@ -103,12 +104,15 @@
             this.InfixHeader,
             this.PostfixHeader,
             this.ChildrenHeader});
+            this.rulesView.FullRowSelect = true;
             this.rulesView.Location = new System.Drawing.Point(0, 25);
+            this.rulesView.MultiSelect = false;
             this.rulesView.Name = "rulesView";
-            this.rulesView.Size = new System.Drawing.Size(533, 520);
-            this.rulesView.TabIndex = 1;
+            this.rulesView.Size = new System.Drawing.Size(501, 436);
+            this.rulesView.TabIndex = 4;
             this.rulesView.UseCompatibleStateImageBehavior = false;
             this.rulesView.View = System.Windows.Forms.View.Details;
+            this.rulesView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.rulesView_KeyDown);
             // 
             // MatchesHeader
             // 
@@ -137,9 +141,10 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(533, 545);
+            this.ClientSize = new System.Drawing.Size(501, 461);
             this.Controls.Add(this.rulesView);
             this.Controls.Add(this.toolBar);
+            this.MinimumSize = new System.Drawing.Size(450, 238);
             this.Name = "RewriteRuleViewer";
             this.Text = "Rewrite Rule Viewer";
             this.toolBar.ResumeLayout(false);

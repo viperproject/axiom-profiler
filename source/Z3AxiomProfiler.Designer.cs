@@ -449,6 +449,7 @@
             this.rewritingRulesButton.TabIndex = 7;
             this.rewritingRulesButton.Text = "Rewriting Rules";
             this.rewritingRulesButton.UseVisualStyleBackColor = true;
+            this.rewritingRulesButton.Click += new System.EventHandler(this.rewritingRulesButton_Click);
             // 
             // Z3AxiomProfiler
             // 

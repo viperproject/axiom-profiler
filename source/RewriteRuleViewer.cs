@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Input;
 using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler
@@ -19,6 +20,7 @@ namespace Z3AxiomProfiler
         private void updateRulesList()
         {
             rulesView.BeginUpdate();
+            rulesView.Items.Clear();
             foreach (var item in rewriteRulesDict.termTranslations.OrderBy(keyValPair => keyValPair.Key).Select(keyValPair => getRuleItem(keyValPair)))
             {
                 rulesView.Items.Add(item);
@@ -49,6 +51,28 @@ namespace Z3AxiomProfiler
             if (result == DialogResult.OK)
             {
                 updateRulesList();
+            }
+        }
+
+        private void deleteRuleButton_Click(object sender, EventArgs e)
+        {
+            deleteSelectedRule();
+        }
+
+        private void deleteSelectedRule()
+        {
+            foreach (ListViewItem rule in rulesView.SelectedItems)
+            {
+                rewriteRulesDict.termTranslations.Remove(rule.Text);
+            }
+            updateRulesList();
+        }
+
+        private void rulesView_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Delete)
+            {
+                deleteSelectedRule();
             }
         }
     }
