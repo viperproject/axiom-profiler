@@ -874,12 +874,21 @@ namespace Z3AxiomProfiler
             {
                 rewriteRuleViewer = null;
             }
-            if (rewriteRuleViewer != null) return;
-            rewriteRuleViewer = new RewriteRuleViewer(rewriteDict);
+            if (rewriteRuleViewer != null)
+            {
+                rewriteRuleViewer.BringToFront();
+                return;
+            }
+            rewriteRuleViewer = new RewriteRuleViewer(this, rewriteDict);
             rewriteRuleViewer.Show();
         }
 
         private void enableRewritingCB_CheckedChanged(object sender, EventArgs e)
+        {
+            SetInfoPanel(lastToolTipCommon);
+        }
+
+        public void updateInfoPanel()
         {
             SetInfoPanel(lastToolTipCommon);
         }

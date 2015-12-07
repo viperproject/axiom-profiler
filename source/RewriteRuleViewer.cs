@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -10,8 +11,10 @@ namespace Z3AxiomProfiler
     public partial class RewriteRuleViewer : Form
     {
         private readonly RewriteDictionary rewriteRulesDict;
-        public RewriteRuleViewer(RewriteDictionary rulesDictionary)
+        private readonly Z3AxiomProfiler profiler;
+        public RewriteRuleViewer(Z3AxiomProfiler profiler, RewriteDictionary rulesDictionary)
         {
+            this.profiler = profiler;
             rewriteRulesDict = rulesDictionary;
             InitializeComponent();
             updateRulesList();
@@ -26,6 +29,7 @@ namespace Z3AxiomProfiler
                 rulesView.Items.Add(item);
             }
             rulesView.EndUpdate();
+            profiler.updateInfoPanel();
         }
 
         private static ListViewItem getRuleItem(KeyValuePair<string, RewriteRule> keyValPair)
@@ -73,6 +77,60 @@ namespace Z3AxiomProfiler
             if (e.KeyCode == Keys.Delete)
             {
                 deleteSelectedRule();
+            }
+        }
+
+        private void exportButton_Click(object sender, EventArgs e)
+        {
+            var dialog = new SaveFileDialog
+            {
+                DefaultExt = ".csv",
+                AddExtension = true,
+                Filter = "Comma separated Values (*.csv)|*.csv"
+            };
+            var dialogResult = dialog.ShowDialog();
+            if (dialogResult != DialogResult.OK)
+            {
+                return;
+            }
+
+            var outStream = new StreamWriter(dialog.OpenFile());
+            foreach (var rulePair in rewriteRulesDict.termTranslations)
+            {
+                var rule = rulePair.Value;
+                outStream.WriteLineAsync(
+                    $"{rulePair.Key};{rule.prefix};{rule.infix};{rule.postfix};{rule.printChildren}");
+            }
+            outStream.Close();
+        }
+
+        private void importButton_Click(object sender, EventArgs e)
+        {
+            var dialog = new OpenFileDialog()
+            {
+                DefaultExt = ".csv",
+                Filter = "Comma separated Values (*.csv)|*.csv"
+            };
+            var dialogResult = dialog.ShowDialog();
+            if (dialogResult != DialogResult.OK)
+            {
+                return;
+            }
+            var inStream = new StreamReader(dialog.OpenFile());
+            var fail = false;
+            while (!inStream.EndOfStream)
+            {
+                var line = inStream.ReadLine();
+                if (line == null)
+                {
+                    break;
+                }
+
+                var lines = line.Split(';');
+                if (lines.Length != 5)
+                {
+                    
+                }
             }
         }
     }
