@@ -116,22 +116,44 @@ namespace Z3AxiomProfiler
             {
                 return;
             }
+
+            rewriteRulesDict.termTranslations.Clear();
             var inStream = new StreamReader(dialog.OpenFile());
-            var fail = false;
+            var invalidLines = false;
             while (!inStream.EndOfStream)
             {
                 var line = inStream.ReadLine();
-                if (line == null)
+                if (string.IsNullOrWhiteSpace(line))
                 {
-                    break;
+                    continue;
                 }
-
                 var lines = line.Split(';');
                 if (lines.Length != 5)
                 {
-                    
+                    invalidLines = true;
+                    continue;
                 }
+                var printChildren = true;
+                if (!bool.TryParse(lines[4], out printChildren))
+                {
+                    invalidLines = true;
+                }
+
+                rewriteRulesDict.termTranslations.Add(lines[0], new RewriteRule
+                {
+                    prefix = lines[1],
+                    infix = lines[2],
+                    postfix = lines[3],
+                    printChildren = printChildren
+                });
             }
+
+            if (invalidLines)
+            {
+                MessageBox.Show("Some unparseable lines were skipped!",
+                                "There were unparseable lines!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            updateRulesList();
         }
     }
 }
