@@ -440,6 +440,7 @@
             this.enableRewritingCB.TabIndex = 6;
             this.enableRewritingCB.Text = "Enable Term Rewriting";
             this.enableRewritingCB.UseVisualStyleBackColor = true;
+            this.enableRewritingCB.CheckedChanged += new System.EventHandler(this.enableRewritingCB_CheckedChanged);
             // 
             // rewritingRulesButton
             // 

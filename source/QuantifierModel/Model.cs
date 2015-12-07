@@ -842,9 +842,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             return s.ToString();
         }
 
-        // ToDo: is this not always false?
-        // Expensive(!) For large terms
-        public int Weight => BodyTerm.PrettyPrint(new PrettyPrintFormat()).Contains("{:weight 0") ? 0 : 1;
+        // ToDo: find better implementation!
+        public int Weight => 1;
 
         private Common TheMost(string tag, Comparison<Instantiation> cmp)
         {

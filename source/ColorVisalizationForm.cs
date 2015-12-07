@@ -162,7 +162,8 @@ namespace Z3AxiomProfiler
                     if ((colorIndex >= 0) && (colorIndex < colors.Count))
                     {
                         this.colorBox.BackColor = colors[colorIndex];
-                        this.boogieQuantifierText.Text = q.InfoPanelText(new PrettyPrintFormat());
+                        this.boogieQuantifierText.Text =
+                            q.InfoPanelText(new PrettyPrintFormat {rewriteDict = new RewriteDictionary()});
                         this.quantifierLinkedText.Text = q.ToString();
                     }
                     else

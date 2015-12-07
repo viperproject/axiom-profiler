@@ -185,7 +185,7 @@ namespace Z3AxiomProfiler
                     inEdge.SourceNode.Label.FontColor = Color.Black;
                 }
                 previouslySelectedNode = node;
-                _z3AxiomProfiler.SetToolTip((Instantiation)node.UserData);
+                _z3AxiomProfiler.SetInfoPanel((Instantiation)node.UserData);
             }
             _viewer.Invalidate();
         }

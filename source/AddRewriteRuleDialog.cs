@@ -39,10 +39,7 @@ namespace Z3AxiomProfiler
         private void addButton_Click(object sender, EventArgs e)
         {
             // check if form is filled out correctly
-            if (string.IsNullOrWhiteSpace(matchTextBox.Text) ||
-                string.IsNullOrWhiteSpace(prefixTextBox.Text) ||
-                (printChildrenCB.Checked &&
-                 (string.IsNullOrWhiteSpace(infixTextBox.Text) || string.IsNullOrWhiteSpace(postFixTextBox.Text))))
+            if (string.IsNullOrWhiteSpace(matchTextBox.Text))
             {
                 MessageBox.Show("The form is missing required values. " +
                                 "Please fill in all values and try again.",

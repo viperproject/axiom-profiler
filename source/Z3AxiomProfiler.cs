@@ -642,17 +642,20 @@ namespace Z3AxiomProfiler
             lastToolTipCommon = c;
             Interlocked.Increment(ref workCounter);
             uiUpdateTimer.Start();
-            Task.Run(() =>
+            Task.Run(() => toolTipQueue.Enqueue(c.InfoPanelText(getFormatFromGUI()).Split('\n')));
+        }
+
+        private PrettyPrintFormat getFormatFromGUI()
+        {
+            return new PrettyPrintFormat
             {
-                var prettyPrintFormat = new PrettyPrintFormat
-                {
-                    showType = showTypesCB.Checked,
-                    showTermId = showTermIdCB.Checked,
-                    maxWidth = (int) maxTermWidthUD.Value,
-                    maxDepth = (int) maxTermDepthUD.Value
-                };
-                toolTipQueue.Enqueue(c.InfoPanelText(prettyPrintFormat).Split('\n'));
-            });
+                showType = showTypesCB.Checked,
+                showTermId = showTermIdCB.Checked,
+                maxWidth = (int) maxTermWidthUD.Value,
+                maxDepth = (int) maxTermDepthUD.Value,
+                rewritingEnabled = enableRewritingCB.Checked,
+                rewriteDict = rewriteDict
+            };
         }
 
         private int toolTipLineIdx;
@@ -874,6 +877,11 @@ namespace Z3AxiomProfiler
             if (rewriteRuleViewer != null) return;
             rewriteRuleViewer = new RewriteRuleViewer(rewriteDict);
             rewriteRuleViewer.Show();
+        }
+
+        private void enableRewritingCB_CheckedChanged(object sender, EventArgs e)
+        {
+            SetInfoPanel(lastToolTipCommon);
         }
     }
 }

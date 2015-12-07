@@ -76,7 +76,7 @@ namespace Z3AxiomProfiler.Rewriting
             if (rewritingEnabled && rewriteDict != null)
             {
                 rewriteRule = rewriteDict.getRewriteRule(t);
-                return true;
+                return rewriteRule != null;
             }
             rewriteRule = RewriteRule.DefaultRewriteRule();
             return false;
