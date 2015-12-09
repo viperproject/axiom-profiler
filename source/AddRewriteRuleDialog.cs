@@ -86,7 +86,7 @@ namespace Z3AxiomProfiler
             {
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
-                postfix = postfixTextBox.Text,
+                suffix = postfixTextBox.Text,
                 printChildren = printChildrenCB.Checked
             };
         }

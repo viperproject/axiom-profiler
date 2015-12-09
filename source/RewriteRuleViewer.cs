@@ -43,7 +43,7 @@ namespace Z3AxiomProfiler
             };
             item.SubItems.Add(rule.prefix);
             item.SubItems.Add(rule.infix);
-            item.SubItems.Add(rule.postfix);
+            item.SubItems.Add(rule.suffix);
             item.SubItems.Add(rule.printChildren + "");
             return item;
         }
@@ -99,7 +99,7 @@ namespace Z3AxiomProfiler
             {
                 var rule = rulePair.Value;
                 outStream.WriteLineAsync(
-                    $"{rulePair.Key};{rule.prefix};{rule.infix};{rule.postfix};{rule.printChildren}");
+                    $"{rulePair.Key};{rule.prefix};{rule.infix};{rule.suffix};{rule.printChildren}");
             }
             outStream.Close();
         }
@@ -143,7 +143,7 @@ namespace Z3AxiomProfiler
                 {
                     prefix = lines[1],
                     infix = lines[2],
-                    postfix = lines[3],
+                    suffix = lines[3],
                     printChildren = printChildren
                 });
             }

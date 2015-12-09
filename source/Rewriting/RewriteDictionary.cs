@@ -33,7 +33,7 @@ namespace Z3AxiomProfiler.Rewriting
     {
         public string prefix = "";
         public string infix = "";
-        public string postfix = "";
+        public string suffix = "";
         public bool printChildren = true;
 
 
@@ -43,7 +43,7 @@ namespace Z3AxiomProfiler.Rewriting
             {
                 prefix = "(",
                 infix = ", ",
-                postfix = ")",
+                suffix = ")",
                 printChildren = true
             };
         }

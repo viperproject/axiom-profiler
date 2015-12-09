@@ -34,7 +34,7 @@
             this.infixTextBox = new System.Windows.Forms.TextBox();
             this.postfixTextBox = new System.Windows.Forms.TextBox();
             this.infixLabel = new System.Windows.Forms.Label();
-            this.postfixLabel = new System.Windows.Forms.Label();
+            this.suffixLabel = new System.Windows.Forms.Label();
             this.matchTextBox = new System.Windows.Forms.TextBox();
             this.matchLabel = new System.Windows.Forms.Label();
             this.addButton = new System.Windows.Forms.Button();
@@ -101,14 +101,14 @@
             this.infixLabel.TabIndex = 7;
             this.infixLabel.Text = "Infix:";
             // 
-            // postfixLabel
+            // suffixLabel
             // 
-            this.postfixLabel.AutoSize = true;
-            this.postfixLabel.Location = new System.Drawing.Point(12, 88);
-            this.postfixLabel.Name = "postfixLabel";
-            this.postfixLabel.Size = new System.Drawing.Size(41, 13);
-            this.postfixLabel.TabIndex = 8;
-            this.postfixLabel.Text = "Postfix:";
+            this.suffixLabel.AutoSize = true;
+            this.suffixLabel.Location = new System.Drawing.Point(12, 88);
+            this.suffixLabel.Name = "suffixLabel";
+            this.suffixLabel.Size = new System.Drawing.Size(36, 13);
+            this.suffixLabel.TabIndex = 8;
+            this.suffixLabel.Text = "Suffix:";
             // 
             // matchTextBox
             // 
@@ -131,7 +131,7 @@
             // addButton
             // 
             this.addButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.addButton.Location = new System.Drawing.Point(76, 114);
+            this.addButton.Location = new System.Drawing.Point(65, 111);
             this.addButton.Name = "addButton";
             this.addButton.Size = new System.Drawing.Size(75, 23);
             this.addButton.TabIndex = 5;
@@ -142,7 +142,7 @@
             // cancelButton
             // 
             this.cancelButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.cancelButton.Location = new System.Drawing.Point(161, 114);
+            this.cancelButton.Location = new System.Drawing.Point(155, 111);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
             this.cancelButton.TabIndex = 6;
@@ -160,7 +160,7 @@
             this.Controls.Add(this.addButton);
             this.Controls.Add(this.matchLabel);
             this.Controls.Add(this.matchTextBox);
-            this.Controls.Add(this.postfixLabel);
+            this.Controls.Add(this.suffixLabel);
             this.Controls.Add(this.infixLabel);
             this.Controls.Add(this.postfixTextBox);
             this.Controls.Add(this.infixTextBox);
@@ -186,7 +186,7 @@
         private System.Windows.Forms.TextBox infixTextBox;
         private System.Windows.Forms.TextBox postfixTextBox;
         private System.Windows.Forms.Label infixLabel;
-        private System.Windows.Forms.Label postfixLabel;
+        private System.Windows.Forms.Label suffixLabel;
         private System.Windows.Forms.TextBox matchTextBox;
         private System.Windows.Forms.Label matchLabel;
         private System.Windows.Forms.Button addButton;

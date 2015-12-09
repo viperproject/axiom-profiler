@@ -988,7 +988,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string InfoPanelText(PrettyPrintFormat format)
         {
-            findPatternMatch();
             StringBuilder s = new StringBuilder();
             s.Append(SummaryInfo());
             s.Append('\n');
@@ -1422,7 +1421,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 builder.Append("...");
             }
 
-            builder.Append(rewrite ? rewriteRule.postfix: ")");
+            builder.Append(rewrite ? rewriteRule.suffix: ")");
 
             // check if line split is necessary
             if (!isMultiline && builder.Length - startLength <= format.maxWidth

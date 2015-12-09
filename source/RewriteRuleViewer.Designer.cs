@@ -37,7 +37,7 @@
             this.MatchesHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.PrefixHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.InfixHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.PostfixHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.SuffixHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.ChildrenHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.toolBar.SuspendLayout();
             this.SuspendLayout();
@@ -104,7 +104,7 @@
             this.MatchesHeader,
             this.PrefixHeader,
             this.InfixHeader,
-            this.PostfixHeader,
+            this.SuffixHeader,
             this.ChildrenHeader});
             this.rulesView.FullRowSelect = true;
             this.rulesView.Location = new System.Drawing.Point(0, 25);
@@ -130,9 +130,9 @@
             // 
             this.InfixHeader.Text = "Infix";
             // 
-            // PostfixHeader
+            // SuffixHeader
             // 
-            this.PostfixHeader.Text = "Postfix";
+            this.SuffixHeader.Text = "Suffix";
             // 
             // ChildrenHeader
             // 
@@ -161,7 +161,7 @@
         private System.Windows.Forms.ColumnHeader MatchesHeader;
         private System.Windows.Forms.ColumnHeader PrefixHeader;
         private System.Windows.Forms.ColumnHeader InfixHeader;
-        private System.Windows.Forms.ColumnHeader PostfixHeader;
+        private System.Windows.Forms.ColumnHeader SuffixHeader;
         private System.Windows.Forms.ColumnHeader ChildrenHeader;
         private System.Windows.Forms.Button addRuleButton;
         private System.Windows.Forms.Button importButton;
