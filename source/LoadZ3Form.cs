@@ -11,23 +11,10 @@ namespace Z3AxiomProfiler
 {
     public partial class LoadZ3Form : Form
     {
-
-        readonly bool launchedFromAddin;
-        readonly Control ctrl;
-
-        delegate string LoadFileDelegate(string filename);
-
-        public LoadZ3Form(bool launchedFromAddin, Control ctrl)
+        public LoadZ3Form()
         {
-            this.launchedFromAddin = launchedFromAddin;
-            this.ctrl = ctrl;
             InitializeComponent();
             buttonLoad.Focus();
-        }
-
-        private void LoadZ3Form_Load(object sender, EventArgs e)
-        {
-
         }
 
         private void buttonLoad_Click(object sender, EventArgs e)
@@ -78,43 +65,29 @@ namespace Z3AxiomProfiler
 
         private string loadZ3File(string filename)
         {
-            if (launchedFromAddin && ctrl.InvokeRequired)
+
+            FileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "Open Z3 file";
+            if (File.Exists(filename))
             {
-                return ctrl.Invoke(new LoadFileDelegate(loadZ3File), filename) as string;
+                openFileDialog.FileName = filename;
             }
-            else
+            openFileDialog.Filter = "Z3 files (*.z3;*.smt;*.smt2;*.sx;*.smp;*.simplif;*.dimacs) |*.z3;*.smt;*.smt2;*.sx;*.smp;*.simplif;*.dimacs| " +
+                                    "Z3 native files (*.z3) |*.z3| " +
+                                    "SMT-LIB files (*.smt;*.smt2) |*.smt;*.smt2| " +
+                                    "Simplify files (*.sx;*.smp;*.simplify) |*.sx;*.smp;*.simplify| " +
+                                    "DIMACS files (*.dimacs) |*.dimacs| " +
+                                    "All files (*.*) |*.*";
+            if ((openFileDialog.ShowDialog() == DialogResult.OK) && File.Exists(openFileDialog.FileName))
             {
-                FileDialog openFileDialog = new OpenFileDialog();
-                openFileDialog.Title = "Open Z3 file";
-                if (File.Exists(filename))
-                {
-                    openFileDialog.FileName = filename;
-                }
-                openFileDialog.Filter = "Z3 files (*.z3;*.smt;*.smt2;*.sx;*.smp;*.simplif;*.dimacs) |*.z3;*.smt;*.smt2;*.sx;*.smp;*.simplif;*.dimacs| " +
-                                        "Z3 native files (*.z3) |*.z3| " +
-                                        "SMT-LIB files (*.smt;*.smt2) |*.smt;*.smt2| " +
-                                        "Simplify files (*.sx;*.smp;*.simplify) |*.sx;*.smp;*.simplify| " +
-                                        "DIMACS files (*.dimacs) |*.dimacs| " +
-                                        "All files (*.*) |*.*";
-                if ((openFileDialog.ShowDialog() == DialogResult.OK) && File.Exists(openFileDialog.FileName))
-                {
-                    return openFileDialog.FileName;
-                }
-                else
-                {
-                    return filename;
-                }
+                return openFileDialog.FileName;
             }
+            return filename;
         }
 
         private void buttonOpenZ3_Click(object sender, EventArgs e)
         {
             z3FilePath.Text = loadZ3File(z3FilePath.Text);
-        }
-
-        private void LoadZ3Form_Shown(object sender, EventArgs e)
-        {
-            buttonLoad.Focus();
         }
     }
 }

@@ -24,12 +24,8 @@ namespace Z3AxiomProfiler
                 Color.ForestGreen, Color.Beige
                 };
 
-        private readonly Control ctrl;
-
-        private int ImageWidth = 0;
-        private int ImageHeight = 0;
-
-        readonly bool launchedFromAddin;
+        private int ImageWidth;
+        private int ImageHeight;
 
         public ColorVisalizationForm()
           : this(false, null)
@@ -39,8 +35,6 @@ namespace Z3AxiomProfiler
         public ColorVisalizationForm(bool launchedFromAddin, Control ctrl)
         {
             InitializeComponent();
-            this.ctrl = ctrl;
-            this.launchedFromAddin = launchedFromAddin;
         }
 
         private void DisplayResults()
@@ -97,19 +91,11 @@ namespace Z3AxiomProfiler
 
         private void saveBitmapAsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
-            if (launchedFromAddin && ctrl.InvokeRequired)
+            SaveFileDialog fileDialog = new SaveFileDialog();
+            fileDialog.Filter = "Png file |*.png";
+            if (fileDialog.ShowDialog() == DialogResult.OK)
             {
-                ctrl.Invoke(new EventHandler(saveBitmapAsToolStripMenuItem_Click), sender, e);
-            }
-            else
-            {
-                SaveFileDialog fileDialog = new SaveFileDialog();
-                fileDialog.Filter = "Png file |*.png";
-                if (fileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    this.pictureBox1.Image.Save(fileDialog.FileName, ImageFormat.Png);
-                }
+                pictureBox1.Image.Save(fileDialog.FileName, ImageFormat.Png);
             }
         }
 
@@ -163,7 +149,7 @@ namespace Z3AxiomProfiler
                     {
                         this.colorBox.BackColor = colors[colorIndex];
                         this.boogieQuantifierText.Text =
-                            q.InfoPanelText(new PrettyPrintFormat {rewriteDict = new RewriteDictionary()});
+                            q.InfoPanelText(new PrettyPrintFormat { rewriteDict = new RewriteDictionary() });
                         this.quantifierLinkedText.Text = q.ToString();
                     }
                     else

@@ -21,10 +21,6 @@ namespace Z3AxiomProfiler
 {
     public partial class Z3AxiomProfiler : Form
     {
-        // TODO: This is legacy stuff -> remove.
-        readonly bool launchedFromAddin;
-        readonly Control ctrl;
-
         public string SearchText = "";
         SearchTree searchTree;
         readonly Dictionary<TreeNode, Common> expanded = new Dictionary<TreeNode, Common>();
@@ -36,18 +32,20 @@ namespace Z3AxiomProfiler
         private int workCounter;
         private Common lastToolTipCommon;
         private RewriteDictionary rewriteDict = new RewriteDictionary();
+        private ParameterConfiguration parameterConfiguration;
+        public Model model;
 
-        private readonly TreeNode graphHistoryNode = new TreeNode
+        private readonly TreeNode historyNode = new TreeNode
         {
-            Text = "GRAPH HISTORY"
+            Text = "HISTORY"
         };
 
         public void addInstantiationToHistory(Instantiation inst)
         {
-            graphHistoryNode.Nodes.Insert(0, makeNode(inst));
-            if (graphHistoryNode.Nodes.Count > 100)
+            historyNode.Nodes.Insert(0, makeNode(inst));
+            if (historyNode.Nodes.Count > 100)
             {
-                graphHistoryNode.Nodes.RemoveAt(100);
+                historyNode.Nodes.RemoveAt(100);
             }
         }
 
@@ -59,12 +57,10 @@ namespace Z3AxiomProfiler
             uiUpdateTimer.Tick += toolTipUpdateTick;
         }
 
-        private ParameterConfiguration parameterConfiguration = null;
-        public Model model;
 
         private void Z3AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
         {
-            if (launchedFromAddin || parameterConfiguration == null) return;
+            if (parameterConfiguration == null) return;
 
             Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
 
@@ -103,8 +99,7 @@ namespace Z3AxiomProfiler
                 s = s.Substring(10);
                 return s.Substring(0, 1) + ":" + s.Substring(1);
             }
-            else
-                return s;
+            return s;
         }
 
         public bool parseCommandLineArguments(string[] args, out string error)
@@ -246,24 +241,9 @@ namespace Z3AxiomProfiler
             return (defaultSetting + " " + newRandomSeedArgument).Trim();
         }
 
-        //New Entry, witch is called from the AddIn
-        public void load(string BPLFileName, string FunctionName, string PreludeFileName,
-                         int randomSeed, bool randomSeedEnabled, string vcccmdswitches)
-        {
-            parameterConfiguration = new ParameterConfiguration
-            {
-                functionName = FunctionName,
-                preludeBplFileInfo = new FileInfo(PreludeFileName),
-                codeBplFileInfo = new FileInfo(BPLFileName),
-                z3Options = getZ3Setting(randomSeed, randomSeedEnabled)
-            };
-
-            loadModelFromBoogie();
-        }
-
         public void loadModelFromBoogie()
         {
-            LoadBoogieForm loadform = new LoadBoogieForm(launchedFromAddin, ctrl);
+            LoadBoogieForm loadform = new LoadBoogieForm();
             if (parameterConfiguration != null)
             {
                 loadform.setParameterConfiguration(parameterConfiguration);
@@ -285,7 +265,7 @@ namespace Z3AxiomProfiler
 
         public void loadModelFromZ3()
         {
-            LoadZ3Form loadform = new LoadZ3Form(launchedFromAddin, ctrl);
+            LoadZ3Form loadform = new LoadZ3Form();
             if (parameterConfiguration != null)
             {
                 loadform.setParameterConfiguration(parameterConfiguration);
@@ -307,7 +287,7 @@ namespace Z3AxiomProfiler
 
         public void loadModelFromZ3Logfile()
         {
-            LoadZ3LogForm loadform = new LoadZ3LogForm(launchedFromAddin, ctrl);
+            LoadZ3LogForm loadform = new LoadZ3LogForm();
             if (parameterConfiguration != null)
             {
                 loadform.setParameterConfiguration(parameterConfiguration);
@@ -346,7 +326,9 @@ namespace Z3AxiomProfiler
             toolTipBox.Clear();
             rewriteDict = new RewriteDictionary();
 
-            z3AxiomTree.Nodes.Add(graphHistoryNode);
+            // clear history
+            historyNode.Nodes.Clear();
+            z3AxiomTree.Nodes.Add(historyNode);
             if (model.conflicts.Count > 0)
             {
                 AddTopNode(Common.Callback("CONFLICTS", () => model.conflicts));
@@ -537,7 +519,7 @@ namespace Z3AxiomProfiler
         {
             if (model == null)
                 return;
-            ColorVisalizationForm colorForm = new ColorVisalizationForm(launchedFromAddin, ctrl);
+            ColorVisalizationForm colorForm = new ColorVisalizationForm();
             colorForm.quantifierLinkedText.Click += nodeSelector;
             colorForm.setQuantifiers(model.GetQuantifiersSortedByOccurence(), model.GetQuantifiersSortedByInstantiations());
             colorForm.Show();

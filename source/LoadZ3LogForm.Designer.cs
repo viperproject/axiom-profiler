@@ -93,7 +93,6 @@
       this.Controls.Add(this.label1);
       this.Name = "LoadZ3LogForm";
       this.Text = "Load Z3 Logfile";
-      this.Load += new System.EventHandler(this.LoadZ3LogForm_Load);
       this.Shown += new System.EventHandler(this.LoadZ3LogForm_Shown);
       this.ResumeLayout(false);
       this.PerformLayout();
