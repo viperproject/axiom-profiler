@@ -27,7 +27,7 @@ namespace Z3AxiomProfiler
         public int checkToConsider = 0; // 0 is a special value, meaning "process all checks"
 
 
-        static public ParameterConfiguration loadParameterConfigurationFromSettings()
+        public static ParameterConfiguration loadParameterConfigurationFromSettings()
         {
             ParameterConfiguration config = new ParameterConfiguration();
 
@@ -46,7 +46,7 @@ namespace Z3AxiomProfiler
             return config;
         }
 
-        static public bool saveParameterConfigurationToSettings(ParameterConfiguration config)
+        public static bool saveParameterConfigurationToSettings(ParameterConfiguration config)
         {
             try
             {
@@ -180,7 +180,7 @@ namespace Z3AxiomProfiler
             using (var rd = File.OpenText(logFile))
             {
                 string l;
-                while ((l = rd.ReadLine()) != null)
+                while ((l = rd.ReadLine()) != null && !isCancelled)
                 {
                     processor.ParseSingleLine(l);
                     curPos += l.Length + 2;

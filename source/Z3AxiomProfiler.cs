@@ -214,33 +214,6 @@ namespace Z3AxiomProfiler
             return true;
         }
 
-        private string getZ3Setting(int randomSeed, bool randomSeedEnabled)
-        {
-            string defaultSetting = Properties.Settings.Default.Z3Options;
-            string newRandomSeedArgument = String.Empty;
-
-            if (randomSeedEnabled)
-                newRandomSeedArgument = string.Format("/rs:{0}", randomSeed);
-
-            //Is /rs in default Settings, then replace it.
-            if (defaultSetting.Contains("/rs:"))
-            {
-                string oldArgument = String.Empty;
-
-                string[] Arguments = defaultSetting.Split(' ');
-                foreach (string Argument in Arguments)
-                {
-                    if (Argument.StartsWith("/rs:"))
-                    {
-                        oldArgument = Argument;
-                    }
-                }
-                return defaultSetting.Replace(oldArgument, newRandomSeedArgument).Trim();
-            }
-            //Is not, add it!
-            return (defaultSetting + " " + newRandomSeedArgument).Trim();
-        }
-
         public void loadModelFromBoogie()
         {
             LoadBoogieForm loadform = new LoadBoogieForm();
@@ -309,6 +282,15 @@ namespace Z3AxiomProfiler
 
         private void loadModel(ParameterConfiguration config, Loader.LoaderTask task)
         {
+            // release memory for new model!
+            model = null;
+            z3AxiomTree.Nodes.Clear();
+            InstantiationPathView.Items.Clear();
+            toolTipBox.Clear();
+            rewriteDict = new RewriteDictionary();
+            // clear history
+            historyNode.Nodes.Clear();
+
             // Create a new loader and LoadingProgressForm and execute the loading
             Loader loader = new Loader(config, task);
             LoadingProgressForm lprogf = new LoadingProgressForm(loader);
@@ -321,13 +303,7 @@ namespace Z3AxiomProfiler
         private void loadTree()
         {
             Text = model.LogFileName + ": Z3 Axiom Profiler";
-            z3AxiomTree.Nodes.Clear();
-            InstantiationPathView.Items.Clear();
-            toolTipBox.Clear();
-            rewriteDict = new RewriteDictionary();
 
-            // clear history
-            historyNode.Nodes.Clear();
             z3AxiomTree.Nodes.Add(historyNode);
             if (model.conflicts.Count > 0)
             {
@@ -577,7 +553,6 @@ namespace Z3AxiomProfiler
                     }
                 }
             }
-
             return res;
         }
 
@@ -809,8 +784,13 @@ namespace Z3AxiomProfiler
         private void InstantiationPathView_Enter(object sender, EventArgs e)
         {
             if (InstantiationPathView.SelectedItems.Count <= 0) return;
-            Common c = InstantiationPathView.SelectedItems[0].Tag as Common;
+            var c = InstantiationPathView.SelectedItems[0].Tag as Common;
             SetInfoPanel(c);
+            var inst = c as Instantiation;
+            if (inst != null)
+            {
+                addInstantiationToHistory(inst);
+            }
         }
 
         private void quantifierBlameVisualizationToolStripMenuItem_Click(object sender, EventArgs e)
