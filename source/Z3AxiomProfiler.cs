@@ -42,6 +42,8 @@ namespace Z3AxiomProfiler
 
         public void addInstantiationToHistory(Instantiation inst)
         {
+            // do not add a instantiation if it is already the most recent.
+            if (isLastInHistory(inst)) return;
             historyNode.Nodes.Insert(0, makeNode(inst));
             if (historyNode.Nodes.Count > 100)
             {
@@ -775,6 +777,17 @@ namespace Z3AxiomProfiler
             {
                 SetInfoPanel(c);
             }
+            var inst = c as Instantiation;
+            if (inst != null)
+            {
+                addInstantiationToHistory(inst);
+            }
+        }
+
+        private bool isLastInHistory(Instantiation inst)
+        {
+            if (historyNode.Nodes.Count == 0) return false;
+            return historyNode.Nodes[0].Tag == inst;
         }
 
         private void z3AxiomTree_Enter(object sender, EventArgs e)
@@ -790,11 +803,6 @@ namespace Z3AxiomProfiler
             if (InstantiationPathView.SelectedItems.Count <= 0) return;
             var c = InstantiationPathView.SelectedItems[0].Tag as Common;
             SetInfoPanel(c);
-            var inst = c as Instantiation;
-            if (inst != null)
-            {
-                addInstantiationToHistory(inst);
-            }
         }
 
         private void quantifierBlameVisualizationToolStripMenuItem_Click(object sender, EventArgs e)
