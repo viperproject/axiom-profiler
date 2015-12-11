@@ -1067,7 +1067,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return false;
         }
 
-        private readonly Regex freeVarRegex = new Regex(@"#\d+");
+        private static readonly Regex freeVarRegex = new Regex(@"#\d+");
         private bool checkTermMatch(Term pattern, Term blamed, Dictionary<Term, string> bindingDictionary)
         {
             var patternTerms = new Queue<Term>();
@@ -1175,7 +1175,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (typeMatch.Success)
             {
                 Name = string.Intern(typeMatch.Groups[1].Value);
-                GenericType = typeMatch.Groups[2].Value;
+                GenericType = string.Intern(typeMatch.Groups[2].Value);
             }
             else
             {
@@ -1758,7 +1758,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 ResponsibleInsts.Sort(delegate (ImportantInstantiation i1, ImportantInstantiation i2)
                 {
                     if (i1.WDepth == i2.WDepth) return i2.Depth.CompareTo(i1.Depth);
-                    else return i2.WDepth.CompareTo(i1.WDepth);
+                    return i2.WDepth.CompareTo(i1.WDepth);
                 });
                 foreach (var i in ResponsibleInsts)
                     yield return i;

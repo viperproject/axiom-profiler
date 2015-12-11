@@ -34,8 +34,8 @@ namespace Z3AxiomProfiler
             string preludeBplFile = Properties.Settings.Default.PreludeBplFile;
             string codeBplFile = Properties.Settings.Default.CodeBplFile;
 
-            config.preludeBplFileInfo = (preludeBplFile.Length > 0) ? new FileInfo(preludeBplFile) : null;
-            config.codeBplFileInfo = (codeBplFile.Length > 0) ? new FileInfo(codeBplFile) : null;
+            config.preludeBplFileInfo = !string.IsNullOrEmpty(preludeBplFile) ? new FileInfo(preludeBplFile) : null;
+            config.codeBplFileInfo = !string.IsNullOrEmpty(codeBplFile) ? new FileInfo(codeBplFile) : null;
             config.boogieOptions = Properties.Settings.Default.BoogieOptions;
             config.z3Options = Properties.Settings.Default.Z3Options;
             config.functionName = Properties.Settings.Default.FunctionName;
@@ -50,8 +50,8 @@ namespace Z3AxiomProfiler
         {
             try
             {
-                Properties.Settings.Default.PreludeBplFile = config.preludeBplFileInfo.FullName;
-                Properties.Settings.Default.CodeBplFile = config.codeBplFileInfo.FullName;
+                Properties.Settings.Default.PreludeBplFile = config.preludeBplFileInfo?.FullName;
+                Properties.Settings.Default.CodeBplFile = config.codeBplFileInfo?.FullName;
                 Properties.Settings.Default.BoogieOptions = config.boogieOptions;
                 Properties.Settings.Default.Z3Options = config.z3Options;
                 Properties.Settings.Default.FunctionName = config.functionName;
@@ -77,7 +77,7 @@ namespace Z3AxiomProfiler
         private string workingDirectory;
         private Process currentProcess;
 
-        private bool isCancelled = false;
+        private bool isCancelled;
 
         public event loaderProgressUpdater statusUpdate;
 
@@ -89,7 +89,7 @@ namespace Z3AxiomProfiler
 
         public Loader(ParameterConfiguration config, LoaderTask task)
         {
-            List<FileInfo> filelist;
+            List<FileInfo> filelist = new List<FileInfo>();
 
             this.config = config;
             this.task = task;
@@ -106,9 +106,8 @@ namespace Z3AxiomProfiler
                 }
                 filelist = new List<FileInfo> { config.preludeBplFileInfo, config.codeBplFileInfo };
             }
-            else
+            else if(task == LoaderTask.LoaderTaskZ3)
             {
-                filelist = new List<FileInfo>();
                 if (config.preludeBplFileInfo != null)
                 {
                     if (!config.preludeBplFileInfo.Exists)
@@ -122,7 +121,6 @@ namespace Z3AxiomProfiler
                     if (!config.codeBplFileInfo.Exists)
                         throw new Exception("Cannot load Boogie specification.");
                     filelist.Add(config.codeBplFileInfo);
-
                 }
             }
             processor = new LogProcessor(filelist, config.skipDecisions, config.checkToConsider);

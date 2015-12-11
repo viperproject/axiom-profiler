@@ -214,7 +214,7 @@ namespace Z3AxiomProfiler
             return true;
         }
 
-        public void loadModelFromBoogie()
+        private void loadModelFromBoogie()
         {
             LoadBoogieForm loadform = new LoadBoogieForm();
             if (parameterConfiguration != null)
@@ -236,7 +236,7 @@ namespace Z3AxiomProfiler
             loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskBoogie);
         }
 
-        public void loadModelFromZ3()
+        private void loadModelFromZ3()
         {
             LoadZ3Form loadform = new LoadZ3Form();
             if (parameterConfiguration != null)
@@ -258,7 +258,7 @@ namespace Z3AxiomProfiler
             loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskZ3);
         }
 
-        public void loadModelFromZ3Logfile()
+        private void loadModelFromZ3Logfile()
         {
             LoadZ3LogForm loadform = new LoadZ3LogForm();
             if (parameterConfiguration != null)
@@ -282,14 +282,7 @@ namespace Z3AxiomProfiler
 
         private void loadModel(ParameterConfiguration config, Loader.LoaderTask task)
         {
-            // release memory for new model!
-            model = null;
-            z3AxiomTree.Nodes.Clear();
-            InstantiationPathView.Items.Clear();
-            toolTipBox.Clear();
-            rewriteDict = new RewriteDictionary();
-            // clear history
-            historyNode.Nodes.Clear();
+            resetProfiler();
 
             // Create a new loader and LoadingProgressForm and execute the loading
             Loader loader = new Loader(config, task);
@@ -298,6 +291,22 @@ namespace Z3AxiomProfiler
 
             model = loader.GetModel();
             loadTree();
+        }
+
+        private void resetProfiler()
+        {
+            // reset everything
+            model = null;
+            z3AxiomTree.Nodes.Clear();
+            InstantiationPathView.Items.Clear();
+            toolTipBox.Clear();
+            rewriteDict = new RewriteDictionary();
+            expanded.Clear();
+            searchTree = null;
+            lastToolTipCommon = null;
+
+            // clear history
+            historyNode.Nodes.Clear();
         }
 
         private void loadTree()
@@ -325,20 +334,15 @@ namespace Z3AxiomProfiler
 
             var rootSD = model.scopes[0];
             Scope root = rootSD.Scope;
-            if (rootSD.Literal == null)
+            var l = new Literal
             {
-                foreach (var i in rootSD.Implied)
-                    System.Diagnostics.Debug.Assert(i.Id == Model.MarkerLiteral.Id);
-            }
-            else
-            {
-                var l = new Literal();
-                l.Id = -1;
-                l.Term = new Term("root", new Term[0]);
-                rootSD.Implied.Insert(0, rootSD.Literal);
-                l.Implied = rootSD.Implied.ToArray();
-                root.Literals.Add(l);
-            }
+                Id = -1,
+                Term = new Term("root", new Term[0])
+            };
+            rootSD.Implied.Insert(0, rootSD.Literal);
+            l.Implied = rootSD.Implied.ToArray();
+            root.Literals.Add(l);
+
             root.PropagateImpliedByChildren();
             root.ComputeConflictCost(new List<Conflict>());
             root.AccountLastDecision(model);
@@ -608,8 +612,8 @@ namespace Z3AxiomProfiler
             {
                 showType = showTypesCB.Checked,
                 showTermId = showTermIdCB.Checked,
-                maxWidth = (int) maxTermWidthUD.Value,
-                maxDepth = (int) maxTermDepthUD.Value,
+                maxWidth = (int)maxTermWidthUD.Value,
+                maxDepth = (int)maxTermDepthUD.Value,
                 rewritingEnabled = enableRewritingCB.Checked,
                 rewriteDict = rewriteDict
             };
