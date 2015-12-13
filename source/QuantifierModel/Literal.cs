@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using Z3AxiomProfiler.Rewriting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
@@ -27,23 +29,21 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             if (isBin)
-                foreach (char c in Term.Name)
+                if (Term.Name.Any(char.IsLetterOrDigit))
                 {
-                    if (Char.IsLetterOrDigit(c))
-                    {
-                        isBin = false;
-                        break;
-                    }
+                    isBin = false;
                 }
 
             if (Term == null) t = "(nil)";
             else if (isBin)
             {
-                t = $"{Term.Args[0].AsCString(false)}  {Term.Name}  {Term.Args[1].AsCString(false)}";
+                t = $"{Term.Args[0].PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat())}  " +
+                    $"{Term.Name}  " +
+                    $"{Term.Args[1].PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat())}";
             }
             else
             {
-                t = Term.AsCString(false);
+                t = Term.PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat());
             }
             return string.Format("{0}p{1}  {3}{2}", Negated ? "~" : "", Id, t, Implied == null ? "" : "[+" + Implied.Length + "] ");
         }

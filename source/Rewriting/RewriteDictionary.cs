@@ -71,6 +71,19 @@ namespace Z3AxiomProfiler.Rewriting
             };
         }
 
+        public static PrettyPrintFormat DefaultPrettyPrintFormat()
+        {
+            return new PrettyPrintFormat
+            {
+                maxWidth = 80,
+                maxDepth = 0,
+                showTermId = true,
+                showType = true,
+                rewritingEnabled = false,
+                rewriteDict = new RewriteDictionary()
+            };
+        }
+
         public bool getRewriteRule(Term t, out RewriteRule rewriteRule)
         {
             if (rewritingEnabled && rewriteDict != null)

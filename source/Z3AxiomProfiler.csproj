@@ -155,7 +155,17 @@
     </Compile>
     <Compile Include="LogProcessor.cs" />
     <Compile Include="Plotting.cs" />
+    <Compile Include="QuantifierModel\Common.cs" />
+    <Compile Include="QuantifierModel\Conflict.cs" />
+    <Compile Include="QuantifierModel\FunApp.cs" />
+    <Compile Include="QuantifierModel\FunSymbol.cs" />
+    <Compile Include="QuantifierModel\Instantiation.cs" />
+    <Compile Include="QuantifierModel\Literal.cs" />
     <Compile Include="QuantifierModel\Model.cs" />
+    <Compile Include="QuantifierModel\Partition.cs" />
+    <Compile Include="QuantifierModel\Quantifier.cs" />
+    <Compile Include="QuantifierModel\Scope.cs" />
+    <Compile Include="QuantifierModel\Term.cs" />
     <Compile Include="RewriteRuleViewer.cs">
       <SubType>Form</SubType>
     </Compile>

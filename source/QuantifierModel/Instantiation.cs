@@ -63,7 +63,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
 
-
         public override string ToString()
         {
             string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";

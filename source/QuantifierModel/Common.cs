@@ -15,7 +15,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public virtual bool AutoExpand() { return false; }
         public virtual Color ForeColor() { return Color.Black; }
 
-        public static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
+        protected static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
             where S : T
         {
             return x.Select(y => (T)y);

@@ -15,48 +15,43 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (Apps.Count == 1)
                 return Apps[0].Children();
-            else
+
+            if (appsByPartition)
             {
-                if (appsByPartition)
+                // group by partition
+                Dictionary<string, List<Common>> byPart = new Dictionary<string, List<Common>>();
+                foreach (var f in Apps)
                 {
-                    // group by partition
-                    Dictionary<string, List<Common>> byPart = new Dictionary<string, List<Common>>();
-                    foreach (var f in Apps)
+                    List<Common> tmp;
+                    if (!byPart.TryGetValue(f.Value.Id, out tmp))
                     {
-                        List<Common> tmp;
-                        if (!byPart.TryGetValue(f.Value.Id, out tmp))
-                        {
-                            tmp = new List<Common>();
-                            byPart.Add(f.Value.Id, tmp);
-                        }
-                        tmp.Add(f);
+                        tmp = new List<Common>();
+                        byPart.Add(f.Value.Id, tmp);
                     }
-                    // sort by partition size
-                    List<List<Common>> lists = new List<List<Common>>(byPart.Values);
-                    lists.Sort(delegate (List<Common> x, List<Common> y) { return y.Count - x.Count; });
-                    List<Common> res = new List<Common>();
-                    foreach (var l in lists)
-                        res.AddRange(l);
-                    return res;
+                    tmp.Add(f);
                 }
-                else
-                {
-                    Apps.Sort(delegate (FunApp a1, FunApp a2)
-                    {
-                        for (int i = 0; i < a1.Args.Length; ++i)
-                        {
-                            int tmp = string.CompareOrdinal(a1.Args[i].ShortName(), a2.Args[i].ShortName());
-                            if (tmp != 0) return tmp;
-                        }
-                        return 0;
-                    });
-                    return Common.ConvertIEnumerable<Common, FunApp>(Apps);
-                }
+                // sort by partition size
+                List<List<Common>> lists = new List<List<Common>>(byPart.Values);
+                lists.Sort(delegate (List<Common> x, List<Common> y) { return y.Count - x.Count; });
+                List<Common> res = new List<Common>();
+                foreach (var l in lists)
+                    res.AddRange(l);
+                return res;
             }
+            Apps.Sort(delegate (FunApp a1, FunApp a2)
+            {
+                for (int i = 0; i < a1.Args.Length; ++i)
+                {
+                    int tmp = string.CompareOrdinal(a1.Args[i].ShortName(), a2.Args[i].ShortName());
+                    if (tmp != 0) return tmp;
+                }
+                return 0;
+            });
+            return ConvertIEnumerable<Common, FunApp>(Apps);
         }
 
-        static long[] maxValues = new long[] { short.MaxValue, int.MaxValue, long.MaxValue };
-        static string[] maxValueNames = new string[] { "INT16", "INT32", "INT64" };
+        static long[] maxValues = { short.MaxValue, int.MaxValue, long.MaxValue };
+        static string[] maxValueNames = { "INT16", "INT32", "INT64" };
 
         string cachedDisplayName;
         public string DisplayName
