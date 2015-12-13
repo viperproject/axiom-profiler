@@ -978,10 +978,6 @@ namespace Z3AxiomProfiler
         private Term GetLiteralTerm(string w)
         {
             Literal l = GetLiteral(w, true);
-            if (l.Negated)
-            {
-                return l.Term.NegatedVersion ?? (l.Term.NegatedVersion = new Term("not", new []{l.Term}));
-            }
             return l.Term;
         }
 

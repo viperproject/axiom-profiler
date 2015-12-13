@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Z3AxiomProfiler.Rewriting;
@@ -11,13 +13,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly string GenericType;
         public readonly Term[] Args;
         public int id = -1;
-        private readonly int Depth;
-        public Term NegatedVersion;
         public Instantiation Responsible;
         private readonly List<Term> dependentTerms = new List<Term>();
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
-
+        private static string indentDiff = "¦ ";
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
 
         public Term(string name, Term[] args)
@@ -36,22 +36,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             Args = args;
             foreach (Term t in Args)
             {
-                Depth = Depth > t.Depth ? Depth : t.Depth;
                 t.dependentTerms.Add(this);
             }
-            Depth++;
         }
 
         public Term(Term t)
         {
             Name = t.Name;
             Args = t.Args;
-            Depth = t.Depth;
             Responsible = t.Responsible;
             id = t.id;
         }
 
-        private static string indentDiff = "¦ ";
 
         private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
@@ -71,9 +67,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 breakIndices = new int[Args.Length + 1];
             }
-            
-            
-            
 
             if (rewrite)
             {
@@ -168,7 +161,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            return $"Term[{Name}] Identifier:{id}, Depth:{Depth}, #Children:{Args.Length}";
+            return $"Term[{Name}] Identifier:{id}, #Children:{Args.Length}";
         }
 
         public string PrettyPrint(PrettyPrintFormat format)
@@ -224,7 +217,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             StringBuilder s = new StringBuilder();
             s.Append("Term Info:\n\n");
             s.Append("Identifier: ").Append(id).Append('\n');
-            s.Append("Depth: ").Append(Depth).Append('\n');
             s.Append("Number of Children: ").Append(Args.Length).Append('\n');
             return s.ToString();
         }
