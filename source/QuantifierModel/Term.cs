@@ -10,10 +10,10 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly string Name;
         public readonly string GenericType;
         public readonly Term[] Args;
-        public Instantiation Responsible;
-        public string identifier = "None";
+        public int id = -1;
         private readonly int Depth;
         public Term NegatedVersion;
+        public Instantiation Responsible;
         private readonly List<Term> dependentTerms = new List<Term>();
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
@@ -48,7 +48,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             Args = t.Args;
             Depth = t.Depth;
             Responsible = t.Responsible;
-            identifier = t.identifier;
+            id = t.id;
         }
 
         private static string indentDiff = "¦ ";
@@ -161,14 +161,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             if (format.showTermId)
             {
-                builder.Append('[').Append(identifier).Append(']');
+                builder.Append("[").Append(id).Append(']');
             }
             builder.Append('(');
         }
 
         public override string ToString()
         {
-            return $"Term[{Name}] Identifier:{identifier}, Depth:{Depth}, #Children:{Args.Length}";
+            return $"Term[{Name}] Identifier:{id}, Depth:{Depth}, #Children:{Args.Length}";
         }
 
         public string PrettyPrint(PrettyPrintFormat format)
@@ -223,7 +223,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             StringBuilder s = new StringBuilder();
             s.Append("Term Info:\n\n");
-            s.Append("Identifier: ").Append(identifier).Append('\n');
+            s.Append("Identifier: ").Append(id).Append('\n');
             s.Append("Depth: ").Append(Depth).Append('\n');
             s.Append("Number of Children: ").Append(Args.Length).Append('\n');
             return s.ToString();

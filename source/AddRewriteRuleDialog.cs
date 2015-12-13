@@ -7,8 +7,8 @@ namespace Z3AxiomProfiler
 {
     public partial class AddRewriteRuleDialog : Form
     {
-        private readonly Dictionary<string, RewriteRule> termTranslations;
-        public AddRewriteRuleDialog(Dictionary<string, RewriteRule> termTranslations)
+        private readonly RewriteDictionary termTranslations;
+        public AddRewriteRuleDialog(RewriteDictionary termTranslations)
         {
             InitializeComponent();
             this.termTranslations = termTranslations;
@@ -39,27 +39,10 @@ namespace Z3AxiomProfiler
         private void addButton_Click(object sender, EventArgs e)
         {
             // check if form is filled out correctly
-            if (string.IsNullOrWhiteSpace(matchTextBox.Text))
-            {
-                MessageBox.Show("The form is missing required values. " +
-                                "Please fill in all values and try again.",
-                                "Missing or blank values!", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (matchTextBox.Text.Contains(";") ||
-                prefixTextBox.Text.Contains(";") ||
-                infixTextBox.Text.Contains(";") ||
-                postfixTextBox.Text.Contains(";"))
-            {
-                MessageBox.Show("The form contains an invalid character (;). " +
-                                "Please remove all these characters and try again.",
-                                "Invalid character!", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
+            if (!isValidInput()) return;
 
             // if so, add the rule (unless abort on collision).
-            if (termTranslations.ContainsKey(matchTextBox.Text))
+            if (termTranslations.hasRule(matchTextBox.Text))
             {
                 var overwriteDecision = MessageBox.Show(
                     $"There is already a rewrite rule matching {matchTextBox.Text}." +
@@ -73,11 +56,36 @@ namespace Z3AxiomProfiler
                     return;
                 }
                 // remove the old one
-                termTranslations.Remove(matchTextBox.Text);
+                termTranslations.removeRule(matchTextBox.Text);
             }
-            termTranslations.Add(matchTextBox.Text, buildRuleFromForm());
+            termTranslations.addRule(matchTextBox.Text, buildRuleFromForm());
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private bool isValidInput()
+        {
+            if (string.IsNullOrWhiteSpace(matchTextBox.Text))
+            {
+                MessageBox.Show("The form is missing required values. " +
+                                "Please fill in all values and try again.",
+                                "Missing or blank values!",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            if (matchTextBox.Text.Contains(";") ||
+                prefixTextBox.Text.Contains(";") ||
+                infixTextBox.Text.Contains(";") ||
+                postfixTextBox.Text.Contains(";"))
+            {
+                MessageBox.Show("The form contains an invalid character (;). " +
+                                "Please remove all these characters and try again.",
+                                "Invalid character!",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+            return true;
         }
 
         private RewriteRule buildRuleFromForm()

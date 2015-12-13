@@ -9,23 +9,56 @@ namespace Z3AxiomProfiler.Rewriting
 {
     public class RewriteDictionary
     {
-        public readonly Dictionary<string, RewriteRule> termTranslations = new Dictionary<string, RewriteRule>();
+        private readonly Dictionary<int, RewriteRule> specificTermTranslations = new Dictionary<int, RewriteRule>();
+        private readonly Dictionary<string, RewriteRule> termTranslations = new Dictionary<string, RewriteRule>();
 
         public RewriteRule getRewriteRule(Term t)
         {
-            if (termTranslations.ContainsKey(t.identifier))
+            if (specificTermTranslations.ContainsKey(t.id))
             {
-                return termTranslations[t.identifier];
+                return specificTermTranslations[t.id];
             }
             if (termTranslations.ContainsKey(t.Name + t.GenericType))
             {
                 return termTranslations[t.Name + t.GenericType];
             }
-            if (termTranslations.ContainsKey(t.Name))
+            return termTranslations.ContainsKey(t.Name) ? termTranslations[t.Name] : null;
+        }
+
+        public bool hasRule(string ruleMatch)
+        {
+            int id;
+            return int.TryParse(ruleMatch, out id) ?
+                specificTermTranslations.ContainsKey(id) :
+                termTranslations.ContainsKey(ruleMatch);
+        }
+
+        public void removeRule(string ruleMatch)
+        {
+            int id;
+            if (int.TryParse(ruleMatch, out id))
             {
-                return termTranslations[t.Name];
+                specificTermTranslations.Remove(id);
             }
-            return null;
+            termTranslations.Remove(ruleMatch);
+        }
+
+        public void addRule(string ruleMatch, RewriteRule rule)
+        {
+            int id;
+            if (int.TryParse(ruleMatch, out id))
+            {
+                specificTermTranslations.Add(id, rule);
+            }
+            termTranslations.Add(ruleMatch, rule);
+        }
+
+        public IEnumerable<KeyValuePair<string, RewriteRule>> getAllRules()
+        {
+            return specificTermTranslations
+                .OrderBy(kvPair => kvPair.Key)
+                .Select(translation => new KeyValuePair<string, RewriteRule>(translation.Key + "", translation.Value))
+                .Concat(termTranslations.OrderBy(kvPair => kvPair.Key));
         }
     }
 

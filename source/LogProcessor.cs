@@ -439,12 +439,12 @@ namespace Z3AxiomProfiler
             return err == 0;
         }
 
-        public delegate bool Predicate2<T, S>(T t, S s);
+        private delegate bool Predicate2<in T, in TS>(T t, TS s);
 
-        static public bool ForAll2<T, S>(T[] a1, S[] a2, Predicate2<T, S> pred)
+        private static bool ForAll2<T, S>(T[] a1, S[] a2, Predicate2<T, S> pred)
         {
             if (a1.Length != a2.Length)
-                throw new System.ArgumentException();
+                throw new ArgumentException();
             return !a1.Where((t, i) => !pred(t, a2[i])).Any();
         }
 
@@ -464,11 +464,18 @@ namespace Z3AxiomProfiler
 
         private static Term Negate(Term a)
         {
-            if (a.Name == "not")
+            return a.Name == "not" ? a.Args[0] : new Term("not", new []{ a });
+        }
+
+        private static int parseIdentifier(string logId)
+        {
+            int id;
+            var sanitizedLogId = logId.Remove(0);
+            if (int.TryParse(sanitizedLogId, out id))
             {
-                return a.Args[0];
+                return id;
             }
-            return new Term("not", new Term[] { a });
+            throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
         }
 
         internal static Term[] NegateAll(Term[] oargs)
@@ -490,7 +497,7 @@ namespace Z3AxiomProfiler
                         Term[] args = GetArgs(3, words);
                         Term t = new Term("FORALL", args)
                         {
-                            identifier = words[1]
+                            id = parseIdentifier(words[1])
                         };
                         model.terms[words[1]] = t;
 
@@ -511,7 +518,7 @@ namespace Z3AxiomProfiler
                         Term[] args = GetArgs(3, words);
                         Term t = new Term(words[2], args);
                         model.terms[words[1]] = t;
-                        t.identifier = words[1];
+                        t.id = parseIdentifier(words[1]);
                     }
                     break;
 
@@ -743,7 +750,7 @@ namespace Z3AxiomProfiler
                             t = new Term(words[2], args)
                             {
                                 Responsible = lastInst,
-                                identifier = words[1]
+                                id = parseIdentifier(words[1])
                             };
                             lastInst?.dependentTerms.Add(t);
                             model.terms[words[1]] = t;
@@ -760,7 +767,7 @@ namespace Z3AxiomProfiler
                         t.Responsible = lastInst;
                         lastInst?.dependentTerms.Add(t);
                         model.terms[words[1]] = t;
-                        t.identifier = words[1];
+                        t.id = parseIdentifier(words[1]);
                     }
                     break;
                 case "[fingerprint]":

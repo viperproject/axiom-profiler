@@ -24,7 +24,7 @@ namespace Z3AxiomProfiler
         {
             rulesView.BeginUpdate();
             rulesView.Items.Clear();
-            foreach (var item in rewriteRulesDict.termTranslations.OrderBy(keyValPair => keyValPair.Key).Select(keyValPair => getRuleItem(keyValPair)))
+            foreach (var item in rewriteRulesDict.getAllRules().Select(getRuleItem))
             {
                 rulesView.Items.Add(item);
             }
@@ -35,7 +35,7 @@ namespace Z3AxiomProfiler
         private static ListViewItem getRuleItem(KeyValuePair<string, RewriteRule> keyValPair)
         {
             var rule = keyValPair.Value;
-            ListViewItem item = new ListViewItem
+            var item = new ListViewItem
             {
                 Text = keyValPair.Key,
                 Name = $"Rule for {keyValPair.Key}",
@@ -50,7 +50,7 @@ namespace Z3AxiomProfiler
 
         private void addRuleButton_Click(object sender, EventArgs e)
         {
-            var addRuleDialog = new AddRewriteRuleDialog(rewriteRulesDict.termTranslations);
+            var addRuleDialog = new AddRewriteRuleDialog(rewriteRulesDict);
             var result = addRuleDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
@@ -67,7 +67,7 @@ namespace Z3AxiomProfiler
         {
             foreach (ListViewItem rule in rulesView.SelectedItems)
             {
-                rewriteRulesDict.termTranslations.Remove(rule.Text);
+                rewriteRulesDict.removeRule(rule.Text);
             }
             updateRulesList();
         }
@@ -95,7 +95,7 @@ namespace Z3AxiomProfiler
             }
 
             var outStream = new StreamWriter(dialog.OpenFile());
-            foreach (var rulePair in rewriteRulesDict.termTranslations)
+            foreach (var rulePair in rewriteRulesDict.getAllRules())
             {
                 var rule = rulePair.Value;
                 outStream.WriteLineAsync(
@@ -117,7 +117,6 @@ namespace Z3AxiomProfiler
                 return;
             }
 
-            rewriteRulesDict.termTranslations.Clear();
             var inStream = new StreamReader(dialog.OpenFile());
             var invalidLines = false;
             while (!inStream.EndOfStream)
@@ -139,7 +138,7 @@ namespace Z3AxiomProfiler
                     invalidLines = true;
                 }
 
-                rewriteRulesDict.termTranslations.Add(lines[0], new RewriteRule
+                rewriteRulesDict.addRule(lines[0], new RewriteRule
                 {
                     prefix = lines[1],
                     infix = lines[2],
