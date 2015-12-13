@@ -18,7 +18,7 @@ namespace Z3AxiomProfiler.QuantifierModel
     public class Model
     {
         // dict with all terms seen so far.
-        public readonly Dictionary<string, Term> terms = new Dictionary<string, Term>();
+        public readonly Dictionary<int, Term> terms = new Dictionary<int, Term>();
 
         // dict with all quanitfiers seen so far.
         public readonly Dictionary<string, Quantifier> quantifiers = new Dictionary<string, Quantifier>();

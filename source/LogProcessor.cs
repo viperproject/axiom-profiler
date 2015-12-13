@@ -32,8 +32,9 @@ namespace Z3AxiomProfiler
         private FunSymbol currentFun;
         private int cnflCount;
         private ResolutionLiteral currResRoot, currResNode;
-        private bool _modelInState = false;
+        private bool _modelInState;
         private readonly bool skipDecisions;
+        private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
 
         public readonly Model model = new Model();
 
@@ -92,7 +93,7 @@ namespace Z3AxiomProfiler
 
         string StringReplaceIgnoreCase(string input, string search, string repl)
         {
-            string regexppattern = String.Format("^{0}", search);
+            string regexppattern = string.Format("^{0}", search);
             Regex re = new Regex(regexppattern, RegexOptions.IgnoreCase);
 
             return re.Replace(input, repl);
@@ -191,12 +192,12 @@ namespace Z3AxiomProfiler
         Term GetTerm(string key)
         {
             if (key == ";") return null;
-            key = RemoveParen(key);
-            if (!model.terms.ContainsKey(key))
+            int id = parseIdentifier(RemoveParen(key));
+            if (!model.terms.ContainsKey(id))
             {
-                model.terms[key] = new Term(key, EmptyTerms);
+                model.terms[id] = new Term("free_var_" + id, EmptyTerms);
             }
-            return model.terms[key];
+            return model.terms[id];
         }
 
         private static string RemoveParen(string key)
@@ -467,15 +468,25 @@ namespace Z3AxiomProfiler
             return a.Name == "not" ? a.Args[0] : new Term("not", new []{ a });
         }
 
-        private static int parseIdentifier(string logId)
+        private int parseIdentifier(string logId)
         {
             int id;
-            var sanitizedLogId = logId.Remove(0);
+            var sanitizedLogId = logId.Replace("#", "");
             if (int.TryParse(sanitizedLogId, out id))
             {
                 return id;
             }
-            throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
+
+            if (literalToTermId.ContainsKey(logId))
+            {
+                return literalToTermId[logId];
+            }
+            var term = model.terms.Values.First(t => t.Name == logId);
+
+            if (term == null) throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
+
+            literalToTermId.Add(logId, term.id);
+            return term.id;
         }
 
         internal static Term[] NegateAll(Term[] oargs)
@@ -499,7 +510,7 @@ namespace Z3AxiomProfiler
                         {
                             id = parseIdentifier(words[1])
                         };
-                        model.terms[words[1]] = t;
+                        model.terms[parseIdentifier(words[1])] = t;
 
                         if (args.Length != 0)
                         {
@@ -517,7 +528,7 @@ namespace Z3AxiomProfiler
                     {
                         Term[] args = GetArgs(3, words);
                         Term t = new Term(words[2], args);
-                        model.terms[words[1]] = t;
+                        model.terms[parseIdentifier(words[1])] = t;
                         t.id = parseIdentifier(words[1]);
                     }
                     break;
@@ -530,7 +541,7 @@ namespace Z3AxiomProfiler
                         {
                             // make a copy of the term, since we are overriding the Responsible field
                             t = new Term(t);
-                            model.terms[words[1]] = t;
+                            model.terms[parseIdentifier(words[1])] = t;
                         }
                         if (lastInst != null)
                         {
@@ -739,7 +750,7 @@ namespace Z3AxiomProfiler
                         Term[] args = GetArgs(3, words);
                         Term t;
                         if (lastInst == null &&
-                            model.terms.TryGetValue(words[1], out t) &&
+                            model.terms.TryGetValue(parseIdentifier(words[1]), out t) &&
                             t.Name == words[2] && t.Args.Length == args.Length &&
                             ForAll2(t.Args, args, delegate (Term x, Term s) { return x == s; }))
                         {
@@ -753,7 +764,7 @@ namespace Z3AxiomProfiler
                                 id = parseIdentifier(words[1])
                             };
                             lastInst?.dependentTerms.Add(t);
-                            model.terms[words[1]] = t;
+                            model.terms[parseIdentifier(words[1])] = t;
                         }
                     }
                     break;
@@ -766,7 +777,7 @@ namespace Z3AxiomProfiler
                         Term t = new Term(args.Length == 0 ? words[3] : words[3].Substring(1), args);
                         t.Responsible = lastInst;
                         lastInst?.dependentTerms.Add(t);
-                        model.terms[words[1]] = t;
+                        model.terms[parseIdentifier(words[1])] = t;
                         t.id = parseIdentifier(words[1]);
                     }
                     break;
@@ -778,8 +789,8 @@ namespace Z3AxiomProfiler
                         model.fingerprints[words[1]] = inst;
                     }
                     break;
-                case "[mk_const]": if (words.Length < 2) break; model.terms.Remove("#" + words[1]); break;
-                case "[create_ite]": if (words.Length < 2) break; model.terms.Remove("#" + words[1]); break;
+                case "[mk_const]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
+                case "[create_ite]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
 
                 case "[done-instantiate-fp]": lastInst = null; break;
                 case "[instantiate-fp]":
@@ -969,7 +980,7 @@ namespace Z3AxiomProfiler
             Literal l = GetLiteral(w, true);
             if (l.Negated)
             {
-                return l.Term.NegatedVersion ?? (l.Term.NegatedVersion = new Term("not", new Term[] {l.Term}));
+                return l.Term.NegatedVersion ?? (l.Term.NegatedVersion = new Term("not", new []{l.Term}));
             }
             return l.Term;
         }

@@ -10,7 +10,7 @@ namespace Z3AxiomProfiler
 {
     public partial class RewriteRuleViewer : Form
     {
-        private readonly RewriteDictionary rewriteRulesDict;
+        private RewriteDictionary rewriteRulesDict;
         private readonly Z3AxiomProfiler profiler;
         public RewriteRuleViewer(Z3AxiomProfiler profiler, RewriteDictionary rulesDictionary)
         {
@@ -117,6 +117,7 @@ namespace Z3AxiomProfiler
                 return;
             }
 
+            rewriteRulesDict = new RewriteDictionary();
             var inStream = new StreamReader(dialog.OpenFile());
             var invalidLines = false;
             while (!inStream.EndOfStream)
