@@ -22,7 +22,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         int depth;
         int wdepth = -1;
         public int DeepestSubpathDepth;
-        public string FingerPrint = "None";
         public string uniqueID => LineNo.ToString();
 
         public void CopyTo(Instantiation inst)

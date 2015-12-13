@@ -554,8 +554,7 @@ namespace Z3AxiomProfiler
                         }
 
                         inst.Quant = CreateQuantifier(words[2], words[2]);
-                        inst.FingerPrint = words[1];
-                        model.fingerprints[inst.FingerPrint] = inst;
+                        model.fingerprints[words[1]] = inst;
                     }
                     break;
 

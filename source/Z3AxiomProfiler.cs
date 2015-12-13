@@ -699,7 +699,7 @@ namespace Z3AxiomProfiler
                 ListViewItem item = new ListViewItem
                 {
                     Text = i.Depth.ToString(),
-                    Name = $"Quantifier Instantiation {i.FingerPrint}",
+                    Name = $"Quantifier Instantiation @{i.LineNo}",
                     Tag = i
                 };
                 item.SubItems.Add(i.Quant.PrintName);
