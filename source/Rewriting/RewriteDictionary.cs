@@ -45,6 +45,11 @@ namespace Z3AxiomProfiler.Rewriting
 
         public void addRule(string ruleMatch, RewriteRule rule)
         {
+            if (hasRule(ruleMatch))
+            {
+                removeRule(ruleMatch);
+            }
+
             int id;
             if (int.TryParse(ruleMatch, out id))
             {

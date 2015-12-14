@@ -117,7 +117,6 @@ namespace Z3AxiomProfiler
                 return;
             }
 
-            rewriteRulesDict = new RewriteDictionary();
             var inStream = new StreamReader(dialog.OpenFile());
             var invalidLines = false;
             while (!inStream.EndOfStream)
