@@ -67,22 +67,36 @@ namespace Z3AxiomProfiler.Rewriting
         }
     }
 
+    
+
     public class RewriteRule
     {
-        public string prefix = "";
-        public string infix = "";
-        public string suffix = "";
-        public bool printChildren = true;
+        public string prefix;
+        public string infix;
+        public string suffix;
+        public bool printChildren;
+        public int precedence;
+        public lineBreakSetting prefixLineBreak;
+        public lineBreakSetting infixLineBreak;
+        public lineBreakSetting suffixLineBreak;
 
+        public enum lineBreakSetting { Before, After, None };
 
-        public static RewriteRule DefaultRewriteRule()
+        public static RewriteRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
+            var prefix = t.Name +
+                (format.showType ? t.GenericType : "") +
+                (format.showTermId ? "[" + t.id + "]" : "") + 
+                "(";
             return new RewriteRule
             {
-                prefix = "(",
+                prefix = prefix,
                 infix = ", ",
                 suffix = ")",
-                printChildren = true
+                printChildren = true,
+                prefixLineBreak = lineBreakSetting.After,
+                infixLineBreak = lineBreakSetting.After,
+                suffixLineBreak = lineBreakSetting.Before
             };
         }
     }
@@ -129,7 +143,7 @@ namespace Z3AxiomProfiler.Rewriting
                 rewriteRule = rewriteDict.getRewriteRule(t);
                 return rewriteRule != null;
             }
-            rewriteRule = RewriteRule.DefaultRewriteRule();
+            rewriteRule = RewriteRule.DefaultRewriteRule(t, this);
             return false;
         }
     }

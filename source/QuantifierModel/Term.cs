@@ -58,6 +58,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             int breakIndex = 0;
             int startLength = builder.Length;
             var indent = true;
+
             if (rewrite)
             {
                 indent = !string.IsNullOrWhiteSpace(rewriteRule.prefix);
