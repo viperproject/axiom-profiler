@@ -51,113 +51,99 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
-            RewriteRule rewriteRule;
-            var rewrite = format.getRewriteRule(this, out rewriteRule);
+            RewriteRule rewriteRule = format.getRewriteRule(this);
             bool isMultiline = false;
-            int[] breakIndices;
-            int breakIndex = 0;
+            List<int> breakIndices = new List<int>();
             int startLength = builder.Length;
-            var indent = true;
+            indentBuilder.Append(indentDiff);
 
-            if (rewrite)
-            {
-                indent = !string.IsNullOrWhiteSpace(rewriteRule.prefix);
-                breakIndices = new int[Args.Length + (indent ? 1 : 0)];
-            }
-            else
-            {
-                breakIndices = new int[Args.Length + 1];
-            }
+            addFormatStringWithLinebreak(rewriteRule.prefix, builder, rewriteRule.prefixLineBreak, breakIndices);
 
-            if (rewrite)
+            if (printChildren(format, rewriteRule))
             {
-                builder.Append(rewriteRule.prefix);
-            }
-            else
-            {
-                addStandardHeader(builder, format);
-            }
-
-            // do not record break index if no break is necessary (because prefix is omitted
-            if (indent)
-            {
-                indentBuilder.Append(indentDiff);
-                breakIndices[breakIndex] = builder.Length;
-                breakIndex++;
-            }
-            var printChildren = (!rewrite && (format.maxDepth == 0 || format.maxDepth > 1)) ||
-                                (rewrite && rewriteRule.printChildren);
-
-            if (printChildren)
-            {
-                for (var i = 0; i < Args.Length; i++)
+                for(var i = 0; i < Args.Length; i++)
                 {
+                    var t = Args[i];
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = Args[i].PrettyPrint(builder, indentBuilder, format.nextDepth())
+                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth())
                                   || isMultiline;
-
-                    if (i != Args.Length - 1)
+                    if (i < Args.Length - 1)
                     {
-                        builder.Append(rewrite ? rewriteRule.infix : ", ");
+                        addFormatStringWithLinebreak(rewriteRule.infix, builder, rewriteRule.infixLineBreak, breakIndices);
                     }
-
-                    breakIndices[breakIndex] = builder.Length;
-                    breakIndex++;
                 }
             }
-            else if (!rewrite)
+            else if (showCutoffDots(format, rewriteRule))
             {
-                // only use this in standard mode
                 builder.Append("...");
             }
 
-            builder.Append(rewrite ? rewriteRule.suffix: ")");
+            addFormatStringWithLinebreak(rewriteRule.suffix, builder, rewriteRule.suffixLineBreak, breakIndices);
 
             // check if line split is necessary
             if (!isMultiline && builder.Length - startLength <= format.maxWidth
                 || format.maxWidth == 0 || format.maxDepth == 1)
             {
-                // split not necessary
-                // unindent again for the return to parent level
-                if (indent)
-                {
-                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
-                }
+                indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 return false;
             }
 
             // split necessary
-            int offset = 0;
-            int oldLength = builder.Length;
-            for (int i = 0; i < breakIndices.Length; i++)
+            addLinebreaks(builder, indentBuilder, breakIndices);
+            return true;
+        }
+
+        private static void addLinebreaks(StringBuilder builder, StringBuilder indentBuilder, List<int> breakIndices)
+        {
+            var offset = 0;
+            var oldLength = builder.Length;
+            for (var i = 0; i < breakIndices.Count; i++)
             {
-                if (i == breakIndices.Length - 1)
+                if (i == breakIndices.Count - 1)
                 {
-                    // unindent again
-                    if (indent)
-                    {
-                        indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
-                    }
+                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
                 builder.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
                 offset += builder.Length - oldLength;
                 oldLength = builder.Length;
             }
-            return true;
         }
 
-        private void addStandardHeader(StringBuilder builder, PrettyPrintFormat format)
+        private static void addFormatStringWithLinebreak(string add, StringBuilder builder,
+            RewriteRule.lineBreakSetting lineBreak, List<int> breakIndices)
         {
-            builder.Append(Name);
-            if (format.showType)
+            if (lineBreak == RewriteRule.lineBreakSetting.Before)
             {
-                builder.Append(GenericType);
+                breakIndices.Add(builder.Length);
             }
-            if (format.showTermId)
+            builder.Append(add);
+            if (lineBreak == RewriteRule.lineBreakSetting.After)
             {
-                builder.Append("[").Append(id).Append(']');
+                breakIndices.Add(builder.Length);
             }
-            builder.Append('(');
+        }
+
+        private bool printChildren(PrettyPrintFormat format, RewriteRule rule)
+        {
+            if (Args.Length == 0)
+            {
+                return false;
+            }
+            var formatSpec = format.maxDepth == 0 || format.maxDepth > 1;
+            if (!format.rewritingEnabled)
+            {
+                return formatSpec;
+            }
+            return formatSpec && rule.printChildren;
+        }
+
+        private bool showCutoffDots(PrettyPrintFormat format, RewriteRule rule)
+        {
+            if (Args.Length == 0 || (format.rewritingEnabled && !rule.printChildren))
+            {
+                return false;
+            }
+            return true;
         }
 
         public override string ToString()

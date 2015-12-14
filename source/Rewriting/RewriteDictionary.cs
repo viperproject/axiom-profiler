@@ -22,7 +22,18 @@ namespace Z3AxiomProfiler.Rewriting
             {
                 return termTranslations[t.Name + t.GenericType];
             }
-            return termTranslations.ContainsKey(t.Name) ? termTranslations[t.Name] : null;
+            if (termTranslations.ContainsKey(t.Name))
+            {
+                return termTranslations[t.Name];
+            }
+            throw new KeyNotFoundException($"No rewrite rule for term {t}!");
+        }
+
+        public bool hasRule(Term t)
+        {
+            return specificTermTranslations.ContainsKey(t.id) || 
+                termTranslations.ContainsKey(t.Name + t.GenericType) ||
+                termTranslations.ContainsKey(t.Name);
         }
 
         public bool hasRule(string ruleMatch)
@@ -67,7 +78,7 @@ namespace Z3AxiomProfiler.Rewriting
         }
     }
 
-    
+
 
     public class RewriteRule
     {
@@ -86,7 +97,7 @@ namespace Z3AxiomProfiler.Rewriting
         {
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
-                (format.showTermId ? "[" + t.id + "]" : "") + 
+                (format.showTermId ? "[" + t.id + "]" : "") +
                 "(";
             return new RewriteRule
             {
@@ -108,7 +119,7 @@ namespace Z3AxiomProfiler.Rewriting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
-        public RewriteDictionary rewriteDict;
+        public RewriteDictionary rewriteDict = new RewriteDictionary();
 
         public PrettyPrintFormat nextDepth()
         {
@@ -136,15 +147,13 @@ namespace Z3AxiomProfiler.Rewriting
             };
         }
 
-        public bool getRewriteRule(Term t, out RewriteRule rewriteRule)
+        public RewriteRule getRewriteRule(Term t)
         {
-            if (rewritingEnabled && rewriteDict != null)
+            if (rewritingEnabled && rewriteDict.hasRule(t))
             {
-                rewriteRule = rewriteDict.getRewriteRule(t);
-                return rewriteRule != null;
+                return rewriteDict.getRewriteRule(t);
             }
-            rewriteRule = RewriteRule.DefaultRewriteRule(t, this);
-            return false;
+            return RewriteRule.DefaultRewriteRule(t, this);
         }
     }
 }
