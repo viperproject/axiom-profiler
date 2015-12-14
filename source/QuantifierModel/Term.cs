@@ -80,9 +80,9 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             addFormatStringWithLinebreak(rewriteRule.suffix, builder, rewriteRule.suffixLineBreak, breakIndices);
 
-            // check if line split is necessary
-            if (!isMultiline && builder.Length - startLength <= format.maxWidth
-                || format.maxWidth == 0 || format.maxDepth == 1)
+            // are there any lines to break?
+            isMultiline = isMultiline && (breakIndices.Count > 0);
+            if (!linebreaksNecessary(builder, format, isMultiline, startLength))
             {
                 indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 return false;
@@ -91,6 +91,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             // split necessary
             addLinebreaks(builder, indentBuilder, breakIndices);
             return true;
+        }
+
+        private static bool linebreaksNecessary(StringBuilder builder, PrettyPrintFormat format, bool isMultiline, int startLength)
+        {
+            return (isMultiline || (builder.Length - startLength > format.maxWidth)) && format.maxDepth > 1;
         }
 
         private static void addLinebreaks(StringBuilder builder, StringBuilder indentBuilder, List<int> breakIndices)
