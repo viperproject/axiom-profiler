@@ -51,25 +51,28 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
-            PrintRule printRule = format.getPrintRule(this);
-            bool isMultiline = false;
-            List<int> breakIndices = new List<int>();
-            int startLength = builder.Length;
+            var printRule = format.getPrintRule(this);
+            var parentRule = format.getPrintRule(format.parentTerm);
+            var isMultiline = false;
+            var breakIndices = new List<int>();
+            var startLength = builder.Length;
             indentBuilder.Append(indentDiff);
 
-            addFormatStringWithLinebreak(printRule.prefix, builder, printRule.prefixLineBreak, breakIndices);
+            addPrefix(printRule, builder, breakIndices);
 
             if (printChildren(format, printRule))
             {
-                for(var i = 0; i < Args.Length; i++)
+                for (var i = 0; i < Args.Length; i++)
                 {
                     var t = Args[i];
+
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth())
+                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(i == 0, this))
                                   || isMultiline;
+
                     if (i < Args.Length - 1)
                     {
-                        addFormatStringWithLinebreak(printRule.infix, builder, printRule.infixLineBreak, breakIndices);
+                        addInfix(printRule, builder, breakIndices);
                     }
                 }
             }
@@ -78,7 +81,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 builder.Append("...");
             }
 
-            addFormatStringWithLinebreak(printRule.suffix, builder, printRule.suffixLineBreak, breakIndices);
+            addSuffix(printRule, builder, breakIndices);
 
             // are there any lines to break?
             isMultiline = isMultiline && (breakIndices.Count > 0);
@@ -91,6 +94,23 @@ namespace Z3AxiomProfiler.QuantifierModel
             // split necessary
             addLinebreaks(builder, indentBuilder, breakIndices);
             return true;
+        }
+
+        private bool needsParenthesis(PrettyPrintFormat format, PrintRule rule, PrintRule parentRule)
+        {
+            switch (rule.parentheses)
+            {
+                case PrintRule.ParenthesesSetting.Always:
+                    return true;
+                case PrintRule.ParenthesesSetting.Never:
+                    return false;
+                case PrintRule.ParenthesesSetting.Precedence:
+                    if (format.parentTerm == null) return false;
+                    if (parentRule.precedence < rule.precedence) return false;
+                    return format.parentTerm.Name != Name || !rule.associative;
+                default:
+                    throw new ArgumentOutOfRangeException("Invalid enum value!");
+            }
         }
 
         private static bool linebreaksNecessary(StringBuilder builder, PrettyPrintFormat format, bool isMultiline, int startLength)
@@ -114,15 +134,40 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void addFormatStringWithLinebreak(string add, StringBuilder builder,
-            PrintRule.LineBreakSetting lineBreak, List<int> breakIndices)
+        private static void addPrefix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
-            if (lineBreak == PrintRule.LineBreakSetting.Before)
+            if (rule.prefixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);
             }
-            builder.Append(add);
-            if (lineBreak == PrintRule.LineBreakSetting.After)
+            builder.Append(rule.prefix);
+            if (rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
+            {
+                breakIndices.Add(builder.Length);
+            }
+        }
+
+        private static void addInfix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
+        {
+            if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
+            {
+                breakIndices.Add(builder.Length);
+            }
+            builder.Append(rule.infix);
+            if (rule.infixLineBreak == PrintRule.LineBreakSetting.After)
+            {
+                breakIndices.Add(builder.Length);
+            }
+        }
+
+        private static void addSuffix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
+        {
+            if (rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
+            {
+                breakIndices.Add(builder.Length);
+            }
+            builder.Append(rule.suffix);
+            if (rule.suffixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(builder.Length);
             }

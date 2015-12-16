@@ -185,9 +185,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
+        public bool leftChild;
+        public Term parentTerm;
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
 
-        public PrettyPrintFormat nextDepth()
+        public PrettyPrintFormat nextDepth(bool isLeftChild, Term parent)
         {
             return new PrettyPrintFormat
             {
@@ -196,7 +198,9 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
-                printRuleDict = printRuleDict
+                printRuleDict = printRuleDict,
+                leftChild = isLeftChild,
+                parentTerm = parent
             };
         }
 
@@ -209,6 +213,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,
+                leftChild = true,
                 printRuleDict = new PrintRuleDictionary()
             };
         }

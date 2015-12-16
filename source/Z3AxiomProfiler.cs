@@ -617,7 +617,8 @@ namespace Z3AxiomProfiler
                 maxWidth = (int)maxTermWidthUD.Value,
                 maxDepth = (int)maxTermDepthUD.Value,
                 rewritingEnabled = enableRewritingCB.Checked,
-                printRuleDict = printRuleDict
+                printRuleDict = printRuleDict,
+                leftChild = true
             };
         }
 
