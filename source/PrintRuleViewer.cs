@@ -44,12 +44,18 @@ namespace Z3AxiomProfiler
             item.SubItems.Add(rule.infix);
             item.SubItems.Add(rule.suffix);
             item.SubItems.Add(rule.printChildren + "");
+            item.SubItems.Add(PrintRule.lineBreakSettingToString(rule.prefixLineBreak));
+            item.SubItems.Add(PrintRule.lineBreakSettingToString(rule.infixLineBreak));
+            item.SubItems.Add(PrintRule.lineBreakSettingToString(rule.suffixLineBreak));
+            item.SubItems.Add(rule.associative + "");
+            item.SubItems.Add(PrintRule.parenthesesSettingsToString(rule.parentheses));
+            item.SubItems.Add(rule.precedence + "");
             return item;
         }
 
         private void addRuleButton_Click(object sender, EventArgs e)
         {
-            var addRuleDialog = new AddPrintRuleDialog(printRuleDict);
+            var addRuleDialog = new EditPrintRuleDialog(printRuleDict);
             var result = addRuleDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
@@ -71,7 +77,7 @@ namespace Z3AxiomProfiler
             updateRulesList();
         }
 
-        private void rulesView_KeyDown(object sender, System.Windows.Forms.KeyEventArgs e)
+        private void rulesView_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Delete)
             {
@@ -98,7 +104,17 @@ namespace Z3AxiomProfiler
             {
                 var rule = rulePair.Value;
                 outStream.WriteLineAsync(
-                    $"{rulePair.Key};{rule.prefix};{rule.infix};{rule.suffix};{rule.printChildren}");
+                    $"{rulePair.Key};" +
+                    $"{rule.prefix};" +
+                    $"{rule.infix};" +
+                    $"{rule.suffix};" +
+                    $"{rule.printChildren};" +
+                    $"{PrintRule.lineBreakSettingToString(rule.prefixLineBreak)};" +
+                    $"{PrintRule.lineBreakSettingToString(rule.infixLineBreak)};" +
+                    $"{PrintRule.lineBreakSettingToString(rule.suffixLineBreak)};" +
+                    $"{rule.associative};" +
+                    $"{PrintRule.parenthesesSettingsToString(rule.parentheses)};" +
+                    $"{rule.precedence}");
             }
             outStream.Close();
         }
@@ -121,20 +137,48 @@ namespace Z3AxiomProfiler
             while (!inStream.EndOfStream)
             {
                 var line = inStream.ReadLine();
+
+                // skip empty lines
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;
                 }
                 var lines = line.Split(';');
-                if (lines.Length != 5)
+                // validate
+                if (lines.Length != 11)
                 {
                     invalidLines = true;
                     continue;
                 }
-                var printChildren = true;
-                if (!bool.TryParse(lines[4], out printChildren))
+
+                // parse bools & ints
+                bool printChildren;
+                bool associative;
+                int precedence;
+                if (!bool.TryParse(lines[4], out printChildren) ||
+                    !bool.TryParse(lines[8], out associative) ||
+                    !int.TryParse(lines[10], out precedence))
                 {
                     invalidLines = true;
+                    continue;
+                }
+
+                // parse enums
+                PrintRule.LineBreakSetting prefixLinebreaks;
+                PrintRule.LineBreakSetting infixLinebreaks;
+                PrintRule.LineBreakSetting suffixLinebreaks;
+                PrintRule.ParenthesesSetting parenthesesSettings;
+                try
+                {
+                    prefixLinebreaks = PrintRule.lineBreakSettingFromString(lines[5]);
+                    infixLinebreaks = PrintRule.lineBreakSettingFromString(lines[6]);
+                    suffixLinebreaks = PrintRule.lineBreakSettingFromString(lines[7]);
+                    parenthesesSettings = PrintRule.parenthesesSettingsFromString(lines[9]);
+                }
+                catch (ArgumentException)
+                {
+                    invalidLines = true;
+                    continue;
                 }
 
                 printRuleDict.addRule(lines[0], new PrintRule
@@ -142,7 +186,13 @@ namespace Z3AxiomProfiler
                     prefix = lines[1],
                     infix = lines[2],
                     suffix = lines[3],
-                    printChildren = printChildren
+                    printChildren = printChildren,
+                    prefixLineBreak = prefixLinebreaks,
+                    infixLineBreak = infixLinebreaks,
+                    suffixLineBreak = suffixLinebreaks,
+                    associative = associative,
+                    parentheses = parenthesesSettings,
+                    precedence = precedence,
                 });
             }
 
@@ -152,6 +202,19 @@ namespace Z3AxiomProfiler
                                 "There were unparseable lines!", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             updateRulesList();
+        }
+
+        private void editButton_Click(object sender, EventArgs e)
+        {
+            if (rulesView.SelectedItems.Count == 0) return;
+            var selectedRule = rulesView.SelectedItems[0].Tag as PrintRule;
+            if (selectedRule == null) return;
+            var addRuleDialog = new EditPrintRuleDialog(printRuleDict, rulesView.SelectedItems[0].Text, selectedRule);
+            var result = addRuleDialog.ShowDialog();
+            if (result == DialogResult.OK)
+            {
+                updateRulesList();
+            }
         }
     }
 }

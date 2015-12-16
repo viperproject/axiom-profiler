@@ -115,14 +115,14 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         private static void addFormatStringWithLinebreak(string add, StringBuilder builder,
-            PrintRule.lineBreakSetting lineBreak, List<int> breakIndices)
+            PrintRule.LineBreakSetting lineBreak, List<int> breakIndices)
         {
-            if (lineBreak == PrintRule.lineBreakSetting.Before)
+            if (lineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);
             }
             builder.Append(add);
-            if (lineBreak == PrintRule.lineBreakSetting.After)
+            if (lineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(builder.Length);
             }

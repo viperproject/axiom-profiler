@@ -4,16 +4,42 @@ using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler
 {
-    public partial class AddPrintRuleDialog : Form
+    public partial class EditPrintRuleDialog : Form
     {
         private readonly PrintRuleDictionary printRuleDictionary;
-        public AddPrintRuleDialog(PrintRuleDictionary printRuleDictionary)
+        private readonly bool editMode;
+        public EditPrintRuleDialog(PrintRuleDictionary printRuleDictionary)
         {
             InitializeComponent();
             this.printRuleDictionary = printRuleDictionary;
-            prefixLinebreakCB.SelectedIndex = 1;
-            infixLinebreakCB.SelectedIndex = 1;
-            suffixLinebreakCB.SelectedIndex = 0;
+            prefixLinebreakCB.SelectedIndex = (int)PrintRule.LineBreakSetting.After;
+            infixLinebreakCB.SelectedIndex = (int)PrintRule.LineBreakSetting.After;
+            suffixLinebreakCB.SelectedIndex = (int)PrintRule.LineBreakSetting.Before;
+            parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Precedence;
+        }
+
+        public EditPrintRuleDialog(PrintRuleDictionary printRuleDictionary, string match, PrintRule editRule) : this(printRuleDictionary)
+        {
+            editMode = true;
+            
+            // text
+            matchTextBox.Text = match;
+            prefixTextBox.Text = editRule.prefix;
+            infixTextBox.Text = editRule.infix;
+            suffixTextBox.Text = editRule.suffix;
+
+            // comboboxes
+            prefixLinebreakCB.SelectedIndex = (int)editRule.prefixLineBreak;
+            infixLinebreakCB.SelectedIndex = (int)editRule.infixLineBreak;
+            suffixLinebreakCB.SelectedIndex = (int)editRule.suffixLineBreak;
+            parenthesesCB.SelectedIndex = (int)editRule.parentheses;
+
+            // checkboxes
+            printChildrenCB.Checked = editRule.printChildren;
+            associativeCB.Checked = editRule.associative;
+
+            // nummeric updowns
+            precedenceUD.Value = editRule.precedence;
         }
 
         private void printChildrenCB_CheckedChanged(object sender, EventArgs e)
@@ -22,13 +48,13 @@ namespace Z3AxiomProfiler
             {
                 prefixLabel.Text = "Prefix:";
                 infixTextBox.Enabled = true;
-                postfixTextBox.Enabled = true;
+                suffixTextBox.Enabled = true;
             }
             else
             {
                 prefixLabel.Text = "New value:";
                 infixTextBox.Enabled = false;
-                postfixTextBox.Enabled = false;
+                suffixTextBox.Enabled = false;
             }
         }
 
@@ -44,7 +70,8 @@ namespace Z3AxiomProfiler
             if (!isValidInput()) return;
 
             // if so, add the rule (unless abort on collision).
-            if (printRuleDictionary.hasRule(matchTextBox.Text))
+            // unless in edit mode
+            if (!editMode && printRuleDictionary.hasRule(matchTextBox.Text))
             {
                 var overwriteDecision = MessageBox.Show(
                     $"There is already a rewrite rule matching {matchTextBox.Text}." +
@@ -79,7 +106,7 @@ namespace Z3AxiomProfiler
             if (matchTextBox.Text.Contains(";") ||
                 prefixTextBox.Text.Contains(";") ||
                 infixTextBox.Text.Contains(";") ||
-                postfixTextBox.Text.Contains(";"))
+                suffixTextBox.Text.Contains(";"))
             {
                 MessageBox.Show("The form contains an invalid character (;). " +
                                 "Please remove all these characters and try again.",
@@ -96,8 +123,14 @@ namespace Z3AxiomProfiler
             {
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
-                suffix = postfixTextBox.Text,
-                printChildren = printChildrenCB.Checked
+                suffix = suffixTextBox.Text,
+                printChildren = printChildrenCB.Checked,
+                prefixLineBreak = PrintRule.lineBreakSettingFromString((string)prefixLinebreakCB.SelectedItem),
+                infixLineBreak = PrintRule.lineBreakSettingFromString((string)infixLinebreakCB.SelectedItem),
+                suffixLineBreak = PrintRule.lineBreakSettingFromString((string)suffixLinebreakCB.SelectedItem),
+                associative = associativeCB.Checked,
+                parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
+                precedence = (int)precedenceUD.Value
             };
         }
 
@@ -106,6 +139,14 @@ namespace Z3AxiomProfiler
             if (e.KeyCode == Keys.Enter)
             {
                 printChildrenCB.Checked = !printChildrenCB.Checked;
+            }
+        }
+
+        private void associativeCB_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                associativeCB.Checked = !associativeCB.Checked;
             }
         }
     }

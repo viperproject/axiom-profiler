@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Z3AxiomProfiler.QuantifierModel;
 
@@ -28,7 +29,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public bool hasRule(Term t)
         {
-            return specificTermTranslations.ContainsKey(t.id) || 
+            return specificTermTranslations.ContainsKey(t.id) ||
                 termTranslations.ContainsKey(t.Name + t.GenericType) ||
                 termTranslations.ContainsKey(t.Name);
         }
@@ -83,12 +84,15 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public string infix;
         public string suffix;
         public bool printChildren;
+        public bool associative;
         public int precedence;
-        public lineBreakSetting prefixLineBreak;
-        public lineBreakSetting infixLineBreak;
-        public lineBreakSetting suffixLineBreak;
+        public LineBreakSetting prefixLineBreak;
+        public LineBreakSetting infixLineBreak;
+        public LineBreakSetting suffixLineBreak;
+        public ParenthesesSetting parentheses;
 
-        public enum lineBreakSetting { Before, After, None };
+        public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
+        public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
 
         public static PrintRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
@@ -102,10 +106,75 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 infix = ", ",
                 suffix = ")",
                 printChildren = true,
-                prefixLineBreak = lineBreakSetting.After,
-                infixLineBreak = lineBreakSetting.After,
-                suffixLineBreak = lineBreakSetting.Before
+                associative = false,
+                precedence = 0,
+                prefixLineBreak = LineBreakSetting.After,
+                infixLineBreak = LineBreakSetting.After,
+                suffixLineBreak = LineBreakSetting.Before,
+                parentheses = ParenthesesSetting.Never
             };
+        }
+
+        public static string lineBreakSettingToString(LineBreakSetting setting)
+        {
+            switch (setting)
+            {
+                case LineBreakSetting.Before:
+                    return "Before";
+                case LineBreakSetting.After:
+                    return "After";
+                case LineBreakSetting.None:
+                    return "None";
+                default:
+                    return "Invalid / Unknown";
+            }
+        }
+
+        public static LineBreakSetting lineBreakSettingFromString(string setting)
+        {
+            setting = setting.ToLower();
+            switch (setting)
+            {
+                case "before":
+                    return LineBreakSetting.Before;
+                case "after":
+                    return LineBreakSetting.After;
+                case "none":
+                    return LineBreakSetting.None;
+                default:
+                    throw new ArgumentException($"Unknown linebreak setting {setting}!");
+            }
+        }
+
+        public static string parenthesesSettingsToString(ParenthesesSetting setting)
+        {
+            switch (setting)
+            {
+                case ParenthesesSetting.Always:
+                    return "Always";
+                case ParenthesesSetting.Precedence:
+                    return "Precedence";
+                case ParenthesesSetting.Never:
+                    return "Never";
+                default:
+                    return "Invalid / Unknown";
+            }
+        }
+
+        public static ParenthesesSetting parenthesesSettingsFromString(string setting)
+        {
+            setting = setting.ToLower();
+            switch (setting)
+            {
+                case "always":
+                    return ParenthesesSetting.Always;
+                case "precedence":
+                    return ParenthesesSetting.Precedence;
+                case "never":
+                    return ParenthesesSetting.Never;
+                default:
+                    throw new ArgumentException($"Unknown parentheses setting {setting}!");
+            }
         }
     }
 
