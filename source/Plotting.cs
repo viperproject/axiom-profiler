@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.IO;
 using Z3AxiomProfiler.QuantifierModel;
 using System.Text.RegularExpressions;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler {
   class Utils {
@@ -295,7 +294,7 @@ namespace Z3AxiomProfiler {
     private void PrintCycle(KeyValuePair<List<Quantifier>, int> cycle) {
       Console.WriteLine("Cycle found! {0} instances, length {1}", cycle.Value, cycle.Key.Count);
       foreach (Quantifier q in cycle.Key)
-        Console.WriteLine(q.InfoPanelText(new PrettyPrintFormat {maxWidth = 80, rewriteDict = new RewriteDictionary()}));
+                Console.WriteLine(q.InfoPanelText(new PrettyPrintFormat { maxWidth = 80, printRuleDict = new PrintRuleDictionary()}));
       Console.WriteLine();
     }
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
@@ -51,15 +51,15 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
-            RewriteRule rewriteRule = format.getRewriteRule(this);
+            PrintRule printRule = format.getPrintRule(this);
             bool isMultiline = false;
             List<int> breakIndices = new List<int>();
             int startLength = builder.Length;
             indentBuilder.Append(indentDiff);
 
-            addFormatStringWithLinebreak(rewriteRule.prefix, builder, rewriteRule.prefixLineBreak, breakIndices);
+            addFormatStringWithLinebreak(printRule.prefix, builder, printRule.prefixLineBreak, breakIndices);
 
-            if (printChildren(format, rewriteRule))
+            if (printChildren(format, printRule))
             {
                 for(var i = 0; i < Args.Length; i++)
                 {
@@ -69,16 +69,16 @@ namespace Z3AxiomProfiler.QuantifierModel
                                   || isMultiline;
                     if (i < Args.Length - 1)
                     {
-                        addFormatStringWithLinebreak(rewriteRule.infix, builder, rewriteRule.infixLineBreak, breakIndices);
+                        addFormatStringWithLinebreak(printRule.infix, builder, printRule.infixLineBreak, breakIndices);
                     }
                 }
             }
-            else if (showCutoffDots(format, rewriteRule))
+            else if (showCutoffDots(format, printRule))
             {
                 builder.Append("...");
             }
 
-            addFormatStringWithLinebreak(rewriteRule.suffix, builder, rewriteRule.suffixLineBreak, breakIndices);
+            addFormatStringWithLinebreak(printRule.suffix, builder, printRule.suffixLineBreak, breakIndices);
 
             // are there any lines to break?
             isMultiline = isMultiline && (breakIndices.Count > 0);
@@ -115,20 +115,20 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         private static void addFormatStringWithLinebreak(string add, StringBuilder builder,
-            RewriteRule.lineBreakSetting lineBreak, List<int> breakIndices)
+            PrintRule.lineBreakSetting lineBreak, List<int> breakIndices)
         {
-            if (lineBreak == RewriteRule.lineBreakSetting.Before)
+            if (lineBreak == PrintRule.lineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);
             }
             builder.Append(add);
-            if (lineBreak == RewriteRule.lineBreakSetting.After)
+            if (lineBreak == PrintRule.lineBreakSetting.After)
             {
                 breakIndices.Add(builder.Length);
             }
         }
 
-        private bool printChildren(PrettyPrintFormat format, RewriteRule rule)
+        private bool printChildren(PrettyPrintFormat format, PrintRule rule)
         {
             if (Args.Length == 0)
             {
@@ -142,7 +142,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             return formatSpec && rule.printChildren;
         }
 
-        private bool showCutoffDots(PrettyPrintFormat format, RewriteRule rule)
+        private bool showCutoffDots(PrettyPrintFormat format, PrintRule rule)
         {
             if (Args.Length == 0 || (format.rewritingEnabled && !rule.printChildren))
             {

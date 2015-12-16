@@ -15,7 +15,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Timer = System.Windows.Forms.Timer;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler
 {
@@ -31,7 +31,7 @@ namespace Z3AxiomProfiler
         private readonly ConcurrentQueue<string[]> toolTipQueue = new ConcurrentQueue<string[]>();
         private int workCounter;
         private Common lastToolTipCommon;
-        private RewriteDictionary rewriteDict = new RewriteDictionary();
+        private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private ParameterConfiguration parameterConfiguration;
         public Model model;
 
@@ -302,7 +302,7 @@ namespace Z3AxiomProfiler
             z3AxiomTree.Nodes.Clear();
             InstantiationPathView.Items.Clear();
             toolTipBox.Clear();
-            rewriteDict = new RewriteDictionary();
+            printRuleDict = new PrintRuleDictionary();
             expanded.Clear();
             searchTree = null;
             lastToolTipCommon = null;
@@ -617,7 +617,7 @@ namespace Z3AxiomProfiler
                 maxWidth = (int)maxTermWidthUD.Value,
                 maxDepth = (int)maxTermDepthUD.Value,
                 rewritingEnabled = enableRewritingCB.Checked,
-                rewriteDict = rewriteDict
+                printRuleDict = printRuleDict
             };
         }
 
@@ -841,20 +841,20 @@ namespace Z3AxiomProfiler
             SetInfoPanel(lastToolTipCommon);
         }
 
-        private RewriteRuleViewer rewriteRuleViewer = null;
+        private PrintRuleViewer printRuleViewer = null;
         private void rewritingRulesButton_Click(object sender, EventArgs e)
         {
-            if (rewriteRuleViewer != null && rewriteRuleViewer.IsDisposed)
+            if (printRuleViewer != null && printRuleViewer.IsDisposed)
             {
-                rewriteRuleViewer = null;
+                printRuleViewer = null;
             }
-            if (rewriteRuleViewer != null)
+            if (printRuleViewer != null)
             {
-                rewriteRuleViewer.BringToFront();
+                printRuleViewer.BringToFront();
                 return;
             }
-            rewriteRuleViewer = new RewriteRuleViewer(this, rewriteDict);
-            rewriteRuleViewer.Show();
+            printRuleViewer = new PrintRuleViewer(this, printRuleDict);
+            printRuleViewer.Show();
         }
 
         private void enableRewritingCB_CheckedChanged(object sender, EventArgs e)

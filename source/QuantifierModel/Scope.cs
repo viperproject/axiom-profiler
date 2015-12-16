@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {

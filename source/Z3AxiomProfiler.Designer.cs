@@ -57,14 +57,14 @@
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.toolsPanel = new System.Windows.Forms.Panel();
+            this.rewritingRulesButton = new System.Windows.Forms.Button();
+            this.enableRewritingCB = new System.Windows.Forms.CheckBox();
             this.showTermIdCB = new System.Windows.Forms.CheckBox();
             this.showTypesCB = new System.Windows.Forms.CheckBox();
             this.maxTermDepthUD = new System.Windows.Forms.NumericUpDown();
             this.maxTermDepthLabel = new System.Windows.Forms.Label();
             this.maxTermWidthUD = new System.Windows.Forms.NumericUpDown();
             this.widthLabel = new System.Windows.Forms.Label();
-            this.enableRewritingCB = new System.Windows.Forms.CheckBox();
-            this.rewritingRulesButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -349,6 +349,29 @@
             this.toolsPanel.Size = new System.Drawing.Size(1184, 25);
             this.toolsPanel.TabIndex = 7;
             // 
+            // rewritingRulesButton
+            // 
+            this.rewritingRulesButton.Location = new System.Drawing.Point(672, 1);
+            this.rewritingRulesButton.Name = "rewritingRulesButton";
+            this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
+            this.rewritingRulesButton.TabIndex = 7;
+            this.rewritingRulesButton.Text = "Printing Rules";
+            this.rewritingRulesButton.UseVisualStyleBackColor = true;
+            this.rewritingRulesButton.Click += new System.EventHandler(this.rewritingRulesButton_Click);
+            // 
+            // enableRewritingCB
+            // 
+            this.enableRewritingCB.AutoSize = true;
+            this.enableRewritingCB.Checked = true;
+            this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.enableRewritingCB.Location = new System.Drawing.Point(533, 4);
+            this.enableRewritingCB.Name = "enableRewritingCB";
+            this.enableRewritingCB.Size = new System.Drawing.Size(135, 17);
+            this.enableRewritingCB.TabIndex = 6;
+            this.enableRewritingCB.Text = "Enable Custom Printing";
+            this.enableRewritingCB.UseVisualStyleBackColor = true;
+            this.enableRewritingCB.CheckedChanged += new System.EventHandler(this.enableRewritingCB_CheckedChanged);
+            // 
             // showTermIdCB
             // 
             this.showTermIdCB.AutoSize = true;
@@ -428,29 +451,6 @@
             this.widthLabel.Size = new System.Drawing.Size(88, 13);
             this.widthLabel.TabIndex = 0;
             this.widthLabel.Text = "Max Term Width:";
-            // 
-            // enableRewritingCB
-            // 
-            this.enableRewritingCB.AutoSize = true;
-            this.enableRewritingCB.Checked = true;
-            this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.enableRewritingCB.Location = new System.Drawing.Point(533, 4);
-            this.enableRewritingCB.Name = "enableRewritingCB";
-            this.enableRewritingCB.Size = new System.Drawing.Size(133, 17);
-            this.enableRewritingCB.TabIndex = 6;
-            this.enableRewritingCB.Text = "Enable Term Rewriting";
-            this.enableRewritingCB.UseVisualStyleBackColor = true;
-            this.enableRewritingCB.CheckedChanged += new System.EventHandler(this.enableRewritingCB_CheckedChanged);
-            // 
-            // rewritingRulesButton
-            // 
-            this.rewritingRulesButton.Location = new System.Drawing.Point(672, 1);
-            this.rewritingRulesButton.Name = "rewritingRulesButton";
-            this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
-            this.rewritingRulesButton.TabIndex = 7;
-            this.rewritingRulesButton.Text = "Rewriting Rules";
-            this.rewritingRulesButton.UseVisualStyleBackColor = true;
-            this.rewritingRulesButton.Click += new System.EventHandler(this.rewritingRulesButton_Click);
             // 
             // Z3AxiomProfiler
             // 

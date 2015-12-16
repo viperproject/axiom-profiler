@@ -1,6 +1,6 @@
 ﻿namespace Z3AxiomProfiler
 {
-    partial class RewriteRuleViewer
+    partial class PrintRuleViewer
     {
         /// <summary>
         /// Required designer variable.
@@ -139,7 +139,7 @@
             this.ChildrenHeader.Text = "Show Children";
             this.ChildrenHeader.Width = 82;
             // 
-            // RewriteRuleViewer
+            // PrintRuleViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -147,8 +147,8 @@
             this.Controls.Add(this.rulesView);
             this.Controls.Add(this.toolBar);
             this.MinimumSize = new System.Drawing.Size(450, 238);
-            this.Name = "RewriteRuleViewer";
-            this.Text = "Rewrite Rule Viewer";
+            this.Name = "PrintRuleViewer";
+            this.Text = "Print Rule Viewer";
             this.toolBar.ResumeLayout(false);
             this.ResumeLayout(false);
 

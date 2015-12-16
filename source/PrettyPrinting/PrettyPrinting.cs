@@ -1,18 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Z3AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler.Rewriting
+namespace Z3AxiomProfiler.PrettyPrinting
 {
-    public class RewriteDictionary
+    public class PrintRuleDictionary
     {
-        private readonly Dictionary<int, RewriteRule> specificTermTranslations = new Dictionary<int, RewriteRule>();
-        private readonly Dictionary<string, RewriteRule> termTranslations = new Dictionary<string, RewriteRule>();
+        private readonly Dictionary<int, PrintRule> specificTermTranslations = new Dictionary<int, PrintRule>();
+        private readonly Dictionary<string, PrintRule> termTranslations = new Dictionary<string, PrintRule>();
 
-        public RewriteRule getRewriteRule(Term t)
+        public PrintRule getRewriteRule(Term t)
         {
             if (specificTermTranslations.ContainsKey(t.id))
             {
@@ -54,7 +51,7 @@ namespace Z3AxiomProfiler.Rewriting
             termTranslations.Remove(ruleMatch);
         }
 
-        public void addRule(string ruleMatch, RewriteRule rule)
+        public void addRule(string ruleMatch, PrintRule rule)
         {
             if (hasRule(ruleMatch))
             {
@@ -69,18 +66,18 @@ namespace Z3AxiomProfiler.Rewriting
             termTranslations.Add(ruleMatch, rule);
         }
 
-        public IEnumerable<KeyValuePair<string, RewriteRule>> getAllRules()
+        public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
         {
             return specificTermTranslations
                 .OrderBy(kvPair => kvPair.Key)
-                .Select(translation => new KeyValuePair<string, RewriteRule>(translation.Key + "", translation.Value))
+                .Select(translation => new KeyValuePair<string, PrintRule>(translation.Key + "", translation.Value))
                 .Concat(termTranslations.OrderBy(kvPair => kvPair.Key));
         }
     }
 
 
 
-    public class RewriteRule
+    public class PrintRule
     {
         public string prefix;
         public string infix;
@@ -93,13 +90,13 @@ namespace Z3AxiomProfiler.Rewriting
 
         public enum lineBreakSetting { Before, After, None };
 
-        public static RewriteRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
+        public static PrintRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
                 (format.showTermId ? "[" + t.id + "]" : "") +
                 "(";
-            return new RewriteRule
+            return new PrintRule
             {
                 prefix = prefix,
                 infix = ", ",
@@ -119,7 +116,7 @@ namespace Z3AxiomProfiler.Rewriting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
-        public RewriteDictionary rewriteDict = new RewriteDictionary();
+        public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
 
         public PrettyPrintFormat nextDepth()
         {
@@ -130,7 +127,7 @@ namespace Z3AxiomProfiler.Rewriting
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
-                rewriteDict = rewriteDict
+                printRuleDict = printRuleDict
             };
         }
 
@@ -143,17 +140,17 @@ namespace Z3AxiomProfiler.Rewriting
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,
-                rewriteDict = new RewriteDictionary()
+                printRuleDict = new PrintRuleDictionary()
             };
         }
 
-        public RewriteRule getRewriteRule(Term t)
+        public PrintRule getPrintRule(Term t)
         {
-            if (rewritingEnabled && rewriteDict.hasRule(t))
+            if (rewritingEnabled && printRuleDict.hasRule(t))
             {
-                return rewriteDict.getRewriteRule(t);
+                return printRuleDict.getRewriteRule(t);
             }
-            return RewriteRule.DefaultRewriteRule(t, this);
+            return PrintRule.DefaultRewriteRule(t, this);
         }
     }
 }

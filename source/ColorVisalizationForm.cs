@@ -9,7 +9,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 using Z3AxiomProfiler.QuantifierModel;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler
 {
@@ -149,7 +149,7 @@ namespace Z3AxiomProfiler
                     {
                         this.colorBox.BackColor = colors[colorIndex];
                         this.boogieQuantifierText.Text =
-                            q.InfoPanelText(new PrettyPrintFormat { rewriteDict = new RewriteDictionary() });
+                            q.InfoPanelText(new PrettyPrintFormat { printRuleDict = new PrintRuleDictionary() });
                         this.quantifierLinkedText.Text = q.ToString();
                     }
                     else

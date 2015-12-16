@@ -3,19 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Input;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler
 {
-    public partial class RewriteRuleViewer : Form
+    public partial class PrintRuleViewer : Form
     {
-        private RewriteDictionary rewriteRulesDict;
+        private readonly PrintRuleDictionary printRuleDict;
         private readonly Z3AxiomProfiler profiler;
-        public RewriteRuleViewer(Z3AxiomProfiler profiler, RewriteDictionary rulesDictionary)
+        public PrintRuleViewer(Z3AxiomProfiler profiler, PrintRuleDictionary rulesDictionary)
         {
             this.profiler = profiler;
-            rewriteRulesDict = rulesDictionary;
+            printRuleDict = rulesDictionary;
             InitializeComponent();
             updateRulesList();
         }
@@ -24,7 +23,7 @@ namespace Z3AxiomProfiler
         {
             rulesView.BeginUpdate();
             rulesView.Items.Clear();
-            foreach (var item in rewriteRulesDict.getAllRules().Select(getRuleItem))
+            foreach (var item in printRuleDict.getAllRules().Select(getRuleItem))
             {
                 rulesView.Items.Add(item);
             }
@@ -32,7 +31,7 @@ namespace Z3AxiomProfiler
             profiler.updateInfoPanel();
         }
 
-        private static ListViewItem getRuleItem(KeyValuePair<string, RewriteRule> keyValPair)
+        private static ListViewItem getRuleItem(KeyValuePair<string, PrintRule> keyValPair)
         {
             var rule = keyValPair.Value;
             var item = new ListViewItem
@@ -50,7 +49,7 @@ namespace Z3AxiomProfiler
 
         private void addRuleButton_Click(object sender, EventArgs e)
         {
-            var addRuleDialog = new AddRewriteRuleDialog(rewriteRulesDict);
+            var addRuleDialog = new AddPrintRuleDialog(printRuleDict);
             var result = addRuleDialog.ShowDialog();
             if (result == DialogResult.OK)
             {
@@ -67,7 +66,7 @@ namespace Z3AxiomProfiler
         {
             foreach (ListViewItem rule in rulesView.SelectedItems)
             {
-                rewriteRulesDict.removeRule(rule.Text);
+                printRuleDict.removeRule(rule.Text);
             }
             updateRulesList();
         }
@@ -95,7 +94,7 @@ namespace Z3AxiomProfiler
             }
 
             var outStream = new StreamWriter(dialog.OpenFile());
-            foreach (var rulePair in rewriteRulesDict.getAllRules())
+            foreach (var rulePair in printRuleDict.getAllRules())
             {
                 var rule = rulePair.Value;
                 outStream.WriteLineAsync(
@@ -138,7 +137,7 @@ namespace Z3AxiomProfiler
                     invalidLines = true;
                 }
 
-                rewriteRulesDict.addRule(lines[0], new RewriteRule
+                printRuleDict.addRule(lines[0], new PrintRule
                 {
                     prefix = lines[1],
                     infix = lines[2],

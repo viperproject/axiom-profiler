@@ -1,17 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows.Forms;
-using Z3AxiomProfiler.Rewriting;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler
 {
-    public partial class AddRewriteRuleDialog : Form
+    public partial class AddPrintRuleDialog : Form
     {
-        private readonly RewriteDictionary termTranslations;
-        public AddRewriteRuleDialog(RewriteDictionary termTranslations)
+        private readonly PrintRuleDictionary printRuleDictionary;
+        public AddPrintRuleDialog(PrintRuleDictionary printRuleDictionary)
         {
             InitializeComponent();
-            this.termTranslations = termTranslations;
+            this.printRuleDictionary = printRuleDictionary;
+            prefixLinebreakCB.SelectedIndex = 1;
+            infixLinebreakCB.SelectedIndex = 1;
+            suffixLinebreakCB.SelectedIndex = 0;
         }
 
         private void printChildrenCB_CheckedChanged(object sender, EventArgs e)
@@ -42,7 +44,7 @@ namespace Z3AxiomProfiler
             if (!isValidInput()) return;
 
             // if so, add the rule (unless abort on collision).
-            if (termTranslations.hasRule(matchTextBox.Text))
+            if (printRuleDictionary.hasRule(matchTextBox.Text))
             {
                 var overwriteDecision = MessageBox.Show(
                     $"There is already a rewrite rule matching {matchTextBox.Text}." +
@@ -56,9 +58,9 @@ namespace Z3AxiomProfiler
                     return;
                 }
                 // remove the old one
-                termTranslations.removeRule(matchTextBox.Text);
+                printRuleDictionary.removeRule(matchTextBox.Text);
             }
-            termTranslations.addRule(matchTextBox.Text, buildRuleFromForm());
+            printRuleDictionary.addRule(matchTextBox.Text, buildRuleFromForm());
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -88,9 +90,9 @@ namespace Z3AxiomProfiler
             return true;
         }
 
-        private RewriteRule buildRuleFromForm()
+        private PrintRule buildRuleFromForm()
         {
-            return new RewriteRule
+            return new PrintRule
             {
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
