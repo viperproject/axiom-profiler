@@ -185,11 +185,10 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
-        public bool leftChild;
         public Term parentTerm;
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
 
-        public PrettyPrintFormat nextDepth(bool isLeftChild, Term parent)
+        public PrettyPrintFormat nextDepth(Term parent)
         {
             return new PrettyPrintFormat
             {
@@ -199,7 +198,6 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                leftChild = isLeftChild,
                 parentTerm = parent
             };
         }
@@ -213,13 +211,13 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,
-                leftChild = true,
                 printRuleDict = new PrintRuleDictionary()
             };
         }
 
         public PrintRule getPrintRule(Term t)
         {
+            if (t == null) return null;
             if (rewritingEnabled && printRuleDict.hasRule(t))
             {
                 return printRuleDict.getRewriteRule(t);

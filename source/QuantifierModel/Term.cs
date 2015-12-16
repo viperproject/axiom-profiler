@@ -56,8 +56,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             var isMultiline = false;
             var breakIndices = new List<int>();
             var startLength = builder.Length;
+            var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
             indentBuilder.Append(indentDiff);
-
+            if (needsParenthesis) builder.Append('(');
             addPrefix(printRule, builder, breakIndices);
 
             if (printChildren(format, printRule))
@@ -67,7 +68,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(i == 0, this))
+                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(this))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
@@ -82,6 +83,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             addSuffix(printRule, builder, breakIndices);
+            if (needsParenthesis) builder.Append(')');
 
             // are there any lines to break?
             isMultiline = isMultiline && (breakIndices.Count > 0);
@@ -107,6 +109,11 @@ namespace Z3AxiomProfiler.QuantifierModel
                 case PrintRule.ParenthesesSetting.Precedence:
                     if (format.parentTerm == null) return false;
                     if (parentRule.precedence < rule.precedence) return false;
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix))
+                    {
+                        return false;
+                    }
                     return format.parentTerm.Name != Name || !rule.associative;
                 default:
                     throw new ArgumentOutOfRangeException("Invalid enum value!");
@@ -115,7 +122,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static bool linebreaksNecessary(StringBuilder builder, PrettyPrintFormat format, bool isMultiline, int startLength)
         {
-            return (isMultiline || (builder.Length - startLength > format.maxWidth)) && format.maxDepth > 1;
+            if (format.maxWidth == 0) return false;
+            return isMultiline || (builder.Length - startLength > format.maxWidth);
         }
 
         private static void addLinebreaks(StringBuilder builder, StringBuilder indentBuilder, List<int> breakIndices)
