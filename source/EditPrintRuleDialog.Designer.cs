@@ -177,7 +177,6 @@
             this.prefixLinebreakCB.DisplayMember = "Before";
             this.prefixLinebreakCB.FormattingEnabled = true;
             this.prefixLinebreakCB.Items.AddRange(new object[] {
-            "Before",
             "After",
             "None"});
             this.prefixLinebreakCB.Location = new System.Drawing.Point(54, 133);
@@ -235,7 +234,6 @@
             this.suffixLinebreakCB.FormattingEnabled = true;
             this.suffixLinebreakCB.Items.AddRange(new object[] {
             "Before",
-            "After",
             "None"});
             this.suffixLinebreakCB.Location = new System.Drawing.Point(315, 133);
             this.suffixLinebreakCB.Name = "suffixLinebreakCB";

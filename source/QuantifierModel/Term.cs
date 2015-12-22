@@ -57,6 +57,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             var breakIndices = new List<int>();
             var startLength = builder.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
+            
             indentBuilder.Append(indentDiff);
             if (needsParenthesis) builder.Append('(');
             addPrefix(printRule, builder, breakIndices);
@@ -136,6 +137,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
+
                 builder.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
                 offset += builder.Length - oldLength;
                 oldLength = builder.Length;
@@ -144,12 +146,9 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addPrefix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
-            if (rule.prefixLineBreak == PrintRule.LineBreakSetting.Before)
-            {
-                breakIndices.Add(builder.Length);
-            }
             builder.Append(rule.prefix);
-            if (rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
+            if (string.IsNullOrWhiteSpace(rule.prefix) &&
+                rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(builder.Length);
             }
@@ -170,15 +169,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
-            if (rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
+            if (string.IsNullOrWhiteSpace(rule.suffix) && 
+                rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);
             }
             builder.Append(rule.suffix);
-            if (rule.suffixLineBreak == PrintRule.LineBreakSetting.After)
-            {
-                breakIndices.Add(builder.Length);
-            }
         }
 
         private bool printChildren(PrettyPrintFormat format, PrintRule rule)

@@ -21,7 +21,7 @@ namespace Z3AxiomProfiler
         public EditPrintRuleDialog(PrintRuleDictionary printRuleDictionary, string match, PrintRule editRule) : this(printRuleDictionary)
         {
             editMode = true;
-            
+
             // text
             matchTextBox.Text = match;
             prefixTextBox.Text = editRule.prefix;
@@ -29,9 +29,10 @@ namespace Z3AxiomProfiler
             suffixTextBox.Text = editRule.suffix;
 
             // comboboxes
-            prefixLinebreakCB.SelectedIndex = (int)editRule.prefixLineBreak;
+            prefixLinebreakCB.SelectedIndex = (int)editRule.prefixLineBreak - 1; // correct index for missing options
             infixLinebreakCB.SelectedIndex = (int)editRule.infixLineBreak;
-            suffixLinebreakCB.SelectedIndex = (int)editRule.suffixLineBreak;
+            suffixLinebreakCB.SelectedIndex = (int)editRule.suffixLineBreak -
+                 (editRule.suffixLineBreak == PrintRule.LineBreakSetting.Before ? 0 : 1); // correct index for missing options
             parenthesesCB.SelectedIndex = (int)editRule.parentheses;
 
             // checkboxes
