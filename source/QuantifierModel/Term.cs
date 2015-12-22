@@ -147,7 +147,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         private static void addPrefix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
             builder.Append(rule.prefix);
-            if (string.IsNullOrWhiteSpace(rule.prefix) &&
+            if (!string.IsNullOrWhiteSpace(rule.prefix) &&
                 rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(builder.Length);
@@ -169,7 +169,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
-            if (string.IsNullOrWhiteSpace(rule.suffix) && 
+            if (!string.IsNullOrWhiteSpace(rule.suffix) && 
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);

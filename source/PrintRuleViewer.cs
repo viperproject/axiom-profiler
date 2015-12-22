@@ -103,7 +103,7 @@ namespace Z3AxiomProfiler
             foreach (var rulePair in printRuleDict.getAllRules())
             {
                 var rule = rulePair.Value;
-                outStream.WriteLineAsync(
+                outStream.WriteLine(
                     $"{rulePair.Key};" +
                     $"{rule.prefix};" +
                     $"{rule.infix};" +
