@@ -85,6 +85,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public string suffix;
         public bool printChildren;
         public bool associative;
+        public bool indent;
         public int precedence;
         public LineBreakSetting prefixLineBreak;
         public LineBreakSetting infixLineBreak;
@@ -107,6 +108,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 suffix = ")",
                 printChildren = true,
                 associative = false,
+                indent = true,
                 precedence = 0,
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,

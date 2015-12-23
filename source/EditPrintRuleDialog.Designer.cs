@@ -51,6 +51,7 @@
             this.associativeCB = new System.Windows.Forms.CheckBox();
             this.parenthesesCB = new System.Windows.Forms.ComboBox();
             this.parenthesesLabel = new System.Windows.Forms.Label();
+            this.indentCB = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.precedenceUD)).BeginInit();
             this.SuspendLayout();
             // 
@@ -60,7 +61,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.prefixTextBox.Location = new System.Drawing.Point(77, 32);
             this.prefixTextBox.Name = "prefixTextBox";
-            this.prefixTextBox.Size = new System.Drawing.Size(298, 20);
+            this.prefixTextBox.Size = new System.Drawing.Size(317, 20);
             this.prefixTextBox.TabIndex = 2;
             // 
             // prefixLabel
@@ -78,7 +79,7 @@
             this.printChildrenCB.AutoSize = true;
             this.printChildrenCB.Checked = true;
             this.printChildrenCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.printChildrenCB.Location = new System.Drawing.Point(287, 8);
+            this.printChildrenCB.Location = new System.Drawing.Point(306, 8);
             this.printChildrenCB.Name = "printChildrenCB";
             this.printChildrenCB.Size = new System.Drawing.Size(88, 17);
             this.printChildrenCB.TabIndex = 1;
@@ -93,7 +94,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.infixTextBox.Location = new System.Drawing.Point(77, 58);
             this.infixTextBox.Name = "infixTextBox";
-            this.infixTextBox.Size = new System.Drawing.Size(298, 20);
+            this.infixTextBox.Size = new System.Drawing.Size(317, 20);
             this.infixTextBox.TabIndex = 3;
             // 
             // suffixTextBox
@@ -102,7 +103,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.suffixTextBox.Location = new System.Drawing.Point(77, 85);
             this.suffixTextBox.Name = "suffixTextBox";
-            this.suffixTextBox.Size = new System.Drawing.Size(298, 20);
+            this.suffixTextBox.Size = new System.Drawing.Size(317, 20);
             this.suffixTextBox.TabIndex = 4;
             // 
             // infixLabel
@@ -129,7 +130,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.matchTextBox.Location = new System.Drawing.Point(77, 6);
             this.matchTextBox.Name = "matchTextBox";
-            this.matchTextBox.Size = new System.Drawing.Size(204, 20);
+            this.matchTextBox.Size = new System.Drawing.Size(223, 20);
             this.matchTextBox.TabIndex = 0;
             // 
             // matchLabel
@@ -144,7 +145,7 @@
             // saveButton
             // 
             this.saveButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.saveButton.Location = new System.Drawing.Point(107, 236);
+            this.saveButton.Location = new System.Drawing.Point(116, 227);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(75, 23);
             this.saveButton.TabIndex = 11;
@@ -155,7 +156,7 @@
             // cancelButton
             // 
             this.cancelButton.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
-            this.cancelButton.Location = new System.Drawing.Point(197, 236);
+            this.cancelButton.Location = new System.Drawing.Point(206, 227);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
             this.cancelButton.TabIndex = 12;
@@ -221,7 +222,7 @@
             // 
             this.suffixLinebreakLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.suffixLinebreakLabel.AutoSize = true;
-            this.suffixLinebreakLabel.Location = new System.Drawing.Point(273, 136);
+            this.suffixLinebreakLabel.Location = new System.Drawing.Point(292, 136);
             this.suffixLinebreakLabel.Name = "suffixLinebreakLabel";
             this.suffixLinebreakLabel.Size = new System.Drawing.Size(36, 13);
             this.suffixLinebreakLabel.TabIndex = 17;
@@ -235,7 +236,7 @@
             this.suffixLinebreakCB.Items.AddRange(new object[] {
             "Before",
             "None"});
-            this.suffixLinebreakCB.Location = new System.Drawing.Point(315, 133);
+            this.suffixLinebreakCB.Location = new System.Drawing.Point(334, 133);
             this.suffixLinebreakCB.Name = "suffixLinebreakCB";
             this.suffixLinebreakCB.Size = new System.Drawing.Size(60, 21);
             this.suffixLinebreakCB.TabIndex = 7;
@@ -260,7 +261,7 @@
             // 
             this.associativeCB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.associativeCB.AutoSize = true;
-            this.associativeCB.Location = new System.Drawing.Point(295, 163);
+            this.associativeCB.Location = new System.Drawing.Point(266, 163);
             this.associativeCB.Name = "associativeCB";
             this.associativeCB.Size = new System.Drawing.Size(80, 17);
             this.associativeCB.TabIndex = 9;
@@ -289,12 +290,25 @@
             this.parenthesesLabel.TabIndex = 22;
             this.parenthesesLabel.Text = "Parentheses:";
             // 
+            // indentCB
+            // 
+            this.indentCB.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.indentCB.AutoSize = true;
+            this.indentCB.Location = new System.Drawing.Point(266, 190);
+            this.indentCB.Name = "indentCB";
+            this.indentCB.Size = new System.Drawing.Size(121, 17);
+            this.indentCB.TabIndex = 26;
+            this.indentCB.Text = "Indent on Linebreak";
+            this.indentCB.UseVisualStyleBackColor = true;
+            this.indentCB.KeyDown += new System.Windows.Forms.KeyEventHandler(this.indentCB_KeyDown);
+            // 
             // EditPrintRuleDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(380, 271);
+            this.ClientSize = new System.Drawing.Size(399, 262);
             this.ControlBox = false;
+            this.Controls.Add(this.indentCB);
             this.Controls.Add(this.parenthesesLabel);
             this.Controls.Add(this.parenthesesCB);
             this.Controls.Add(this.associativeCB);
@@ -320,7 +334,7 @@
             this.Controls.Add(this.prefixTextBox);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(384, 287);
+            this.MinimumSize = new System.Drawing.Size(415, 287);
             this.Name = "EditPrintRuleDialog";
             this.Text = "Edit Print Rule";
             ((System.ComponentModel.ISupportInitialize)(this.precedenceUD)).EndInit();
@@ -354,5 +368,6 @@
         private System.Windows.Forms.CheckBox associativeCB;
         private System.Windows.Forms.ComboBox parenthesesCB;
         private System.Windows.Forms.Label parenthesesLabel;
+        private System.Windows.Forms.CheckBox indentCB;
     }
 }

@@ -54,6 +54,7 @@ namespace Z3AxiomProfiler
                 associativeCB.Enabled = true;
                 parenthesesCB.Enabled = true;
                 parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Precedence;
+                indentCB.Enabled = true;
                 prefixLinebreakCB.Enabled = true;
                 infixLinebreakCB.Enabled = true;
                 suffixLinebreakCB.Enabled = true;
@@ -67,6 +68,7 @@ namespace Z3AxiomProfiler
                 associativeCB.Enabled = false;
                 parenthesesCB.Enabled = false;
                 parenthesesCB.SelectedIndex = (int) PrintRule.ParenthesesSetting.Never;
+                indentCB.Enabled = false;
                 prefixLinebreakCB.Enabled = false;
                 infixLinebreakCB.Enabled = false;
                 suffixLinebreakCB.Enabled = false;
@@ -145,6 +147,7 @@ namespace Z3AxiomProfiler
                 infixLineBreak = PrintRule.lineBreakSettingFromString((string)infixLinebreakCB.SelectedItem),
                 suffixLineBreak = PrintRule.lineBreakSettingFromString((string)suffixLinebreakCB.SelectedItem),
                 associative = associativeCB.Checked,
+                indent = indentCB.Checked,
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
                 precedence = (int)precedenceUD.Value
             };
@@ -163,6 +166,14 @@ namespace Z3AxiomProfiler
             if (e.KeyCode == Keys.Enter)
             {
                 associativeCB.Checked = !associativeCB.Checked;
+            }
+        }
+
+        private void indentCB_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                indentCB.Checked = !indentCB.Checked;
             }
         }
     }

@@ -50,6 +50,7 @@ namespace Z3AxiomProfiler
             item.SubItems.Add(rule.associative + "");
             item.SubItems.Add(PrintRule.parenthesesSettingsToString(rule.parentheses));
             item.SubItems.Add(rule.precedence + "");
+            item.SubItems.Add(rule.indent + "");
             return item;
         }
 
@@ -114,7 +115,8 @@ namespace Z3AxiomProfiler
                     $"{PrintRule.lineBreakSettingToString(rule.suffixLineBreak)};" +
                     $"{rule.associative};" +
                     $"{PrintRule.parenthesesSettingsToString(rule.parentheses)};" +
-                    $"{rule.precedence}");
+                    $"{rule.precedence};" +
+                    $"{rule.indent}");
             }
             outStream.Close();
         }
@@ -145,7 +147,7 @@ namespace Z3AxiomProfiler
                 }
                 var lines = line.Split(';');
                 // validate
-                if (lines.Length != 11)
+                if (lines.Length != 12)
                 {
                     invalidLines = true;
                     continue;
@@ -154,9 +156,11 @@ namespace Z3AxiomProfiler
                 // parse bools & ints
                 bool printChildren;
                 bool associative;
+                bool indent;
                 int precedence;
                 if (!bool.TryParse(lines[4], out printChildren) ||
                     !bool.TryParse(lines[8], out associative) ||
+                    !bool.TryParse(lines[11], out indent) ||
                     !int.TryParse(lines[10], out precedence))
                 {
                     invalidLines = true;
@@ -193,6 +197,7 @@ namespace Z3AxiomProfiler
                     associative = associative,
                     parentheses = parenthesesSettings,
                     precedence = precedence,
+                    indent = indent
                 });
             }
 

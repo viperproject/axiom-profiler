@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.toolBar = new System.Windows.Forms.Panel();
+            this.editButton = new System.Windows.Forms.Button();
             this.deleteRuleButton = new System.Windows.Forms.Button();
             this.exportButton = new System.Windows.Forms.Button();
             this.importButton = new System.Windows.Forms.Button();
@@ -45,7 +46,7 @@
             this.associativityHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.parenthesesHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.precedenceHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.editButton = new System.Windows.Forms.Button();
+            this.indentHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.toolBar.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -60,8 +61,18 @@
             this.toolBar.Controls.Add(this.newRuleButton);
             this.toolBar.Location = new System.Drawing.Point(0, 0);
             this.toolBar.Name = "toolBar";
-            this.toolBar.Size = new System.Drawing.Size(854, 25);
+            this.toolBar.Size = new System.Drawing.Size(913, 25);
             this.toolBar.TabIndex = 0;
+            // 
+            // editButton
+            // 
+            this.editButton.Location = new System.Drawing.Point(76, 1);
+            this.editButton.Name = "editButton";
+            this.editButton.Size = new System.Drawing.Size(75, 23);
+            this.editButton.TabIndex = 4;
+            this.editButton.Text = "Edit Rule";
+            this.editButton.UseVisualStyleBackColor = true;
+            this.editButton.Click += new System.EventHandler(this.editButton_Click);
             // 
             // deleteRuleButton
             // 
@@ -119,12 +130,14 @@
             this.suffixLinebreakHeader,
             this.associativityHeader,
             this.parenthesesHeader,
-            this.precedenceHeader});
+            this.precedenceHeader,
+            this.indentHeader});
             this.rulesView.FullRowSelect = true;
+            this.rulesView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.rulesView.Location = new System.Drawing.Point(0, 25);
             this.rulesView.MultiSelect = false;
             this.rulesView.Name = "rulesView";
-            this.rulesView.Size = new System.Drawing.Size(855, 485);
+            this.rulesView.Size = new System.Drawing.Size(914, 498);
             this.rulesView.TabIndex = 4;
             this.rulesView.UseCompatibleStateImageBehavior = false;
             this.rulesView.View = System.Windows.Forms.View.Details;
@@ -185,21 +198,15 @@
             this.precedenceHeader.Text = "Precedence";
             this.precedenceHeader.Width = 80;
             // 
-            // editButton
+            // indentHeader
             // 
-            this.editButton.Location = new System.Drawing.Point(76, 1);
-            this.editButton.Name = "editButton";
-            this.editButton.Size = new System.Drawing.Size(75, 23);
-            this.editButton.TabIndex = 4;
-            this.editButton.Text = "Edit Rule";
-            this.editButton.UseVisualStyleBackColor = true;
-            this.editButton.Click += new System.EventHandler(this.editButton_Click);
+            this.indentHeader.Text = "Indent";
             // 
             // PrintRuleViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(855, 510);
+            this.ClientSize = new System.Drawing.Size(914, 523);
             this.Controls.Add(this.rulesView);
             this.Controls.Add(this.toolBar);
             this.MinimumSize = new System.Drawing.Size(450, 238);
@@ -230,5 +237,6 @@
         private System.Windows.Forms.ColumnHeader parenthesesHeader;
         private System.Windows.Forms.ColumnHeader precedenceHeader;
         private System.Windows.Forms.Button editButton;
+        private System.Windows.Forms.ColumnHeader indentHeader;
     }
 }
