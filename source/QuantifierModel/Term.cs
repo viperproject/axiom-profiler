@@ -57,8 +57,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             var breakIndices = new List<int>();
             var startLength = builder.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
-            
-            indentBuilder.Append(indentDiff);
+
+            if (printRule.indent) indentBuilder.Append(indentDiff);
             if (needsParenthesis) builder.Append('(');
             addPrefix(printRule, builder, breakIndices);
 
@@ -69,7 +69,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(this))
+                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(this, i))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
@@ -90,12 +90,15 @@ namespace Z3AxiomProfiler.QuantifierModel
             isMultiline = isMultiline && (breakIndices.Count > 0);
             if (!linebreaksNecessary(builder, format, isMultiline, startLength))
             {
-                indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                if (printRule.indent)
+                {
+                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                }
                 return false;
             }
 
             // split necessary
-            addLinebreaks(builder, indentBuilder, breakIndices);
+            addLinebreaks(printRule, builder, indentBuilder, breakIndices);
             return true;
         }
 
@@ -112,9 +115,15 @@ namespace Z3AxiomProfiler.QuantifierModel
                     if (parentRule.precedence < rule.precedence) return false;
                     if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
                         !string.IsNullOrWhiteSpace(parentRule.suffix))
-                    {
-                        return false;
-                    }
+                    { return false; }
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
+                        !string.IsNullOrWhiteSpace(parentRule.infix) &&
+                        format.childIndex == 0)
+                    { return false; }
+                    if (!string.IsNullOrWhiteSpace(parentRule.infix) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix) &&
+                        format.childIndex == format.parentTerm.Args.Length - 1)
+                    { return false; }
                     return format.parentTerm.Name != Name || !rule.associative;
                 default:
                     throw new ArgumentOutOfRangeException("Invalid enum value!");
@@ -127,13 +136,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             return isMultiline || (builder.Length - startLength > format.maxWidth);
         }
 
-        private static void addLinebreaks(StringBuilder builder, StringBuilder indentBuilder, List<int> breakIndices)
+        private static void addLinebreaks(PrintRule rule, StringBuilder builder,
+            StringBuilder indentBuilder, List<int> breakIndices)
         {
             var offset = 0;
             var oldLength = builder.Length;
             for (var i = 0; i < breakIndices.Count; i++)
             {
-                if (i == breakIndices.Count - 1)
+                if (rule.indent && i == breakIndices.Count - 1)
                 {
                     indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
@@ -169,7 +179,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
         {
-            if (!string.IsNullOrWhiteSpace(rule.suffix) && 
+            if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(builder.Length);

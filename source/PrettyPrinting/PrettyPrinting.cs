@@ -188,9 +188,10 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public bool showTermId;
         public bool rewritingEnabled;
         public Term parentTerm;
+        public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
 
-        public PrettyPrintFormat nextDepth(Term parent)
+        public PrettyPrintFormat nextDepth(Term parent, int childNo)
         {
             return new PrettyPrintFormat
             {
@@ -200,7 +201,8 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                parentTerm = parent
+                parentTerm = parent,
+                childIndex = childNo
             };
         }
 
