@@ -51,12 +51,26 @@ namespace Z3AxiomProfiler
                 prefixLabel.Text = "Prefix:";
                 infixTextBox.Enabled = true;
                 suffixTextBox.Enabled = true;
+                associativeCB.Enabled = true;
+                parenthesesCB.Enabled = true;
+                parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Precedence;
+                prefixLinebreakCB.Enabled = true;
+                infixLinebreakCB.Enabled = true;
+                suffixLinebreakCB.Enabled = true;
+                precedenceUD.Enabled = true;
             }
             else
             {
                 prefixLabel.Text = "New value:";
                 infixTextBox.Enabled = false;
                 suffixTextBox.Enabled = false;
+                associativeCB.Enabled = false;
+                parenthesesCB.Enabled = false;
+                parenthesesCB.SelectedIndex = (int) PrintRule.ParenthesesSetting.Never;
+                prefixLinebreakCB.Enabled = false;
+                infixLinebreakCB.Enabled = false;
+                suffixLinebreakCB.Enabled = false;
+                precedenceUD.Enabled = false;
             }
         }
 
