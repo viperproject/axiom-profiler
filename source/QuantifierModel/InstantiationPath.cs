@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
@@ -55,17 +56,35 @@ namespace Z3AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
-        public string toString()
+        public string toString(PrettyPrintFormat format)
         {
             StringBuilder builder = new StringBuilder();
             builder.Append("Path explanation:");
             builder.Append("\n------------------------\n");
             builder.Append("Length: ").Append(Length()).Append('\n');
             builder.Append("Cost: ").Append(Cost()).Append('\n');
+
+            Instantiation previous = null;
             foreach (var instantiation in pathInstantiations)
             {
+                if (previous != null)
+                {
+                    builder.Append("Link term: \n\n");
+                    var term = findOverlap(previous, instantiation);
+                    if (term == null)
+                    {
+                        builder.Append("No overlap found!!!\n");
+                    }
+                    else
+                    {
+                        builder.Append(term.PrettyPrint(format));
+                    }
+                }
+
                 builder.Append("\n------------------------\n");
                 builder.Append(instantiation.SummaryInfo());
+
+                previous = instantiation;
             }
 
             return builder.ToString();
@@ -74,6 +93,14 @@ namespace Z3AxiomProfiler.QuantifierModel
         public IEnumerable<Instantiation> getInstantiations()
         {
             return pathInstantiations;
+        }
+
+        private Term findOverlap(Instantiation parent, Instantiation child)
+        {
+            var termsToCheck = new List<Term>();
+            termsToCheck.AddRange(child.Responsible);
+            termsToCheck.AddRange(child.Bindings);
+            return termsToCheck.FirstOrDefault(term => parent.dependentTerms.Contains(term));
         }
     }
 }

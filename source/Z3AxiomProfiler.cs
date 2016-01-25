@@ -614,7 +614,7 @@ namespace Z3AxiomProfiler
 
             Interlocked.Increment(ref workCounter);
             uiUpdateTimer.Start();
-            Task.Run(() => infoPanelQueue.Enqueue(path.toString().Split('\n')));
+            Task.Run(() => infoPanelQueue.Enqueue(path.toString(getFormatFromGUI()).Split('\n')));
         }
 
         private PrettyPrintFormat getFormatFromGUI()
