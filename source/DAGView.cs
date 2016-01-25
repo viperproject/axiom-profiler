@@ -152,6 +152,7 @@ namespace Z3AxiomProfiler
         }
 
         private Node previouslySelectedNode;
+        private readonly List<Node> highlightedNodes = new List<Node>(); 
         private void _ViewerViewClick(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left)
@@ -178,15 +179,21 @@ namespace Z3AxiomProfiler
                 node.Attr.FillColor = selectionColor;
                 node.Label.FontColor = Color.White;
                 // plus all parents
-                foreach (var inEdge in node.InEdges)
+                foreach (var sourceNode in node.InEdges.Select(inEdge => inEdge.SourceNode))
                 {
-                    inEdge.SourceNode.Attr.FillColor = parentColor;
-                    inEdge.SourceNode.Label.FontColor = Color.Black;
+                    highlightNode(sourceNode);
                 }
                 previouslySelectedNode = node;
                 _z3AxiomProfiler.SetInfoPanel((Instantiation)node.UserData);
             }
             _viewer.Invalidate();
+        }
+
+        private void highlightNode(Node node)
+        {
+            node.Attr.FillColor = parentColor;
+            node.Label.FontColor = Color.Black;
+            highlightedNodes.Add(node);
         }
 
         private void unselectNode()
@@ -195,10 +202,11 @@ namespace Z3AxiomProfiler
             formatNode(previouslySelectedNode);
 
             // plus all parents
-            foreach (var inEdge in previouslySelectedNode.InEdges)
+            foreach (var node in highlightedNodes)
             {
-                formatNode(inEdge.SourceNode);
+                formatNode(node);
             }
+            highlightedNodes.Clear();
             previouslySelectedNode = null;
         }
 
@@ -406,11 +414,13 @@ namespace Z3AxiomProfiler
             var bestDownPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, true);
             var bestUpPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, false);
             bestUpPath.appendWithOverlap(bestDownPath);
+            highlightPath(bestUpPath);
             _z3AxiomProfiler.SetInfoPanel(bestUpPath);
         }
 
         private InstantiationPath buildPathDepthFirst(InstantiationPath basePath, Node node, bool down)
         {
+            basePath = new InstantiationPath(basePath);
             if (down)
             {
                 basePath.append((Instantiation) node.UserData);
@@ -432,6 +442,15 @@ namespace Z3AxiomProfiler
                 }
             }
             return returnPath;
+        }
+
+        private void highlightPath(InstantiationPath path)
+        {
+            foreach (var instantiation in path.getInstantiations())
+            {
+                highlightNode(graph.FindNode(instantiation.uniqueID));
+            }
+            _viewer.Invalidate();
         }
     }
 }

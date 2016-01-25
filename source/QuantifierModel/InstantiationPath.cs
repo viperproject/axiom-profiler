@@ -70,5 +70,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             return builder.ToString();
         }
+
+        public IEnumerable<Instantiation> getInstantiations()
+        {
+            return pathInstantiations;
+        }
     }
 }
