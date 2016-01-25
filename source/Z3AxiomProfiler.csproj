@@ -160,6 +160,7 @@
     <Compile Include="QuantifierModel\FunApp.cs" />
     <Compile Include="QuantifierModel\FunSymbol.cs" />
     <Compile Include="QuantifierModel\Instantiation.cs" />
+    <Compile Include="QuantifierModel\InstantiationPath.cs" />
     <Compile Include="QuantifierModel\Literal.cs" />
     <Compile Include="QuantifierModel\Model.cs" />
     <Compile Include="QuantifierModel\Partition.cs" />

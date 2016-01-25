@@ -608,6 +608,15 @@ namespace Z3AxiomProfiler
             Task.Run(() => infoPanelQueue.Enqueue(c.InfoPanelText(getFormatFromGUI()).Split('\n')));
         }
 
+        public void SetInfoPanel(InstantiationPath path)
+        {
+            if (path == null) return;
+
+            Interlocked.Increment(ref workCounter);
+            uiUpdateTimer.Start();
+            Task.Run(() => infoPanelQueue.Enqueue(path.toString().Split('\n')));
+        }
+
         private PrettyPrintFormat getFormatFromGUI()
         {
             return new PrettyPrintFormat

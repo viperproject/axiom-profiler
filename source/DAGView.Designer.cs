@@ -37,6 +37,7 @@
             this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
+            this.pathExplanationButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -45,6 +46,7 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.panel1.Controls.Add(this.pathExplanationButton);
             this.panel1.Controls.Add(this.sourceTreeButton);
             this.panel1.Controls.Add(this.redrawCompleteGraphButton);
             this.panel1.Controls.Add(this.showChainButton);
@@ -55,7 +57,7 @@
             this.panel1.Controls.Add(this.maxRenderDepth);
             this.panel1.Location = new System.Drawing.Point(0, 0);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(767, 27);
+            this.panel1.Size = new System.Drawing.Size(777, 27);
             this.panel1.TabIndex = 1;
             // 
             // sourceTreeButton
@@ -149,11 +151,21 @@
             0,
             0});
             // 
+            // pathExplanationButton
+            // 
+            this.pathExplanationButton.Location = new System.Drawing.Point(694, 2);
+            this.pathExplanationButton.Name = "pathExplanationButton";
+            this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
+            this.pathExplanationButton.TabIndex = 9;
+            this.pathExplanationButton.Text = "Explain Path";
+            this.pathExplanationButton.UseVisualStyleBackColor = true;
+            this.pathExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
+            // 
             // DAGView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(767, 576);
+            this.ClientSize = new System.Drawing.Size(777, 485);
             this.Controls.Add(this.panel1);
             this.Name = "DAGView";
             this.Text = "DAGView";
@@ -175,5 +187,6 @@
         private System.Windows.Forms.Button showChainButton;
         private System.Windows.Forms.Button redrawCompleteGraphButton;
         private System.Windows.Forms.Button sourceTreeButton;
+        private System.Windows.Forms.Button pathExplanationButton;
     }
 }

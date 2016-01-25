@@ -394,5 +394,44 @@ namespace Z3AxiomProfiler
             }
             redrawGraph();
         }
+
+        private void pathExplanationButton_Click(object sender, EventArgs e)
+        {
+            if (previouslySelectedNode == null)
+            {
+                return;
+            }
+
+            // building path downwards:
+            var bestDownPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, true);
+            var bestUpPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, false);
+            bestUpPath.appendWithOverlap(bestDownPath);
+            _z3AxiomProfiler.SetInfoPanel(bestUpPath);
+        }
+
+        private InstantiationPath buildPathDepthFirst(InstantiationPath basePath, Node node, bool down)
+        {
+            if (down)
+            {
+                basePath.append((Instantiation) node.UserData);
+            }
+            else
+            {
+                basePath.prepend((Instantiation)node.UserData);
+            }
+
+            var relevantEdges = down ? node.OutEdges : node.InEdges;
+            var returnPath = basePath;
+            foreach (var edge in relevantEdges)
+            {
+                var pathCandidate = buildPathDepthFirst(basePath, down ? edge.TargetNode : edge.SourceNode, down);
+
+                if (pathCandidate.Cost() >= returnPath.Cost())
+                {
+                    returnPath = pathCandidate;
+                }
+            }
+            return returnPath;
+        }
     }
 }
