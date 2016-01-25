@@ -42,9 +42,8 @@ namespace Z3AxiomProfiler
             _viewer = new GViewer
             {
                 AsyncLayout = true,
-                EdgeInsertButtonVisible = false,
                 LayoutEditingEnabled = false,
-                //LayoutAlgorithmSettingsButtonVisible = false,
+                ToolBarIsVisible = false,
                 NavigationVisible = false,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 Top = panel1.Bottom,
