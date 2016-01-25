@@ -81,7 +81,7 @@
             this.quantSelectionBox.Location = new System.Drawing.Point(15, 61);
             this.quantSelectionBox.Name = "quantSelectionBox";
             this.quantSelectionBox.Size = new System.Drawing.Size(392, 154);
-            this.quantSelectionBox.TabIndex = 2;
+            this.quantSelectionBox.TabIndex = 3;
             this.quantSelectionBox.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.quantSelectionBox_ItemCheck);
             // 
             // quantifierTitleLable
@@ -134,7 +134,7 @@
             0});
             this.maxNewNodesUpDown.Name = "maxNewNodesUpDown";
             this.maxNewNodesUpDown.Size = new System.Drawing.Size(71, 20);
-            this.maxNewNodesUpDown.TabIndex = 7;
+            this.maxNewNodesUpDown.TabIndex = 2;
             this.maxNewNodesUpDown.Value = new decimal(new int[] {
             20,
             0,
@@ -148,7 +148,7 @@
             this.okButton.Location = new System.Drawing.Point(124, 255);
             this.okButton.Name = "okButton";
             this.okButton.Size = new System.Drawing.Size(75, 23);
-            this.okButton.TabIndex = 8;
+            this.okButton.TabIndex = 5;
             this.okButton.Text = "Ok";
             this.okButton.UseVisualStyleBackColor = true;
             this.okButton.Click += new System.EventHandler(this.okButton_Click);
@@ -159,7 +159,7 @@
             this.cancelButton.Location = new System.Drawing.Point(205, 255);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
-            this.cancelButton.TabIndex = 9;
+            this.cancelButton.TabIndex = 6;
             this.cancelButton.Text = "Cancel";
             this.cancelButton.UseVisualStyleBackColor = true;
             this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
@@ -188,7 +188,7 @@
             this.sortSelectionBox.Location = new System.Drawing.Point(285, 221);
             this.sortSelectionBox.Name = "sortSelectionBox";
             this.sortSelectionBox.Size = new System.Drawing.Size(121, 21);
-            this.sortSelectionBox.TabIndex = 11;
+            this.sortSelectionBox.TabIndex = 4;
             this.sortSelectionBox.SelectedIndexChanged += new System.EventHandler(this.sortSelectionBox_SelectedIndexChanged);
             // 
             // InstantiationFilter

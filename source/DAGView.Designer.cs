@@ -65,7 +65,7 @@
             this.sourceTreeButton.Location = new System.Drawing.Point(583, 2);
             this.sourceTreeButton.Name = "sourceTreeButton";
             this.sourceTreeButton.Size = new System.Drawing.Size(105, 23);
-            this.sourceTreeButton.TabIndex = 8;
+            this.sourceTreeButton.TabIndex = 6;
             this.sourceTreeButton.Text = "Show Source Tree";
             this.sourceTreeButton.UseVisualStyleBackColor = true;
             this.sourceTreeButton.Click += new System.EventHandler(this.sourceTreeButton_Click);
@@ -75,7 +75,7 @@
             this.redrawCompleteGraphButton.Location = new System.Drawing.Point(102, 2);
             this.redrawCompleteGraphButton.Name = "redrawCompleteGraphButton";
             this.redrawCompleteGraphButton.Size = new System.Drawing.Size(85, 23);
-            this.redrawCompleteGraphButton.TabIndex = 7;
+            this.redrawCompleteGraphButton.TabIndex = 1;
             this.redrawCompleteGraphButton.Text = "Redraw Graph";
             this.redrawCompleteGraphButton.UseVisualStyleBackColor = true;
             this.redrawCompleteGraphButton.Click += new System.EventHandler(this.redrawGraph_Click);
@@ -85,7 +85,7 @@
             this.showChainButton.Location = new System.Drawing.Point(452, 2);
             this.showChainButton.Name = "showChainButton";
             this.showChainButton.Size = new System.Drawing.Size(125, 23);
-            this.showChainButton.TabIndex = 6;
+            this.showChainButton.TabIndex = 5;
             this.showChainButton.Text = "Show a Longest Chain";
             this.showChainButton.UseVisualStyleBackColor = true;
             this.showChainButton.Click += new System.EventHandler(this.showChainButton_Click);
@@ -156,7 +156,7 @@
             this.pathExplanationButton.Location = new System.Drawing.Point(694, 2);
             this.pathExplanationButton.Name = "pathExplanationButton";
             this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
-            this.pathExplanationButton.TabIndex = 9;
+            this.pathExplanationButton.TabIndex = 7;
             this.pathExplanationButton.Text = "Explain Path";
             this.pathExplanationButton.UseVisualStyleBackColor = true;
             this.pathExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
