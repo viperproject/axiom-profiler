@@ -30,7 +30,7 @@ namespace Z3AxiomProfiler
         private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>>();
         private readonly ConcurrentQueue<string[]> infoPanelQueue = new ConcurrentQueue<string[]>();
         private int workCounter;
-        private Common lastToolTipCommon;
+        private IPrintable currentInfoPanelPrintable;
         private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private ParameterConfiguration parameterConfiguration;
         public Model model;
@@ -305,7 +305,7 @@ namespace Z3AxiomProfiler
             printRuleDict = new PrintRuleDictionary();
             expanded.Clear();
             searchTree = null;
-            lastToolTipCommon = null;
+            currentInfoPanelPrintable = null;
 
             // clear history
             historyNode.Nodes.Clear();
@@ -598,23 +598,14 @@ namespace Z3AxiomProfiler
             }
         }
 
-        public void SetInfoPanel(Common c)
+        public void SetInfoPanel(IPrintable c)
         {
             if (c == null) return;
 
-            lastToolTipCommon = c;
+            currentInfoPanelPrintable = c;
             Interlocked.Increment(ref workCounter);
             uiUpdateTimer.Start();
             Task.Run(() => infoPanelQueue.Enqueue(c.InfoPanelText(getFormatFromGUI()).Split('\n')));
-        }
-
-        public void SetInfoPanel(InstantiationPath path)
-        {
-            if (path == null) return;
-
-            Interlocked.Increment(ref workCounter);
-            uiUpdateTimer.Start();
-            Task.Run(() => infoPanelQueue.Enqueue(path.toString(getFormatFromGUI()).Split('\n')));
         }
 
         private PrettyPrintFormat getFormatFromGUI()
@@ -832,22 +823,22 @@ namespace Z3AxiomProfiler
 
         private void showTypesCB_CheckedChanged(object sender, EventArgs e)
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private void showTermIdCB_CheckedChanged(object sender, EventArgs e)
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private void maxTermWidthUD_ValueChanged(object sender, EventArgs e)
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private void maxTermDepthUD_ValueChanged(object sender, EventArgs e)
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private PrintRuleViewer printRuleViewer = null;
@@ -868,12 +859,12 @@ namespace Z3AxiomProfiler
 
         private void enableRewritingCB_CheckedChanged(object sender, EventArgs e)
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
 
         public void updateInfoPanel()
         {
-            SetInfoPanel(lastToolTipCommon);
+            SetInfoPanel(currentInfoPanelPrintable);
         }
     }
 }

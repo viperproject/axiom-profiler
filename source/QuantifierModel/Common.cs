@@ -5,7 +5,7 @@ using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
-    public abstract class Common
+    public abstract class Common : IPrintable
     {
         public virtual string InfoPanelText(PrettyPrintFormat format) { return ToString(); }
 

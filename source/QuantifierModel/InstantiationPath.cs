@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
 {
-    public class InstantiationPath
+    public class InstantiationPath : IPrintable
     {
         private readonly List<Instantiation> pathInstantiations;
 
@@ -56,7 +57,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
-        public string toString(PrettyPrintFormat format)
+        public string InfoPanelText(PrettyPrintFormat format)
         {
             StringBuilder builder = new StringBuilder();
             builder.Append("Path explanation:");
@@ -101,6 +102,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             termsToCheck.AddRange(child.Responsible);
             termsToCheck.AddRange(child.Bindings);
             return termsToCheck.FirstOrDefault(term => parent.dependentTerms.Contains(term));
+        }
+
+        public string SummaryInfo()
+        {
+            // todo fix!
+            return "no summary available.";
         }
     }
 }
