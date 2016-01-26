@@ -29,7 +29,7 @@ namespace Z3AxiomProfiler
                 };
 
         private static readonly Color selectionColor = Color.Red;
-        private static readonly Color parentColor = Color.Yellow;
+        private static readonly Color parentColor = Color.DarkOrange;
 
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
         private int currColorIdx;
@@ -99,7 +99,11 @@ namespace Z3AxiomProfiler
         {
             var inst = (Instantiation) currNode.UserData;
             var nodeColor = getColor(inst.Quant);
+            currNode.Attr.LineWidth = 1;
+            currNode.Attr.LabelMargin = 5;
+            currNode.Attr.Color = Color.Black;
             currNode.Attr.FillColor = nodeColor;
+
             if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186.0)
             {
                 currNode.Label.FontColor = Color.White;
@@ -176,7 +180,8 @@ namespace Z3AxiomProfiler
             if (node != null)
             {
                 // format new one
-                node.Attr.FillColor = selectionColor;
+                node.Attr.Color = selectionColor;
+                node.Attr.LineWidth = 5;
                 node.Label.FontColor = Color.White;
                 // plus all parents
                 foreach (var sourceNode in node.InEdges.Select(inEdge => inEdge.SourceNode))
@@ -191,8 +196,8 @@ namespace Z3AxiomProfiler
 
         private void highlightNode(Node node)
         {
-            node.Attr.FillColor = parentColor;
-            node.Label.FontColor = Color.Black;
+            node.Attr.Color = parentColor;
+            node.Attr.LineWidth = 5;
             highlightedNodes.Add(node);
         }
 

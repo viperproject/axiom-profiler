@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
+            this.pathExplanationButton = new System.Windows.Forms.Button();
             this.sourceTreeButton = new System.Windows.Forms.Button();
             this.redrawCompleteGraphButton = new System.Windows.Forms.Button();
             this.showChainButton = new System.Windows.Forms.Button();
@@ -37,7 +38,6 @@
             this.hideInstantiationButton = new System.Windows.Forms.Button();
             this.label1 = new System.Windows.Forms.Label();
             this.maxRenderDepth = new System.Windows.Forms.NumericUpDown();
-            this.pathExplanationButton = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).BeginInit();
             this.SuspendLayout();
@@ -59,6 +59,16 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(777, 27);
             this.panel1.TabIndex = 1;
+            // 
+            // pathExplanationButton
+            // 
+            this.pathExplanationButton.Location = new System.Drawing.Point(694, 2);
+            this.pathExplanationButton.Name = "pathExplanationButton";
+            this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
+            this.pathExplanationButton.TabIndex = 7;
+            this.pathExplanationButton.Text = "Explain Path";
+            this.pathExplanationButton.UseVisualStyleBackColor = true;
+            this.pathExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
             // 
             // sourceTreeButton
             // 
@@ -146,20 +156,10 @@
             this.maxRenderDepth.Size = new System.Drawing.Size(48, 20);
             this.maxRenderDepth.TabIndex = 0;
             this.maxRenderDepth.Value = new decimal(new int[] {
-            1,
+            20,
             0,
             0,
             0});
-            // 
-            // pathExplanationButton
-            // 
-            this.pathExplanationButton.Location = new System.Drawing.Point(694, 2);
-            this.pathExplanationButton.Name = "pathExplanationButton";
-            this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
-            this.pathExplanationButton.TabIndex = 7;
-            this.pathExplanationButton.Text = "Explain Path";
-            this.pathExplanationButton.UseVisualStyleBackColor = true;
-            this.pathExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
             // 
             // DAGView
             // 
