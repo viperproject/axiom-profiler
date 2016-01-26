@@ -103,11 +103,5 @@ namespace Z3AxiomProfiler.QuantifierModel
             termsToCheck.AddRange(child.Bindings);
             return termsToCheck.FirstOrDefault(term => parent.dependentTerms.Contains(term));
         }
-
-        public string SummaryInfo()
-        {
-            // todo fix!
-            return "no summary available.";
-        }
     }
 }
