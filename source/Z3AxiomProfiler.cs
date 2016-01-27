@@ -28,7 +28,7 @@ namespace Z3AxiomProfiler
         // Needed to expand nodes with many children without freezing the GUI.
         private readonly Timer uiUpdateTimer = new Timer();
         private readonly ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>> expandQueue = new ConcurrentQueue<Tuple<TreeNode, List<TreeNode>, bool>>();
-        private readonly ConcurrentQueue<string[]> infoPanelQueue = new ConcurrentQueue<string[]>();
+        private readonly ConcurrentQueue<InfoPanelContent> infoPanelQueue = new ConcurrentQueue<InfoPanelContent>();
         private int workCounter;
         private IPrintable currentInfoPanelPrintable;
         private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
@@ -605,7 +605,13 @@ namespace Z3AxiomProfiler
             currentInfoPanelPrintable = c;
             Interlocked.Increment(ref workCounter);
             uiUpdateTimer.Start();
-            Task.Run(() => infoPanelQueue.Enqueue(c.InfoPanelText(getFormatFromGUI()).Split('\n')));
+            Task.Run(() =>
+            {
+                var content = new InfoPanelContent();
+                c.InfoPanelText(content, getFormatFromGUI());
+                content.finalize();
+                infoPanelQueue.Enqueue(content);
+            });
         }
 
         private PrettyPrintFormat getFormatFromGUI()
@@ -621,57 +627,32 @@ namespace Z3AxiomProfiler
             };
         }
 
-        private int infoPanelLineIdx;
         private void InfoPanelUpdateTick(object sender, EventArgs e)
         {
-            string[] lines;
+            InfoPanelContent content;
 
             // dequeue outdated tooltips
             while (infoPanelQueue.Count > 1)
             {
-                infoPanelQueue.TryDequeue(out lines);
-                infoPanelLineIdx = 0;
+                infoPanelQueue.TryDequeue(out content);
+                content.reset();
             }
 
             // read the first entry if available
-            if (!infoPanelQueue.TryPeek(out lines)) return;
+            if (!infoPanelQueue.TryPeek(out content)) return;
 
             // clear toolTipBox if this is a new toolTip.
-            if (infoPanelLineIdx == 0)
+            if (!content.inProgress())
             {
                 toolTipBox.Clear();
             }
 
-            // work a batch of lines
-            for (int i = 0; i < batchSize && infoPanelLineIdx < lines.Length; i++)
-            {
-                var line = lines[infoPanelLineIdx] + '\n';
-                const FontStyle markerStyle = FontStyle.Bold | FontStyle.Underline;
-                if (line.Contains("Term"))
-                {
-                    AppendInfoTextInColor(line, Color.DarkMagenta, markerStyle);
-                }
-                else if (line.Contains("term"))
-                {
-                    AppendInfoTextInColor(line, Color.DarkRed, markerStyle);
-                }
-                else if (line.Contains("Instantiation ") || line.Contains("uantifier"))
-                {
-                    AppendInfoTextInColor(line, Color.DarkBlue, markerStyle);
-                }
-                else
-                {
-                    toolTipBox.AppendText(line);
-                }
-
-                infoPanelLineIdx++;
-            }
+            content.writeToTextBox(toolTipBox, 1000);
 
             // check if finished
-            if (infoPanelLineIdx == lines.Length)
+            if (content.finished)
             {
-                infoPanelQueue.TryDequeue(out lines);
-                infoPanelLineIdx = 0;
+                infoPanelQueue.TryDequeue(out content);
                 checkStopCounter();
             }
         }

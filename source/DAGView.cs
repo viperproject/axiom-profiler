@@ -6,6 +6,7 @@ using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Microsoft.Msagl.Layout.Layered;
+using Z3AxiomProfiler.PrettyPrinting;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
@@ -108,7 +109,10 @@ namespace Z3AxiomProfiler
             {
                 currNode.Label.FontColor = Color.White;
             }
-            currNode.LabelText = inst.SummaryInfo();
+            
+            var content = new InfoPanelContent();
+            inst.SummaryInfo(content);
+            currNode.LabelText = content.ToString();
         }
 
         private void redrawGraph_Click(object sender, EventArgs e)

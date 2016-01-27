@@ -155,6 +155,7 @@
     </Compile>
     <Compile Include="LogProcessor.cs" />
     <Compile Include="Plotting.cs" />
+    <Compile Include="PrettyPrinting\InfoPanelContent.cs" />
     <Compile Include="PrettyPrinting\IPrintable.cs" />
     <Compile Include="QuantifierModel\Common.cs" />
     <Compile Include="QuantifierModel\Conflict.cs" />

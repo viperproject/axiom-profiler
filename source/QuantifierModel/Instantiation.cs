@@ -75,7 +75,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             foreach (var t in Responsible)
             {
-                content.Append(t.SummaryInfo());
+                t.SummaryInfo(content);
                 content.Append("\n");
                 content.Append(t.PrettyPrint(format));
                 content.Append("\n\n");
@@ -85,7 +85,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
-                content.Append(t.SummaryInfo());
+                t.SummaryInfo(content);
                 content.Append("\n");
                 content.Append(t.PrettyPrint(format));
                 content.Append("\n\n");

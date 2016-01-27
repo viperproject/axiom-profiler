@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Text;
+using System.Windows.Forms;
 
 namespace Z3AxiomProfiler.PrettyPrinting
 {
@@ -18,7 +20,12 @@ namespace Z3AxiomProfiler.PrettyPrinting
         private readonly List<TextFormat> formats = new List<TextFormat>();
 
         private TextFormat currentFormat = TextFormat.defaultFormat(0);
+        private TextFormat nextFormat;
         private string finalText;
+        private int currentIndex;
+        private int formatSwitchIndex;
+        private IEnumerator<TextFormat> formatEnumerator;
+        public bool finished { get; private set; }
 
         public override string ToString()
         {
@@ -28,8 +35,22 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public void finalize()
         {
+            if(finalized) { throw new InvalidOperationException("Already finalized!");}
+            if (currentFormat.startIdx < textBuilder.Length)
+            {
+                formats.Add(currentFormat);
+            }
+
             finalText = textBuilder.ToString();
             finalized = true;
+            reset();
+        }
+
+        private void advanceFormat()
+        {
+            currentFormat = formatEnumerator.Current;
+            nextFormat = formatEnumerator.MoveNext() ? formatEnumerator.Current : null;
+            formatSwitchIndex = nextFormat?.startIdx ?? finalText.Length;
         }
 
         public InfoPanelContent Append(string text)
@@ -59,19 +80,63 @@ namespace Z3AxiomProfiler.PrettyPrinting
         {
             if (finalized) throw new InvalidOperationException("Info panel content is already finalized!");
         }
+
+        public void writeToTextBox(RichTextBox textBox, int batchsize)
+        {
+            do
+            {
+                // calculate block of things that are printed the same.
+                var blockLength = Math.Min(formatSwitchIndex - currentIndex, batchsize);
+                batchsize -= blockLength;
+
+                // set format
+                textBox.SelectionStart = textBox.TextLength;
+                textBox.SelectionLength = 0;
+                textBox.Font = currentFormat.font;
+                textBox.SelectionColor = currentFormat.textColor;
+
+                // actual writing
+                textBox.AppendText(finalText.Substring(currentIndex, blockLength));
+
+                // bookkeeping
+                currentIndex += blockLength;
+                if (currentIndex == formatSwitchIndex)
+                {
+                    advanceFormat();
+                }
+            } while (currentIndex < finalText.Length && batchsize > 0);
+
+            if (currentIndex == finalText.Length)
+            {
+                finished = true;
+            }
+        }
+
+        public void reset()
+        {
+            currentIndex = 0;
+            formatEnumerator = formats.GetEnumerator();
+            formatEnumerator.MoveNext();
+            advanceFormat();
+        }
+
+        public bool inProgress()
+        {
+            return currentIndex > 0 && !finished;
+        }
     }
 
     class TextFormat
     {
         public readonly int startIdx;
-        public readonly Font highlightFont;
-        public readonly Color highlightColor;
+        public readonly Font font;
+        public readonly Color textColor;
 
         public TextFormat(int startIndex, Font font, Color color)
         {
             startIdx = startIndex;
-            highlightColor = color;
-            highlightFont = font;
+            textColor = color;
+            this.font = font;
         }
 
         public static TextFormat defaultFormat(int startIndex)
