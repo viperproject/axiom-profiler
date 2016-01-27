@@ -77,7 +77,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 t.SummaryInfo(content);
                 content.Append("\n");
-                content.Append(t.PrettyPrint(format));
+                t.PrettyPrint(content, new StringBuilder(), format);
                 content.Append("\n\n");
             }
             content.Append("\n");
@@ -87,18 +87,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 t.SummaryInfo(content);
                 content.Append("\n");
-                content.Append(t.PrettyPrint(format));
+                t.PrettyPrint(content, new StringBuilder(), format);
                 content.Append("\n\n");
             }
 
             content.Append("The quantifier body:\n\n");
-            content.Append(Quant.BodyTerm.PrettyPrint(format));
+            Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
             content.Append("\n\n");
 
             if (dependentTerms.Count > 0)
             {
                 content.Append("The resulting term:\n\n");
-                content.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(format));
+                dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, new StringBuilder(), format);
             }
         }
 
@@ -195,7 +195,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Instantiation ").Append('@').Append(LineNo + ":\n");
             content.switchToDefaultFormat();
 
-            content.Append(Quant.PrintName).Append('\n');
+            content.Append('\n').Append(Quant.PrintName).Append('\n');
             content.Append("Depth: " + depth).Append('\n');
             content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
         }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -37,13 +38,20 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (Term == null) t = "(nil)";
             else if (isBin)
             {
-                t = $"{Term.Args[0].PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat())}  " +
-                    $"{Term.Name}  " +
-                    $"{Term.Args[1].PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat())}";
+                var content0 = new InfoPanelContent();
+                var content1 = new InfoPanelContent();
+                Term.Args[0].PrettyPrint(content0, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
+                Term.Args[1].PrettyPrint(content1, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
+                content0.finalize();
+                content1.finalize();
+                t = $"{content0}  {Term.Name}  {content1}";
             }
             else
             {
-                t = Term.PrettyPrint(PrettyPrintFormat.DefaultPrettyPrintFormat());
+                var content = new InfoPanelContent();
+                Term.PrettyPrint(content, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
+                content.finalize();
+                t = content.ToString();
             }
             return string.Format("{0}p{1}  {3}{2}", Negated ? "~" : "", Id, t, Implied == null ? "" : "[+" + Implied.Length + "] ");
         }

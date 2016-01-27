@@ -35,7 +35,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             SummaryInfo(content);
-            content.Append(BodyTerm.PrettyPrint(format));
+            BodyTerm.PrettyPrint(content, new StringBuilder(), format);
         }
 
         // ToDo: find better implementation!
@@ -79,8 +79,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (lev != 0 && inst.Quant == this) return 0;
             return 1 + (from ch in inst.DependantInstantiations
-                let cnt = ch.Responsible.Count(other => other.Responsible != null)
-                select InstanceCost(ch, lev + 1) / cnt)
+                        let cnt = ch.Responsible.Count(other => other.Responsible != null)
+                        select InstanceCost(ch, lev + 1) / cnt)
                 .Sum();
         }
 
@@ -101,8 +101,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.Append("Quantifier Info:\n\n");
-            content.Append("Print name: ").Append(PrintName).Append('\n');
+            content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
+            content.Append("Quantifier Info:\n");
+            content.switchToDefaultFormat();
+            content.Append("\nPrint name: ").Append(PrintName).Append('\n');
             content.Append("QId: ").Append(Qid).Append('\n');
             content.Append("Cost: " + Cost).Append('\n');
             content.Append("Number of Instantiations: " + Instances.Count).Append('\n');

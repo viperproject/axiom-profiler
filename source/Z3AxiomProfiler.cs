@@ -635,7 +635,6 @@ namespace Z3AxiomProfiler
             while (infoPanelQueue.Count > 1)
             {
                 infoPanelQueue.TryDequeue(out content);
-                content.reset();
             }
 
             // read the first entry if available

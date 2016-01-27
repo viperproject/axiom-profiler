@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -67,7 +68,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     content.Append("\nLink term: \n\n");
                     var term = findOverlap(previous, instantiation);
-                    content.Append(term.PrettyPrint(format));
+                    term.PrettyPrint(content, new StringBuilder(), format);
                     content.Append("\n\n");
                 }
 
@@ -75,7 +76,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                 var biggestTerm = instantiation.dependentTerms[instantiation.dependentTerms.Count - 1];
                 content.Append("\nThis instantiation yields:\n\n");
-                content.Append(biggestTerm.PrettyPrint(format));
+                biggestTerm.PrettyPrint(content, new StringBuilder(), format);
                 content.Append("\n------------------------\n");
 
                 previous = instantiation;

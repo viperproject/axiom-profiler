@@ -150,6 +150,7 @@ namespace Z3AxiomProfiler
                         this.colorBox.BackColor = colors[colorIndex];
                         var content = new InfoPanelContent();
                         q.InfoPanelText(content, new PrettyPrintFormat { printRuleDict = new PrintRuleDictionary() });
+                        content.finalize();
                         this.boogieQuantifierText.Text = content.ToString();
                             
                         this.quantifierLinkedText.Text = q.ToString();

@@ -7,10 +7,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 {
     public abstract class Common : IPrintable
     {
-        public virtual void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
-        {
-            content.Append("No info panel text available.");
-        }
+        public virtual void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format) { }
 
         public virtual void SummaryInfo(InfoPanelContent content)
         {

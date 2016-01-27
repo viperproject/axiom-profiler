@@ -9,8 +9,8 @@ namespace Z3AxiomProfiler.PrettyPrinting
     public class InfoPanelContent
     {
         public static readonly Font DefaultFont = new Font("Consolas", 9, FontStyle.Regular);
-        public static readonly Font TitleFont = new Font("Consolas", 15, FontStyle.Underline);
-        public static readonly Font SubtitleFont = new Font("Consolas", 12, FontStyle.Regular);
+        public static readonly Font TitleFont = new Font("Consolas", 13, FontStyle.Underline | FontStyle.Bold);
+        public static readonly Font SubtitleFont = new Font("Consolas", 11, FontStyle.Underline | FontStyle.Bold);
         public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
         public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
 
@@ -36,7 +36,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public void finalize()
         {
             if(finalized) { throw new InvalidOperationException("Already finalized!");}
-            if (currentFormat.startIdx < textBuilder.Length)
+            if (currentFormat.startIdx <= textBuilder.Length)
             {
                 formats.Add(currentFormat);
             }

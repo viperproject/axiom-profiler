@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using System.Text.RegularExpressions;
 using Z3AxiomProfiler.PrettyPrinting;
@@ -48,7 +49,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
 
-        private bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
+        public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
             var printRule = format.getPrintRule(this);
             var parentRule = format.getPrintRule(format.parentTerm);
@@ -129,10 +130,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private static bool linebreaksNecessary(StringBuilder builder, PrettyPrintFormat format, bool isMultiline, int startLength)
+        private static bool linebreaksNecessary(InfoPanelContent content, PrettyPrintFormat format, bool isMultiline, int startLength)
         {
             if (format.maxWidth == 0) return false;
-            return isMultiline || (builder.Length - startLength > format.maxWidth);
+            return isMultiline || (content.Length - startLength > format.maxWidth);
         }
 
         private static void addLinebreaks(PrintRule rule, InfoPanelContent content,
@@ -255,8 +256,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.Append("Term Info:\n\n");
-            content.Append("Identifier: " + id).Append('\n');
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.Append("Term Info:\n");
+            content.switchToDefaultFormat();
+            content.Append("\nIdentifier: " + id).Append('\n');
             content.Append("Number of Children: " + Args.Length).Append('\n');
         }
     }
