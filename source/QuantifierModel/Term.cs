@@ -48,18 +48,18 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
 
-        private bool PrettyPrint(StringBuilder builder, StringBuilder indentBuilder, PrettyPrintFormat format)
+        private bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
             var printRule = format.getPrintRule(this);
             var parentRule = format.getPrintRule(format.parentTerm);
             var isMultiline = false;
             var breakIndices = new List<int>();
-            var startLength = builder.Length;
+            var startLength = content.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
             if (printRule.indent) indentBuilder.Append(indentDiff);
-            if (needsParenthesis) builder.Append('(');
-            addPrefix(printRule, builder, breakIndices);
+            if (needsParenthesis) content.Append('(');
+            addPrefix(printRule, content, breakIndices);
 
             if (printChildren(format, printRule))
             {
@@ -68,26 +68,26 @@ namespace Z3AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(builder, indentBuilder, format.nextDepth(this, i))
+                    isMultiline = t.PrettyPrint(content, indentBuilder, format.nextDepth(this, i))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
                     {
-                        addInfix(printRule, builder, breakIndices);
+                        addInfix(printRule, content, breakIndices);
                     }
                 }
             }
             else if (showCutoffDots(format, printRule))
             {
-                builder.Append("...");
+                content.Append("...");
             }
 
-            addSuffix(printRule, builder, breakIndices);
-            if (needsParenthesis) builder.Append(')');
+            addSuffix(printRule, content, breakIndices);
+            if (needsParenthesis) content.Append(')');
 
             // are there any lines to break?
             isMultiline = isMultiline && (breakIndices.Count > 0);
-            if (!linebreaksNecessary(builder, format, isMultiline, startLength))
+            if (!linebreaksNecessary(content, format, isMultiline, startLength))
             {
                 if (printRule.indent)
                 {
@@ -97,7 +97,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             // split necessary
-            addLinebreaks(printRule, builder, indentBuilder, breakIndices);
+            addLinebreaks(printRule, content, indentBuilder, breakIndices);
             return true;
         }
 
@@ -135,11 +135,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             return isMultiline || (builder.Length - startLength > format.maxWidth);
         }
 
-        private static void addLinebreaks(PrintRule rule, StringBuilder builder,
+        private static void addLinebreaks(PrintRule rule, InfoPanelContent content,
             StringBuilder indentBuilder, List<int> breakIndices)
         {
             var offset = 0;
-            var oldLength = builder.Length;
+            var oldLength = content.Length;
             for (var i = 0; i < breakIndices.Count; i++)
             {
                 if (rule.indent && i == breakIndices.Count - 1)
@@ -147,43 +147,43 @@ namespace Z3AxiomProfiler.QuantifierModel
                     indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
 
-                builder.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
-                offset += builder.Length - oldLength;
-                oldLength = builder.Length;
+                content.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
+                offset += content.Length - oldLength;
+                oldLength = content.Length;
             }
         }
 
-        private static void addPrefix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
+        private static void addPrefix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            builder.Append(rule.prefix);
+            content.Append(rule.prefix);
             if (!string.IsNullOrWhiteSpace(rule.prefix) &&
                 rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
             {
-                breakIndices.Add(builder.Length);
+                breakIndices.Add(content.Length);
             }
         }
 
-        private static void addInfix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
+        private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
-                breakIndices.Add(builder.Length);
+                breakIndices.Add(content.Length);
             }
-            builder.Append(rule.infix);
+            content.Append(rule.infix);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.After)
             {
-                breakIndices.Add(builder.Length);
+                breakIndices.Add(content.Length);
             }
         }
 
-        private static void addSuffix(PrintRule rule, StringBuilder builder, ICollection<int> breakIndices)
+        private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
             if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
-                breakIndices.Add(builder.Length);
+                breakIndices.Add(content.Length);
             }
-            builder.Append(rule.suffix);
+            content.Append(rule.suffix);
         }
 
         private bool printChildren(PrettyPrintFormat format, PrintRule rule)
@@ -214,18 +214,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             return $"Term[{Name}] Identifier:{id}, #Children:{Args.Length}";
         }
 
-        public string PrettyPrint(PrettyPrintFormat format)
-        {
-            StringBuilder builder = new StringBuilder();
-            PrettyPrint(builder, new StringBuilder(), format);
-            return builder.ToString();
-        }
-
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             SummaryInfo(content);
             content.Append('\n');
-            content.Append(PrettyPrint(format));
+            PrettyPrint(content, new StringBuilder(), format);
         }
 
         public override bool HasChildren()

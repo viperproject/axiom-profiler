@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
@@ -27,10 +26,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
         private IEnumerator<TextFormat> formatEnumerator;
         public bool finished { get; private set; }
 
+        public int Length => textBuilder.Length;
+
         public override string ToString()
         {
-            if(!finalized) finalize();
-            return string.Copy(finalText);
+            return !finalized ? "not finalized yet!" : string.Copy(finalText);
         }
 
         public void finalize()
@@ -67,6 +67,19 @@ namespace Z3AxiomProfiler.PrettyPrinting
             return this;
         }
 
+        public InfoPanelContent Insert(int index, string text)
+        {
+            textBuilder.Insert(index, text);
+            foreach (var format in formats)
+            {
+                if (format.startIdx >= index)
+                {
+                    format.startIdx += text.Length;
+                }
+            }
+            return this;
+        }
+
         public void switchFormat(Font font, Color color)
         {
             if (currentFormat.startIdx < textBuilder.Length)
@@ -74,6 +87,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 formats.Add(currentFormat);
             }
             currentFormat = new TextFormat(textBuilder.Length, font, color);
+        }
+
+        public void switchToDefaultFormat()
+        {
+            switchFormat(DefaultFont, Color.Black);
         }
 
         private void checkFinalized()
@@ -92,7 +110,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 // set format
                 textBox.SelectionStart = textBox.TextLength;
                 textBox.SelectionLength = 0;
-                textBox.Font = currentFormat.font;
+                textBox.SelectionFont = currentFormat.font;
                 textBox.SelectionColor = currentFormat.textColor;
 
                 // actual writing
@@ -126,9 +144,10 @@ namespace Z3AxiomProfiler.PrettyPrinting
         }
     }
 
-    class TextFormat
+    internal class TextFormat
     {
-        public readonly int startIdx;
+        // needs to be mutable for insert functionality
+        public int startIdx;
         public readonly Font font;
         public readonly Color textColor;
 

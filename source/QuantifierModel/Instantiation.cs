@@ -191,7 +191,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.Append("Instantiation ").Append('@').Append(LineNo + ":\n\n");
+            content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
+            content.Append("Instantiation ").Append('@').Append(LineNo + ":\n");
+            content.switchToDefaultFormat();
+
             content.Append(Quant.PrintName).Append('\n');
             content.Append("Depth: " + depth).Append('\n');
             content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
