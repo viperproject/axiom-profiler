@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -54,36 +53,33 @@ namespace Z3AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
-        public string InfoPanelText(PrettyPrintFormat format)
+        public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            StringBuilder builder = new StringBuilder();
-            builder.Append("Path explanation:");
-            builder.Append("\n------------------------\n");
-            builder.Append("Length: ").Append(Length()).Append('\n');
-            builder.Append("Cost: ").Append(Cost()).Append('\n');
+            content.Append("Path explanation:");
+            content.Append("\n------------------------\n");
+            content.Append("Length: " + Length()).Append('\n');
+            content.Append("Cost: " + Cost()).Append('\n');
 
             Instantiation previous = null;
             foreach (var instantiation in pathInstantiations)
             {
                 if (previous != null)
                 {
-                    builder.Append("\nLink term: \n\n");
+                    content.Append("\nLink term: \n\n");
                     var term = findOverlap(previous, instantiation);
-                    builder.Append(term.PrettyPrint(format));
-                    builder.Append("\n\n");
+                    content.Append(term.PrettyPrint(format));
+                    content.Append("\n\n");
                 }
 
-                builder.Append(instantiation.SummaryInfo());
+                instantiation.SummaryInfo(content);
 
                 var biggestTerm = instantiation.dependentTerms[instantiation.dependentTerms.Count - 1];
-                builder.Append("\nThis instantiation yields:\n\n");
-                builder.Append(biggestTerm.PrettyPrint(format));
-                builder.Append("\n------------------------\n");
+                content.Append("\nThis instantiation yields:\n\n");
+                content.Append(biggestTerm.PrettyPrint(format));
+                content.Append("\n------------------------\n");
 
                 previous = instantiation;
             }
-
-            return builder.ToString();
         }
 
         public IEnumerable<Instantiation> getInstantiations()

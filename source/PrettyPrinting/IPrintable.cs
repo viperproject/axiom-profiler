@@ -2,6 +2,6 @@
 {
     public interface IPrintable
     {
-        string InfoPanelText(PrettyPrintFormat format);
+        void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format);
     }
 }

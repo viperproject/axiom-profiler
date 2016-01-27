@@ -7,9 +7,15 @@ namespace Z3AxiomProfiler.QuantifierModel
 {
     public abstract class Common : IPrintable
     {
-        public virtual string InfoPanelText(PrettyPrintFormat format) { return ToString(); }
+        public virtual void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            content.Append("No info panel text available.");
+        }
 
-        public virtual string SummaryInfo() { return ToString(); }
+        public virtual void SummaryInfo(InfoPanelContent content)
+        {
+            content.Append("No summary available.");
+        }
         public abstract IEnumerable<Common> Children();
         public virtual bool HasChildren() { return true; }
         public virtual bool AutoExpand() { return false; }
@@ -61,9 +67,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             return Fwd.HasChildren();
         }
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            return Fwd.InfoPanelText(format);
+            Fwd.InfoPanelText(content, format);
         }
         public override string ToString()
         {

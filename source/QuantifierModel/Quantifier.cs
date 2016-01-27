@@ -32,13 +32,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             return BodyTerm.Args.Where(term => term.Name == "pattern").ToList();
         }
 
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append(SummaryInfo());
-            s.Append('\n');
-            s.Append(BodyTerm.PrettyPrint(format));
-            return s.ToString();
+            SummaryInfo(content);
+            content.Append(BodyTerm.PrettyPrint(format));
         }
 
         // ToDo: find better implementation!
@@ -102,16 +99,14 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public double Cost => CrudeCost + Instances.Count;
 
-        public override string SummaryInfo()
+        public override void SummaryInfo(InfoPanelContent content)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append("Quantifier Info:\n\n");
-            s.Append("Print name: ").Append(PrintName).Append('\n');
-            s.Append("QId: ").Append(Qid).Append('\n');
-            s.Append("Cost: ").Append(Cost).Append('\n');
-            s.Append("Number of Instantiations: ").Append(Instances.Count).Append('\n');
-            s.Append("Number of Conflicts: ").Append(GeneratedConflicts).Append('\n');
-            return s.ToString();
+            content.Append("Quantifier Info:\n\n");
+            content.Append("Print name: ").Append(PrintName).Append('\n');
+            content.Append("QId: ").Append(Qid).Append('\n');
+            content.Append("Cost: " + Cost).Append('\n');
+            content.Append("Number of Instantiations: " + Instances.Count).Append('\n');
+            content.Append("Number of Conflicts: " + GeneratedConflicts).Append("\n\n");
         }
     }
 }

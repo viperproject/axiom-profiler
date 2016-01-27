@@ -68,41 +68,38 @@ namespace Z3AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append(SummaryInfo());
-            s.Append('\n');
-            s.Append("Blamed terms:\n\n");
+            SummaryInfo(content);
+            content.Append("Blamed terms:\n\n");
 
             foreach (var t in Responsible)
             {
-                s.Append(t.SummaryInfo());
-                s.Append('\n');
-                s.Append(t.PrettyPrint(format));
-                s.Append("\n\n");
+                content.Append(t.SummaryInfo());
+                content.Append("\n");
+                content.Append(t.PrettyPrint(format));
+                content.Append("\n\n");
             }
-            s.Append('\n');
+            content.Append("\n");
 
-            s.Append("Bound terms:\n\n");
+            content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
-                s.Append(t.SummaryInfo());
-                s.Append('\n');
-                s.Append(t.PrettyPrint(format));
-                s.Append("\n\n");
+                content.Append(t.SummaryInfo());
+                content.Append("\n");
+                content.Append(t.PrettyPrint(format));
+                content.Append("\n\n");
             }
 
-            s.Append("The quantifier body:\n\n");
-            s.Append(Quant.BodyTerm.PrettyPrint(format));
-            s.Append("\n\n");
+            content.Append("The quantifier body:\n\n");
+            content.Append(Quant.BodyTerm.PrettyPrint(format));
+            content.Append("\n\n");
 
             if (dependentTerms.Count > 0)
             {
-                s.Append("The resulting term:\n\n");
-                s.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(format));
+                content.Append("The resulting term:\n\n");
+                content.Append(dependentTerms[dependentTerms.Count - 1].PrettyPrint(format));
             }
-            return s.ToString();
         }
 
         private void findPatternMatch()
@@ -192,14 +189,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             return true;
         }
 
-        public override string SummaryInfo()
+        public override void SummaryInfo(InfoPanelContent content)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append("Instantiation ").Append('@').Append(LineNo).Append(":\n\n");
-            s.Append(Quant.PrintName).Append('\n');
-            s.Append("Depth: ").Append(depth).Append('\n');
-            s.Append("Cost: ").Append(Cost.ToString("F")).Append('\n');
-            return s.ToString();
+            content.Append("Instantiation ").Append('@').Append(LineNo + ":\n\n");
+            content.Append(Quant.PrintName).Append('\n');
+            content.Append("Depth: " + depth).Append('\n');
+            content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
         }
 
         public override IEnumerable<Common> Children()

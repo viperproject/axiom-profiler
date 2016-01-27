@@ -222,13 +222,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             return builder.ToString();
         }
 
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append(SummaryInfo());
-            s.Append('\n');
-            s.Append(PrettyPrint(format));
-            return s.ToString();
+            SummaryInfo(content);
+            content.Append('\n');
+            content.Append(PrettyPrint(format));
         }
 
         public override bool HasChildren()
@@ -263,13 +261,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        public override string SummaryInfo()
+        public override void SummaryInfo(InfoPanelContent content)
         {
-            StringBuilder s = new StringBuilder();
-            s.Append("Term Info:\n\n");
-            s.Append("Identifier: ").Append(id).Append('\n');
-            s.Append("Number of Children: ").Append(Args.Length).Append('\n');
-            return s.ToString();
+            content.Append("Term Info:\n\n");
+            content.Append("Identifier: " + id).Append('\n');
+            content.Append("Number of Children: " + Args.Length).Append('\n');
         }
     }
 }

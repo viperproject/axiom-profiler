@@ -43,14 +43,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         }
 
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            StringBuilder sb = new StringBuilder();
             foreach (Literal l in Literals)
             {
-                sb.Append(l).Append("\n");
+                content.Append(l + "\n");
             }
-            return sb.ToString();
         }
 
         public override IEnumerable<Common> Children()

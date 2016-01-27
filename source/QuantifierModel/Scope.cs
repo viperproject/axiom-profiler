@@ -167,9 +167,16 @@ namespace Z3AxiomProfiler.QuantifierModel
             return res;
         }
 
-        public override string InfoPanelText(PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            return Conflict != null ? Conflict.InfoPanelText(format) : "No conflict";
+            if (Conflict != null)
+            {
+                Conflict.InfoPanelText(content, format);
+            }
+            else
+            {
+                content.Append("No conflict");
+            }
         }
 
         public void PropagateImpliedByChildren()

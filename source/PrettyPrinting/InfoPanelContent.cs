@@ -20,6 +20,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
         private TextFormat currentFormat = TextFormat.defaultFormat(0);
         private string finalText;
 
+        public override string ToString()
+        {
+            if(!finalized) finalize();
+            return string.Copy(finalText);
+        }
 
         public void finalize()
         {
@@ -27,10 +32,18 @@ namespace Z3AxiomProfiler.PrettyPrinting
             finalized = true;
         }
 
-        public void appendText(string text)
+        public InfoPanelContent Append(string text)
         {
             checkFinalized();
             textBuilder.Append(text);
+            return this;
+        }
+
+        public InfoPanelContent Append(char text)
+        {
+            checkFinalized();
+            textBuilder.Append(text);
+            return this;
         }
 
         public void switchFormat(Font font, Color color)
