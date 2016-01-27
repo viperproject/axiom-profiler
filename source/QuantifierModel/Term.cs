@@ -51,6 +51,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
+            if (format.parentTerm == null)
+            {
+                content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
+            }
+            
             var printRule = format.getPrintRule(this);
             var parentRule = format.getPrintRule(format.parentTerm);
             var isMultiline = false;
@@ -87,6 +92,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (needsParenthesis) content.Append(')');
 
             // are there any lines to break?
+            // todo: refactor!
             isMultiline = isMultiline && (breakIndices.Count > 0);
             if (!linebreaksNecessary(content, format, isMultiline, startLength))
             {
@@ -94,11 +100,19 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
+                if (format.parentTerm == null)
+                {
+                    content.switchToDefaultFormat();
+                }
                 return false;
             }
 
             // split necessary
             addLinebreaks(printRule, content, indentBuilder, breakIndices);
+            if (format.parentTerm == null)
+            {
+                content.switchToDefaultFormat();
+            }
             return true;
         }
 

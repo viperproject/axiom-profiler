@@ -656,18 +656,6 @@ namespace Z3AxiomProfiler
             }
         }
 
-        private void AppendInfoTextInColor(string text, Color color, FontStyle fontStyle)
-        {
-            toolTipBox.SelectionStart = toolTipBox.TextLength;
-            toolTipBox.SelectionLength = 0;
-
-            toolTipBox.SelectionFont = new Font(toolTipBox.Font, fontStyle);
-            toolTipBox.SelectionColor = color;
-            toolTipBox.AppendText(text);
-            toolTipBox.SelectionColor = toolTipBox.ForeColor;
-            toolTipBox.SelectionFont = new Font(toolTipBox.Font, FontStyle.Regular);
-        }
-
         private void SetInstantiationPath(Instantiation inst)
         {
             // delete old content

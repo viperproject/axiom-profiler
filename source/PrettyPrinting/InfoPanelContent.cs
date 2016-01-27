@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -9,8 +10,8 @@ namespace Z3AxiomProfiler.PrettyPrinting
     public class InfoPanelContent
     {
         public static readonly Font DefaultFont = new Font("Consolas", 9, FontStyle.Regular);
-        public static readonly Font TitleFont = new Font("Consolas", 13, FontStyle.Underline | FontStyle.Bold);
-        public static readonly Font SubtitleFont = new Font("Consolas", 11, FontStyle.Underline | FontStyle.Bold);
+        public static readonly Font TitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
+        public static readonly Font SubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
         public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
         public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
 
@@ -35,7 +36,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public void finalize()
         {
-            if(finalized) { throw new InvalidOperationException("Already finalized!");}
+            if (finalized) { throw new InvalidOperationException("Already finalized!"); }
             if (currentFormat.startIdx <= textBuilder.Length)
             {
                 formats.Add(currentFormat);
@@ -70,12 +71,14 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public InfoPanelContent Insert(int index, string text)
         {
             textBuilder.Insert(index, text);
-            foreach (var format in formats)
+
+            foreach (var format in formats.Where(format => format.startIdx >= index))
             {
-                if (format.startIdx >= index)
-                {
-                    format.startIdx += text.Length;
-                }
+                format.startIdx += text.Length;
+            }
+            if (currentFormat.startIdx >= index)
+            {
+                currentFormat.startIdx += text.Length;
             }
             return this;
         }
@@ -106,18 +109,20 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 // calculate block of things that are printed the same.
                 var blockLength = Math.Min(formatSwitchIndex - currentIndex, batchsize);
                 batchsize -= blockLength;
-
-                // set format
-                textBox.SelectionStart = textBox.TextLength;
-                textBox.SelectionLength = 0;
-                textBox.SelectionFont = currentFormat.font;
-                textBox.SelectionColor = currentFormat.textColor;
+                var startIdx = textBox.TextLength;
 
                 // actual writing
                 textBox.AppendText(finalText.Substring(currentIndex, blockLength));
 
+                // set format
+                textBox.SelectionStart = startIdx;
+                textBox.SelectionLength = textBox.TextLength;
+                textBox.SelectionFont = currentFormat.font;
+                textBox.SelectionColor = currentFormat.textColor;
+
                 // bookkeeping
                 currentIndex += blockLength;
+
                 if (currentIndex == formatSwitchIndex)
                 {
                     advanceFormat();

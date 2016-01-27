@@ -112,6 +112,7 @@ namespace Z3AxiomProfiler
             
             var content = new InfoPanelContent();
             inst.SummaryInfo(content);
+            content.finalize();
             currNode.LabelText = content.ToString();
         }
 
