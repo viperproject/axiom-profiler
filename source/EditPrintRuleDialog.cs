@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
 
@@ -35,7 +36,7 @@ namespace Z3AxiomProfiler
 
             // comboboxes
             // correct index for missing options
-            prefixLinebreakCB.SelectedIndex = editRule.prefixLineBreak == PrintRule.LineBreakSetting.After ? 0 : 1; 
+            prefixLinebreakCB.SelectedIndex = editRule.prefixLineBreak == PrintRule.LineBreakSetting.After ? 0 : 1;
             infixLinebreakCB.SelectedIndex = (int)editRule.infixLineBreak;
             // correct index for missing options
             suffixLinebreakCB.SelectedIndex = editRule.suffixLineBreak == PrintRule.LineBreakSetting.Before ? 0 : 1;
@@ -76,7 +77,7 @@ namespace Z3AxiomProfiler
                 suffixColorButton.Enabled = false;
                 associativeCB.Enabled = false;
                 parenthesesCB.Enabled = false;
-                parenthesesCB.SelectedIndex = (int) PrintRule.ParenthesesSetting.Never;
+                parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Never;
                 indentCB.Enabled = false;
                 prefixLinebreakCB.Enabled = false;
                 infixLinebreakCB.Enabled = false;
@@ -191,29 +192,52 @@ namespace Z3AxiomProfiler
 
         private void prefixColorButton_Click(object sender, EventArgs e)
         {
-            var dialog = new ColorDialog();
+
+
+            var dialog = new ColorDialog {CustomColors = loadCustomColors()};
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 prefixColorButton.BackColor = dialog.Color;
             }
+            saveCustomColors(dialog.CustomColors);
         }
 
         private void infixColorButton_Click(object sender, EventArgs e)
         {
-            var dialog = new ColorDialog();
+            var dialog = new ColorDialog {CustomColors = loadCustomColors()};
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 infixColorButton.BackColor = dialog.Color;
             }
+            saveCustomColors(dialog.CustomColors);
         }
 
         private void suffixColorButton_Click(object sender, EventArgs e)
         {
-            var dialog = new ColorDialog();
+            var dialog = new ColorDialog {CustomColors = loadCustomColors()};
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 suffixColorButton.BackColor = dialog.Color;
             }
+            saveCustomColors(dialog.CustomColors);
+        }
+
+        private void saveCustomColors(int[] colors)
+        {
+            Properties.Settings.Default.CustomColors = string.Join(";", colors);
+            Properties.Settings.Default.Save();
+        }
+
+        private int[] loadCustomColors()
+        {
+            if(string.IsNullOrWhiteSpace(Properties.Settings.Default.CustomColors)) return new int[0];
+            string[] colorStrings = Properties.Settings.Default.CustomColors.Split(';');
+            int[] customColors = new int[colorStrings.Length];
+            for (int i = 0; i < customColors.Length; i++)
+            {
+                customColors[i] = int.Parse(colorStrings[i]);
+            }
+            return customColors;
         }
     }
 }

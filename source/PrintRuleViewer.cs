@@ -128,8 +128,11 @@ namespace Z3AxiomProfiler
                 outStream.WriteLine(
                     $"{rulePair.Key};" +
                     $"{rule.prefix};" +
+                    $"{rule.prefixColor.ToArgb()};" +
                     $"{rule.infix};" +
+                    $"{rule.infixColor.ToArgb()};" +
                     $"{rule.suffix};" +
+                    $"{rule.suffixColor.ToArgb()};" +
                     $"{rule.printChildren};" +
                     $"{PrintRule.lineBreakSettingToString(rule.prefixLineBreak)};" +
                     $"{PrintRule.lineBreakSettingToString(rule.infixLineBreak)};" +
@@ -168,7 +171,7 @@ namespace Z3AxiomProfiler
                 }
                 var lines = line.Split(';');
                 // validate
-                if (lines.Length != 12)
+                if (lines.Length != 15)
                 {
                     invalidLines = true;
                     continue;
@@ -179,10 +182,16 @@ namespace Z3AxiomProfiler
                 bool associative;
                 bool indent;
                 int precedence;
-                if (!bool.TryParse(lines[4], out printChildren) ||
-                    !bool.TryParse(lines[8], out associative) ||
-                    !bool.TryParse(lines[11], out indent) ||
-                    !int.TryParse(lines[10], out precedence))
+                int prefixColorArgb;
+                int infixColorArgb;
+                int suffixColorArgb;
+                if (!bool.TryParse(lines[7], out printChildren) ||
+                    !bool.TryParse(lines[11], out associative) ||
+                    !bool.TryParse(lines[14], out indent) ||
+                    !int.TryParse(lines[13], out precedence) ||
+                    !int.TryParse(lines[2], out prefixColorArgb) ||
+                    !int.TryParse(lines[4], out infixColorArgb) ||
+                    !int.TryParse(lines[6], out suffixColorArgb))
                 {
                     invalidLines = true;
                     continue;
@@ -195,10 +204,10 @@ namespace Z3AxiomProfiler
                 PrintRule.ParenthesesSetting parenthesesSettings;
                 try
                 {
-                    prefixLinebreaks = PrintRule.lineBreakSettingFromString(lines[5]);
-                    infixLinebreaks = PrintRule.lineBreakSettingFromString(lines[6]);
-                    suffixLinebreaks = PrintRule.lineBreakSettingFromString(lines[7]);
-                    parenthesesSettings = PrintRule.parenthesesSettingsFromString(lines[9]);
+                    prefixLinebreaks = PrintRule.lineBreakSettingFromString(lines[8]);
+                    infixLinebreaks = PrintRule.lineBreakSettingFromString(lines[9]);
+                    suffixLinebreaks = PrintRule.lineBreakSettingFromString(lines[10]);
+                    parenthesesSettings = PrintRule.parenthesesSettingsFromString(lines[12]);
                 }
                 catch (ArgumentException)
                 {
@@ -209,15 +218,15 @@ namespace Z3AxiomProfiler
                 printRuleDict.addRule(lines[0], new PrintRule
                 {
                     prefix = lines[1],
-                    infix = lines[2],
-                    suffix = lines[3],
+                    prefixColor = Color.FromArgb(prefixColorArgb),
+                    infix = lines[3],
+                    infixColor = Color.FromArgb(infixColorArgb),
+                    suffix = lines[5],
+                    suffixColor = Color.FromArgb(suffixColorArgb),
                     printChildren = printChildren,
                     prefixLineBreak = prefixLinebreaks,
                     infixLineBreak = infixLinebreaks,
                     suffixLineBreak = suffixLinebreaks,
-                    prefixColor = Color.DarkSlateGray,
-                    infixColor = Color.DarkSlateGray,
-                    suffixColor = Color.DarkSlateGray,
                     associative = associative,
                     parentheses = parenthesesSettings,
                     precedence = precedence,
