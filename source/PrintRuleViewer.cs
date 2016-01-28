@@ -46,21 +46,21 @@ namespace Z3AxiomProfiler
             var prefixItem = new ListViewItem.ListViewSubItem
             {
                 Text = rule.prefix,
-                ForeColor = rule.prefixColor
+                ForeColor = rule.color
             };
             item.SubItems.Add(prefixItem);
 
             var infixItem = new ListViewItem.ListViewSubItem
             {
                 Text = rule.infix,
-                ForeColor = rule.infixColor
+                ForeColor = rule.color
             };
             item.SubItems.Add(infixItem);
 
             var suffixItem = new ListViewItem.ListViewSubItem
             {
                 Text = rule.suffix,
-                ForeColor = rule.suffixColor
+                ForeColor = rule.color
             };
             item.SubItems.Add(suffixItem);
 
@@ -128,11 +128,9 @@ namespace Z3AxiomProfiler
                 outStream.WriteLine(
                     $"{rulePair.Key};" +
                     $"{rule.prefix};" +
-                    $"{rule.prefixColor.ToArgb()};" +
                     $"{rule.infix};" +
-                    $"{rule.infixColor.ToArgb()};" +
                     $"{rule.suffix};" +
-                    $"{rule.suffixColor.ToArgb()};" +
+                    $"{rule.color.ToArgb()};" +
                     $"{rule.printChildren};" +
                     $"{PrintRule.lineBreakSettingToString(rule.prefixLineBreak)};" +
                     $"{PrintRule.lineBreakSettingToString(rule.infixLineBreak)};" +
@@ -171,7 +169,7 @@ namespace Z3AxiomProfiler
                 }
                 var lines = line.Split(';');
                 // validate
-                if (lines.Length != 15)
+                if (lines.Length != 13)
                 {
                     invalidLines = true;
                     continue;
@@ -182,16 +180,12 @@ namespace Z3AxiomProfiler
                 bool associative;
                 bool indent;
                 int precedence;
-                int prefixColorArgb;
-                int infixColorArgb;
-                int suffixColorArgb;
-                if (!bool.TryParse(lines[7], out printChildren) ||
-                    !bool.TryParse(lines[11], out associative) ||
-                    !bool.TryParse(lines[14], out indent) ||
-                    !int.TryParse(lines[13], out precedence) ||
-                    !int.TryParse(lines[2], out prefixColorArgb) ||
-                    !int.TryParse(lines[4], out infixColorArgb) ||
-                    !int.TryParse(lines[6], out suffixColorArgb))
+                int colorArgb;
+                if (!bool.TryParse(lines[5], out printChildren) ||
+                    !bool.TryParse(lines[9], out associative) ||
+                    !bool.TryParse(lines[12], out indent) ||
+                    !int.TryParse(lines[11], out precedence) ||
+                    !int.TryParse(lines[4], out colorArgb))
                 {
                     invalidLines = true;
                     continue;
@@ -204,10 +198,10 @@ namespace Z3AxiomProfiler
                 PrintRule.ParenthesesSetting parenthesesSettings;
                 try
                 {
-                    prefixLinebreaks = PrintRule.lineBreakSettingFromString(lines[8]);
-                    infixLinebreaks = PrintRule.lineBreakSettingFromString(lines[9]);
-                    suffixLinebreaks = PrintRule.lineBreakSettingFromString(lines[10]);
-                    parenthesesSettings = PrintRule.parenthesesSettingsFromString(lines[12]);
+                    prefixLinebreaks = PrintRule.lineBreakSettingFromString(lines[6]);
+                    infixLinebreaks = PrintRule.lineBreakSettingFromString(lines[7]);
+                    suffixLinebreaks = PrintRule.lineBreakSettingFromString(lines[8]);
+                    parenthesesSettings = PrintRule.parenthesesSettingsFromString(lines[10]);
                 }
                 catch (ArgumentException)
                 {
@@ -218,11 +212,9 @@ namespace Z3AxiomProfiler
                 printRuleDict.addRule(lines[0], new PrintRule
                 {
                     prefix = lines[1],
-                    prefixColor = Color.FromArgb(prefixColorArgb),
-                    infix = lines[3],
-                    infixColor = Color.FromArgb(infixColorArgb),
-                    suffix = lines[5],
-                    suffixColor = Color.FromArgb(suffixColorArgb),
+                    infix = lines[2],
+                    suffix = lines[3],
+                    color = Color.FromArgb(colorArgb),
                     printChildren = printChildren,
                     prefixLineBreak = prefixLinebreaks,
                     infixLineBreak = infixLinebreaks,

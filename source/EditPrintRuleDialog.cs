@@ -30,9 +30,7 @@ namespace Z3AxiomProfiler
             suffixTextBox.Text = editRule.suffix;
 
             // colors
-            prefixColorButton.BackColor = editRule.prefixColor;
-            infixColorButton.BackColor = editRule.infixColor;
-            suffixColorButton.BackColor = editRule.suffixColor;
+            colorButton.BackColor = editRule.color;
 
             // comboboxes
             // correct index for missing options
@@ -57,8 +55,6 @@ namespace Z3AxiomProfiler
                 prefixLabel.Text = "Prefix:";
                 infixTextBox.Enabled = true;
                 suffixTextBox.Enabled = true;
-                infixColorButton.Enabled = true;
-                suffixColorButton.Enabled = true;
                 associativeCB.Enabled = true;
                 parenthesesCB.Enabled = true;
                 parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Precedence;
@@ -73,8 +69,6 @@ namespace Z3AxiomProfiler
                 prefixLabel.Text = "New value:";
                 infixTextBox.Enabled = false;
                 suffixTextBox.Enabled = false;
-                infixColorButton.Enabled = false;
-                suffixColorButton.Enabled = false;
                 associativeCB.Enabled = false;
                 parenthesesCB.Enabled = false;
                 parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Never;
@@ -152,9 +146,7 @@ namespace Z3AxiomProfiler
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
                 suffix = suffixTextBox.Text,
-                prefixColor = prefixColorButton.BackColor,
-                infixColor = infixColorButton.BackColor,
-                suffixColor = suffixColorButton.BackColor,
+                color = colorButton.BackColor,
                 printChildren = printChildrenCB.Checked,
                 prefixLineBreak = PrintRule.lineBreakSettingFromString((string)prefixLinebreakCB.SelectedItem),
                 infixLineBreak = PrintRule.lineBreakSettingFromString((string)infixLinebreakCB.SelectedItem),
@@ -190,34 +182,12 @@ namespace Z3AxiomProfiler
             }
         }
 
-        private void prefixColorButton_Click(object sender, EventArgs e)
-        {
-
-
-            var dialog = new ColorDialog {CustomColors = loadCustomColors()};
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                prefixColorButton.BackColor = dialog.Color;
-            }
-            saveCustomColors(dialog.CustomColors);
-        }
-
-        private void infixColorButton_Click(object sender, EventArgs e)
+        private void colorButton_Click(object sender, EventArgs e)
         {
             var dialog = new ColorDialog {CustomColors = loadCustomColors()};
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                infixColorButton.BackColor = dialog.Color;
-            }
-            saveCustomColors(dialog.CustomColors);
-        }
-
-        private void suffixColorButton_Click(object sender, EventArgs e)
-        {
-            var dialog = new ColorDialog {CustomColors = loadCustomColors()};
-            if (dialog.ShowDialog() == DialogResult.OK)
-            {
-                suffixColorButton.BackColor = dialog.Color;
+                colorButton.BackColor = dialog.Color;
             }
             saveCustomColors(dialog.CustomColors);
         }
