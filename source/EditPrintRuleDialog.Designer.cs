@@ -52,6 +52,9 @@
             this.parenthesesCB = new System.Windows.Forms.ComboBox();
             this.parenthesesLabel = new System.Windows.Forms.Label();
             this.indentCB = new System.Windows.Forms.CheckBox();
+            this.prefixColorButton = new System.Windows.Forms.Button();
+            this.infixColorButton = new System.Windows.Forms.Button();
+            this.suffixColorButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.precedenceUD)).BeginInit();
             this.SuspendLayout();
             // 
@@ -61,7 +64,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.prefixTextBox.Location = new System.Drawing.Point(77, 32);
             this.prefixTextBox.Name = "prefixTextBox";
-            this.prefixTextBox.Size = new System.Drawing.Size(317, 20);
+            this.prefixTextBox.Size = new System.Drawing.Size(281, 20);
             this.prefixTextBox.TabIndex = 2;
             // 
             // prefixLabel
@@ -94,8 +97,8 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.infixTextBox.Location = new System.Drawing.Point(77, 58);
             this.infixTextBox.Name = "infixTextBox";
-            this.infixTextBox.Size = new System.Drawing.Size(317, 20);
-            this.infixTextBox.TabIndex = 3;
+            this.infixTextBox.Size = new System.Drawing.Size(281, 20);
+            this.infixTextBox.TabIndex = 4;
             // 
             // suffixTextBox
             // 
@@ -103,8 +106,8 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.suffixTextBox.Location = new System.Drawing.Point(77, 85);
             this.suffixTextBox.Name = "suffixTextBox";
-            this.suffixTextBox.Size = new System.Drawing.Size(317, 20);
-            this.suffixTextBox.TabIndex = 4;
+            this.suffixTextBox.Size = new System.Drawing.Size(281, 20);
+            this.suffixTextBox.TabIndex = 6;
             // 
             // infixLabel
             // 
@@ -148,7 +151,7 @@
             this.saveButton.Location = new System.Drawing.Point(116, 227);
             this.saveButton.Name = "saveButton";
             this.saveButton.Size = new System.Drawing.Size(75, 23);
-            this.saveButton.TabIndex = 11;
+            this.saveButton.TabIndex = 15;
             this.saveButton.Text = "Save Rule";
             this.saveButton.UseVisualStyleBackColor = true;
             this.saveButton.Click += new System.EventHandler(this.addButton_Click);
@@ -159,7 +162,7 @@
             this.cancelButton.Location = new System.Drawing.Point(206, 227);
             this.cancelButton.Name = "cancelButton";
             this.cancelButton.Size = new System.Drawing.Size(75, 23);
-            this.cancelButton.TabIndex = 12;
+            this.cancelButton.TabIndex = 16;
             this.cancelButton.Text = "Cancel";
             this.cancelButton.UseVisualStyleBackColor = true;
             this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
@@ -183,7 +186,7 @@
             this.prefixLinebreakCB.Location = new System.Drawing.Point(54, 133);
             this.prefixLinebreakCB.Name = "prefixLinebreakCB";
             this.prefixLinebreakCB.Size = new System.Drawing.Size(60, 21);
-            this.prefixLinebreakCB.TabIndex = 5;
+            this.prefixLinebreakCB.TabIndex = 8;
             // 
             // prefixLinebreakLabel
             // 
@@ -216,7 +219,7 @@
             this.infixLinebreakCB.Location = new System.Drawing.Point(190, 133);
             this.infixLinebreakCB.Name = "infixLinebreakCB";
             this.infixLinebreakCB.Size = new System.Drawing.Size(60, 21);
-            this.infixLinebreakCB.TabIndex = 6;
+            this.infixLinebreakCB.TabIndex = 9;
             // 
             // suffixLinebreakLabel
             // 
@@ -239,14 +242,14 @@
             this.suffixLinebreakCB.Location = new System.Drawing.Point(334, 133);
             this.suffixLinebreakCB.Name = "suffixLinebreakCB";
             this.suffixLinebreakCB.Size = new System.Drawing.Size(60, 21);
-            this.suffixLinebreakCB.TabIndex = 7;
+            this.suffixLinebreakCB.TabIndex = 10;
             // 
             // precedenceUD
             // 
             this.precedenceUD.Location = new System.Drawing.Point(129, 189);
             this.precedenceUD.Name = "precedenceUD";
             this.precedenceUD.Size = new System.Drawing.Size(40, 20);
-            this.precedenceUD.TabIndex = 10;
+            this.precedenceUD.TabIndex = 13;
             // 
             // opPrecedenceLabel
             // 
@@ -264,7 +267,7 @@
             this.associativeCB.Location = new System.Drawing.Point(266, 163);
             this.associativeCB.Name = "associativeCB";
             this.associativeCB.Size = new System.Drawing.Size(80, 17);
-            this.associativeCB.TabIndex = 9;
+            this.associativeCB.TabIndex = 12;
             this.associativeCB.Text = "Associative";
             this.associativeCB.UseVisualStyleBackColor = true;
             this.associativeCB.KeyDown += new System.Windows.Forms.KeyEventHandler(this.associativeCB_KeyDown);
@@ -279,7 +282,7 @@
             this.parenthesesCB.Location = new System.Drawing.Point(129, 161);
             this.parenthesesCB.Name = "parenthesesCB";
             this.parenthesesCB.Size = new System.Drawing.Size(121, 21);
-            this.parenthesesCB.TabIndex = 8;
+            this.parenthesesCB.TabIndex = 11;
             // 
             // parenthesesLabel
             // 
@@ -297,17 +300,53 @@
             this.indentCB.Location = new System.Drawing.Point(266, 190);
             this.indentCB.Name = "indentCB";
             this.indentCB.Size = new System.Drawing.Size(121, 17);
-            this.indentCB.TabIndex = 26;
+            this.indentCB.TabIndex = 14;
             this.indentCB.Text = "Indent on Linebreak";
             this.indentCB.UseVisualStyleBackColor = true;
             this.indentCB.KeyDown += new System.Windows.Forms.KeyEventHandler(this.indentCB_KeyDown);
+            // 
+            // prefixColorButton
+            // 
+            this.prefixColorButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.prefixColorButton.BackColor = System.Drawing.Color.DarkSlateGray;
+            this.prefixColorButton.Location = new System.Drawing.Point(364, 30);
+            this.prefixColorButton.Name = "prefixColorButton";
+            this.prefixColorButton.Size = new System.Drawing.Size(23, 23);
+            this.prefixColorButton.TabIndex = 3;
+            this.prefixColorButton.UseVisualStyleBackColor = false;
+            this.prefixColorButton.Click += new System.EventHandler(this.prefixColorButton_Click);
+            // 
+            // infixColorButton
+            // 
+            this.infixColorButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.infixColorButton.BackColor = System.Drawing.Color.DarkSlateGray;
+            this.infixColorButton.Location = new System.Drawing.Point(364, 56);
+            this.infixColorButton.Name = "infixColorButton";
+            this.infixColorButton.Size = new System.Drawing.Size(23, 23);
+            this.infixColorButton.TabIndex = 5;
+            this.infixColorButton.UseVisualStyleBackColor = false;
+            this.infixColorButton.Click += new System.EventHandler(this.infixColorButton_Click);
+            // 
+            // suffixColorButton
+            // 
+            this.suffixColorButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.suffixColorButton.BackColor = System.Drawing.Color.DarkSlateGray;
+            this.suffixColorButton.Location = new System.Drawing.Point(364, 83);
+            this.suffixColorButton.Name = "suffixColorButton";
+            this.suffixColorButton.Size = new System.Drawing.Size(23, 23);
+            this.suffixColorButton.TabIndex = 7;
+            this.suffixColorButton.UseVisualStyleBackColor = false;
+            this.suffixColorButton.Click += new System.EventHandler(this.suffixColorButton_Click);
             // 
             // EditPrintRuleDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(399, 262);
+            this.ClientSize = new System.Drawing.Size(399, 271);
             this.ControlBox = false;
+            this.Controls.Add(this.suffixColorButton);
+            this.Controls.Add(this.infixColorButton);
+            this.Controls.Add(this.prefixColorButton);
             this.Controls.Add(this.indentCB);
             this.Controls.Add(this.parenthesesLabel);
             this.Controls.Add(this.parenthesesCB);
@@ -369,5 +408,8 @@
         private System.Windows.Forms.ComboBox parenthesesCB;
         private System.Windows.Forms.Label parenthesesLabel;
         private System.Windows.Forms.CheckBox indentCB;
+        private System.Windows.Forms.Button prefixColorButton;
+        private System.Windows.Forms.Button infixColorButton;
+        private System.Windows.Forms.Button suffixColorButton;
     }
 }

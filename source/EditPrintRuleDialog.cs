@@ -51,6 +51,8 @@ namespace Z3AxiomProfiler
                 prefixLabel.Text = "Prefix:";
                 infixTextBox.Enabled = true;
                 suffixTextBox.Enabled = true;
+                infixColorButton.Enabled = true;
+                suffixColorButton.Enabled = true;
                 associativeCB.Enabled = true;
                 parenthesesCB.Enabled = true;
                 parenthesesCB.SelectedIndex = (int)PrintRule.ParenthesesSetting.Precedence;
@@ -65,6 +67,8 @@ namespace Z3AxiomProfiler
                 prefixLabel.Text = "New value:";
                 infixTextBox.Enabled = false;
                 suffixTextBox.Enabled = false;
+                infixColorButton.Enabled = false;
+                suffixColorButton.Enabled = false;
                 associativeCB.Enabled = false;
                 parenthesesCB.Enabled = false;
                 parenthesesCB.SelectedIndex = (int) PrintRule.ParenthesesSetting.Never;
@@ -142,6 +146,9 @@ namespace Z3AxiomProfiler
                 prefix = prefixTextBox.Text,
                 infix = infixTextBox.Text,
                 suffix = suffixTextBox.Text,
+                prefixColor = prefixColorButton.BackColor,
+                infixColor = infixColorButton.BackColor,
+                suffixColor = suffixColorButton.BackColor,
                 printChildren = printChildrenCB.Checked,
                 prefixLineBreak = PrintRule.lineBreakSettingFromString((string)prefixLinebreakCB.SelectedItem),
                 infixLineBreak = PrintRule.lineBreakSettingFromString((string)infixLinebreakCB.SelectedItem),
@@ -174,6 +181,33 @@ namespace Z3AxiomProfiler
             if (e.KeyCode == Keys.Enter)
             {
                 indentCB.Checked = !indentCB.Checked;
+            }
+        }
+
+        private void prefixColorButton_Click(object sender, EventArgs e)
+        {
+            var dialog = new ColorDialog();
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                prefixColorButton.BackColor = dialog.Color;
+            }
+        }
+
+        private void infixColorButton_Click(object sender, EventArgs e)
+        {
+            var dialog = new ColorDialog();
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                infixColorButton.BackColor = dialog.Color;
+            }
+        }
+
+        private void suffixColorButton_Click(object sender, EventArgs e)
+        {
+            var dialog = new ColorDialog();
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                suffixColorButton.BackColor = dialog.Color;
             }
         }
     }
