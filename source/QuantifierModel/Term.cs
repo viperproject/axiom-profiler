@@ -51,11 +51,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
-            if (format.parentTerm == null)
-            {
-                content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
-            }
-            
             var printRule = format.getPrintRule(this);
             var parentRule = format.getPrintRule(format.parentTerm);
             var isMultiline = false;
@@ -64,6 +59,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
             if (printRule.indent) indentBuilder.Append(indentDiff);
+
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
             if (needsParenthesis) content.Append('(');
             addPrefix(printRule, content, breakIndices);
 
@@ -92,28 +89,17 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (needsParenthesis) content.Append(')');
 
             // are there any lines to break?
-            // todo: refactor!
-            isMultiline = isMultiline && (breakIndices.Count > 0);
-            if (!linebreaksNecessary(content, format, isMultiline, startLength))
+            var lineBreaks = linebreaksNecessary(content, format, isMultiline && (breakIndices.Count > 0), startLength);
+            if (lineBreaks)
             {
-                if (printRule.indent)
-                {
-                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
-                }
-                if (format.parentTerm == null)
-                {
-                    content.switchToDefaultFormat();
-                }
-                return false;
+                addLinebreaks(printRule, content, indentBuilder, breakIndices);
             }
-
-            // split necessary
-            addLinebreaks(printRule, content, indentBuilder, breakIndices);
-            if (format.parentTerm == null)
+            else if (printRule.indent)
             {
-                content.switchToDefaultFormat();
+                // just remove indent if necessary
+                indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
             }
-            return true;
+            return lineBreaks;
         }
 
         private bool needsParenthesis(PrettyPrintFormat format, PrintRule rule, PrintRule parentRule)
@@ -180,6 +166,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
@@ -193,6 +180,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
             if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {

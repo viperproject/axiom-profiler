@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using Z3AxiomProfiler.QuantifierModel;
 
@@ -83,6 +84,9 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public string prefix;
         public string infix;
         public string suffix;
+        public Color prefixColor;
+        public Color infixColor;
+        public Color suffixColor;
         public bool printChildren;
         public bool associative;
         public bool indent;
@@ -106,6 +110,9 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 prefix = prefix,
                 infix = ", ",
                 suffix = ")",
+                prefixColor = Color.Black,
+                infixColor = Color.Black,
+                suffixColor = Color.Black,
                 printChildren = true,
                 associative = false,
                 indent = true,

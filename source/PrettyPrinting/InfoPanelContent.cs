@@ -85,6 +85,9 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public void switchFormat(Font font, Color color)
         {
+            // switch to the same format -> nothing to do
+            if (currentFormat.font.Equals(font) && currentFormat.textColor == color) return;
+
             if (currentFormat.startIdx < textBuilder.Length)
             {
                 formats.Add(currentFormat);

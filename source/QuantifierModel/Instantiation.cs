@@ -82,6 +82,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             content.Append("\n");
 
+            content.switchToDefaultFormat();
             content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
@@ -91,12 +92,14 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
+            content.switchToDefaultFormat();
             content.Append("The quantifier body:\n\n");
             Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
             content.Append("\n\n");
 
             if (dependentTerms.Count > 0)
             {
+                content.switchToDefaultFormat();
                 content.Append("The resulting term:\n\n");
                 dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, new StringBuilder(), format);
             }
