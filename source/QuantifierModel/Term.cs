@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Schema;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -58,9 +60,16 @@ namespace Z3AxiomProfiler.QuantifierModel
             var startLength = content.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
-            if (printRule.indent) indentBuilder.Append(indentDiff);
+            content.switchFormat(InfoPanelContent.DefaultFont, printRule.color);
 
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
+            // check for cutoff
+            if (format.maxDepth == 1)
+            {
+                content.Append("...");
+                return false;
+            }
+
+            if (printRule.indent) indentBuilder.Append(indentDiff);
             if (needsParenthesis) content.Append('(');
             addPrefix(printRule, content, breakIndices);
 
@@ -80,10 +89,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                     }
                 }
             }
-            else if (showCutoffDots(format, printRule))
-            {
-                content.Append("...");
-            }
 
             addSuffix(printRule, content, breakIndices);
             if (needsParenthesis) content.Append(')');
@@ -99,6 +104,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 // just remove indent if necessary
                 indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
             }
+
             return lineBreaks;
         }
 
@@ -166,7 +172,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
+            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
@@ -180,7 +186,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DarkSlateGray);
+            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
             if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
@@ -195,21 +201,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 return false;
             }
-            var formatSpec = format.maxDepth == 0 || format.maxDepth > 1;
-            if (!format.rewritingEnabled)
-            {
-                return formatSpec;
-            }
-            return formatSpec && rule.printChildren;
-        }
-
-        private bool showCutoffDots(PrettyPrintFormat format, PrintRule rule)
-        {
-            if (Args.Length == 0 || (format.rewritingEnabled && !rule.printChildren))
-            {
-                return false;
-            }
-            return true;
+            return !format.rewritingEnabled || rule.printChildren;
         }
 
         public override string ToString()

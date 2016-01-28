@@ -76,7 +76,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             {
                 format.startIdx += text.Length;
             }
-            if (currentFormat.startIdx >= index)
+            if (currentFormat.startIdx > index)
             {
                 currentFormat.startIdx += text.Length;
             }
@@ -86,7 +86,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public void switchFormat(Font font, Color color)
         {
             // switch to the same format -> nothing to do
-            if (currentFormat.font.Equals(font) && currentFormat.textColor == color) return;
+            if (currentFormat.font.Equals(font) && currentFormat.textColor.ToArgb() == color.ToArgb()) return;
 
             if (currentFormat.startIdx < textBuilder.Length)
             {
