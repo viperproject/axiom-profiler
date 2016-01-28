@@ -28,6 +28,11 @@ namespace Z3AxiomProfiler
             infixTextBox.Text = editRule.infix;
             suffixTextBox.Text = editRule.suffix;
 
+            // colors
+            prefixColorButton.BackColor = editRule.prefixColor;
+            infixColorButton.BackColor = editRule.infixColor;
+            suffixColorButton.BackColor = editRule.suffixColor;
+
             // comboboxes
             // correct index for missing options
             prefixLinebreakCB.SelectedIndex = editRule.prefixLineBreak == PrintRule.LineBreakSetting.After ? 0 : 1; 

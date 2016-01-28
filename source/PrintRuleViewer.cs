@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -38,11 +39,31 @@ namespace Z3AxiomProfiler
             {
                 Text = keyValPair.Key,
                 Name = $"Rule for {keyValPair.Key}",
-                Tag = rule
+                Tag = rule,
+                UseItemStyleForSubItems = false
             };
-            item.SubItems.Add(rule.prefix);
-            item.SubItems.Add(rule.infix);
-            item.SubItems.Add(rule.suffix);
+
+            var prefixItem = new ListViewItem.ListViewSubItem
+            {
+                Text = rule.prefix,
+                ForeColor = rule.prefixColor
+            };
+            item.SubItems.Add(prefixItem);
+
+            var infixItem = new ListViewItem.ListViewSubItem
+            {
+                Text = rule.infix,
+                ForeColor = rule.infixColor
+            };
+            item.SubItems.Add(infixItem);
+
+            var suffixItem = new ListViewItem.ListViewSubItem
+            {
+                Text = rule.suffix,
+                ForeColor = rule.suffixColor
+            };
+            item.SubItems.Add(suffixItem);
+
             item.SubItems.Add(rule.printChildren + "");
             item.SubItems.Add(PrintRule.lineBreakSettingToString(rule.prefixLineBreak));
             item.SubItems.Add(PrintRule.lineBreakSettingToString(rule.infixLineBreak));
@@ -194,6 +215,9 @@ namespace Z3AxiomProfiler
                     prefixLineBreak = prefixLinebreaks,
                     infixLineBreak = infixLinebreaks,
                     suffixLineBreak = suffixLinebreaks,
+                    prefixColor = Color.DarkSlateGray,
+                    infixColor = Color.DarkSlateGray,
+                    suffixColor = Color.DarkSlateGray,
                     associative = associative,
                     parentheses = parenthesesSettings,
                     precedence = precedence,
