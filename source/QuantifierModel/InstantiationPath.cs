@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using Z3AxiomProfiler.PrettyPrinting;
@@ -59,27 +61,66 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Path explanation:");
             content.Append("\n------------------------\n");
             content.Append("Length: " + Length()).Append('\n');
-            content.Append("Cost: " + Cost()).Append('\n');
 
             Instantiation previous = null;
+            Instantiation current = null;
             foreach (var instantiation in pathInstantiations)
             {
-                if (previous != null)
+                current = instantiation;
+                if (previous == null)
                 {
-                    content.Append("\nLink term: \n\n");
-                    var term = findOverlap(previous, instantiation);
-                    term.PrettyPrint(content, new StringBuilder(), format);
-                    content.Append("\n\n");
+                    previous = instantiation;
+                    continue;
                 }
 
-                instantiation.SummaryInfo(content);
+                // add the rule for highlighting the blame term
+                var terms = findBlameTerms(previous, instantiation);
+                var restoreRules = new List<Tuple<string, PrintRule>>();
+                foreach (var term in terms)
+                {
+                    var previousRule = format.getPrintRule(term);
+                    var needRestore = format.printRuleDict.hasRule(term) &&
+                                      format.printRuleDict.getMatch(term) == term.id + "";
+                    if (needRestore)
+                    {
+                        restoreRules.Add(new Tuple<string, PrintRule>(term.id + "", previousRule));
+                    }
+                    highlightBlameTerm(format, previousRule.Clone(), term);
+                }
+                
 
-                var biggestTerm = instantiation.dependentTerms[instantiation.dependentTerms.Count - 1];
+                // print the blame term
+                content.Append("\n\n");
+                previous.SummaryInfo(content);
+                content.switchToDefaultFormat();
                 content.Append("\nThis instantiation yields:\n\n");
-                biggestTerm.PrettyPrint(content, new StringBuilder(), format);
-                content.Append("\n------------------------\n");
+                previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
+
+                // restore old formatting
+                foreach (var term in terms)
+                {
+                    format.printRuleDict.removeRule(term.id + ""); 
+                }
+                foreach (var restoreRule in restoreRules)
+                {
+                    format.printRuleDict.addRule(restoreRule.Item1, restoreRule.Item2);
+                }
 
                 previous = instantiation;
+            }
+        }
+
+        private static void highlightBlameTerm(PrettyPrintFormat format, PrintRule highlightRule, Term term)
+        {
+            highlightRule.color = Color.Red;
+            if (format.printRuleDict.hasRule(term.id + ""))
+            {
+                format.printRuleDict.removeRule(term.id + "");
+                format.printRuleDict.addRule(term.id + "", highlightRule);
+            }
+            else
+            {
+                format.printRuleDict.addRule(term.id + "", highlightRule);
             }
         }
 
@@ -88,12 +129,37 @@ namespace Z3AxiomProfiler.QuantifierModel
             return pathInstantiations;
         }
 
-        private Term findOverlap(Instantiation parent, Instantiation child)
+        private List<Term> findBlameTerms(Instantiation parent, Instantiation child)
         {
             var termsToCheck = new List<Term>();
             termsToCheck.AddRange(child.Responsible);
-            termsToCheck.AddRange(child.Bindings);
-            return termsToCheck.FirstOrDefault(term => parent.dependentTerms.Contains(term));
+            return termsToCheck.FindAll(term => parent.dependentTerms.Contains(term)).ToList();
+        }
+
+        private List<Term> findBondTermsInBlameterm(Instantiation child, Term blameTerm)
+        {
+            var termsToCheck = new Queue<Term>();
+            termsToCheck.Enqueue(blameTerm);
+
+            var results = new List<Term>();
+
+            while (termsToCheck.Count > 0)
+            {
+                var current = termsToCheck.Dequeue();
+                if (child.Responsible.Contains(current))
+                {
+                    results.Add(current);
+                }
+                else
+                {
+                    foreach (var term in current.Args)
+                    {
+                        termsToCheck.Enqueue(term);
+                    }
+                }
+            }
+
+            return results;
         }
     }
 }

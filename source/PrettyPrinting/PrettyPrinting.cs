@@ -28,6 +28,38 @@ namespace Z3AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
+        public string getMatch(Term t)
+        {
+            if (specificTermTranslations.ContainsKey(t.id))
+            {
+                return t.id + "";
+            }
+            if (termTranslations.ContainsKey(t.Name + t.GenericType))
+            {
+                return t.Name + t.GenericType;
+            }
+            if (termTranslations.ContainsKey(t.Name))
+            {
+                return t.Name;
+            }
+            throw new KeyNotFoundException($"No rewrite rule for term {t}!");
+        }
+
+        public bool hasSpecificRule(Term t)
+        {
+            return specificTermTranslations.ContainsKey(t.id);
+        }
+
+        public KeyValuePair<string, PrintRule> getGeneralTermTranslationPair(Term t)
+        {
+            if (termTranslations.ContainsKey(t.Name + t.GenericType))
+            {
+                return new KeyValuePair<string, PrintRule>(t.Name + t.GenericType, termTranslations[t.Name + t.GenericType]);
+            }
+
+            return new KeyValuePair<string, PrintRule>(t.Name, termTranslations[t.Name]);
+        } 
+
         public bool hasRule(Term t)
         {
             return specificTermTranslations.ContainsKey(t.id) ||
@@ -180,6 +212,25 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 default:
                     throw new ArgumentException($"Unknown parentheses setting {setting}!");
             }
+        }
+
+        public PrintRule Clone()
+        {
+            return new PrintRule
+            {
+                prefix = prefix,
+                infix = infix,
+                suffix = suffix,
+                color = color,
+                prefixLineBreak = prefixLineBreak,
+                infixLineBreak = infixLineBreak,
+                suffixLineBreak = suffixLineBreak,
+                associative = associative,
+                indent = indent,
+                parentheses = parentheses,
+                precedence = precedence,
+                printChildren = printChildren
+            };
         }
     }
 
