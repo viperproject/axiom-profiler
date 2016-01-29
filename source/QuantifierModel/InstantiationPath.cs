@@ -73,21 +73,26 @@ namespace Z3AxiomProfiler.QuantifierModel
                     continue;
                 }
 
-                // add the rule for highlighting the blame term
-                var terms = findBlameTerms(previous, instantiation);
+                var boundTerms = new List<Term>();
                 var restoreRules = new List<Tuple<string, PrintRule>>();
+
+                // add the rules for highlighting the blame terms
+                var terms = findBlameTerms(previous, instantiation);
                 foreach (var term in terms)
                 {
-                    var previousRule = format.getPrintRule(term);
-                    var needRestore = format.printRuleDict.hasRule(term) &&
-                                      format.printRuleDict.getMatch(term) == term.id + "";
-                    if (needRestore)
-                    {
-                        restoreRules.Add(new Tuple<string, PrintRule>(term.id + "", previousRule));
-                    }
-                    highlightBlameTerm(format, previousRule.Clone(), term);
+                    var highlightRule = getHighlightRule(format, term, restoreRules);
+                    highlightTerm(format, highlightRule, term, Color.Red);
+                    boundTerms.AddRange(findBoundTermsInBlameTerm(current, term));
                 }
-                
+                // Note: Some terms might appear multiple times. We just want them once.
+                boundTerms = boundTerms.Distinct().ToList();
+
+                // add the rules for highlighting the bound terms
+                foreach (var boundTerm in boundTerms)
+                {
+                    var highlightRule = getHighlightRule(format, boundTerm, restoreRules);
+                    highlightTerm(format, highlightRule, boundTerm, Color.DeepSkyBlue);
+                }
 
                 // print the blame term
                 content.Append("\n\n");
@@ -97,9 +102,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                 previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
 
                 // restore old formatting
-                foreach (var term in terms)
+                foreach (var term in terms.Concat(boundTerms))
                 {
-                    format.printRuleDict.removeRule(term.id + ""); 
+                    format.printRuleDict.removeRule(term.id + "");
                 }
                 foreach (var restoreRule in restoreRules)
                 {
@@ -110,18 +115,22 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void highlightBlameTerm(PrettyPrintFormat format, PrintRule highlightRule, Term term)
+        private static PrintRule getHighlightRule(PrettyPrintFormat format, Term term, List<Tuple<string, PrintRule>> restoreRules)
         {
-            highlightRule.color = Color.Red;
-            if (format.printRuleDict.hasRule(term.id + ""))
+            var previousRule = format.getPrintRule(term);
+            var needRestore = format.printRuleDict.hasRule(term) &&
+                              format.printRuleDict.getMatch(term) == term.id + "";
+            if (needRestore)
             {
-                format.printRuleDict.removeRule(term.id + "");
-                format.printRuleDict.addRule(term.id + "", highlightRule);
+                restoreRules.Add(new Tuple<string, PrintRule>(term.id + "", previousRule));
             }
-            else
-            {
-                format.printRuleDict.addRule(term.id + "", highlightRule);
-            }
+            return previousRule.Clone();
+        }
+
+        private static void highlightTerm(PrettyPrintFormat format, PrintRule highlightRule, Term term, Color color)
+        {
+            highlightRule.color = color;
+            format.printRuleDict.addRule(term.id + "", highlightRule);
         }
 
         public IEnumerable<Instantiation> getInstantiations()
@@ -131,12 +140,30 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private List<Term> findBlameTerms(Instantiation parent, Instantiation child)
         {
-            var termsToCheck = new List<Term>();
-            termsToCheck.AddRange(child.Responsible);
-            return termsToCheck.FindAll(term => parent.dependentTerms.Contains(term)).ToList();
+            var termsToCheck = new Queue<Term>();
+            foreach (var dependentTerm in parent.dependentTerms)
+            {
+                termsToCheck.Enqueue(dependentTerm);
+            }
+            var results = new List<Term>();
+
+            while (termsToCheck.Count > 0)
+            {
+                var current = termsToCheck.Dequeue();
+                if (child.Responsible.Contains(current) && !results.Contains(current))
+                {
+                    results.Add(current);
+                    foreach (var term in current.Args)
+                    {
+                        termsToCheck.Enqueue(term);
+                    }
+                }
+            }
+
+            return results;
         }
 
-        private List<Term> findBondTermsInBlameterm(Instantiation child, Term blameTerm)
+        private List<Term> findBoundTermsInBlameTerm(Instantiation child, Term blameTerm)
         {
             var termsToCheck = new Queue<Term>();
             termsToCheck.Enqueue(blameTerm);
@@ -146,7 +173,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             while (termsToCheck.Count > 0)
             {
                 var current = termsToCheck.Dequeue();
-                if (child.Responsible.Contains(current))
+                // Note: Some terms might appear multiple times. We just want them once.
+                if (child.Bindings.Contains(current) && !results.Contains(current))
                 {
                     results.Add(current);
                 }
