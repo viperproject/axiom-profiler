@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -83,6 +84,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("\n");
 
             content.switchToDefaultFormat();
+            content.Append("Number of unique ones: " + getDistinctBlameTerms().Count);
+            content.Append('\n');
+
+            var pattern = findPatternThatMatched();
+            content.Append(pattern?.Name).Append("[" + pattern?.id + "]").Append('\n');
+
+
             content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
@@ -103,6 +111,123 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("The resulting term:\n\n");
                 dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, new StringBuilder(), format);
             }
+        }
+
+        private List<Term> getDistinctBlameTerms()
+        {
+            var blameTerms = new List<Term>(Responsible);
+            blameTerms.Sort((term1, term2) => term2.size.CompareTo(term1.size));
+            var distinctBlameTerms = new List<Term>();
+
+            foreach (var blameTerm in blameTerms
+                .Where(blameTerm => !distinctBlameTerms.Any(term => term.isDirectSubterm(blameTerm))))
+            {
+                distinctBlameTerms.Add(blameTerm);
+            }
+
+            return distinctBlameTerms;
+        }
+
+        private Term findPatternThatMatched()
+        {
+            foreach (var pattern in Quant.Patterns())
+            {
+                Dictionary<Term, Term> dict;
+                if (matchesBlameTerms(pattern, out dict))
+                {
+                    return pattern;
+                }
+            }
+            return null;
+        }
+
+        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Term> bindingDict)
+        {
+            bindingDict = new Dictionary<Term, Term>();
+            var blameTerms = getDistinctBlameTerms();
+
+            // Number of distinct terms does not match.
+            // (e.g. multipattern on single blame term or single pattern on multiple terms)
+            if (pattern.Args.Length != blameTerms.Count) return false;
+
+            foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
+            {
+                bindingDict.Clear();
+
+                var patternEnum = patternPermutation.GetEnumerator();
+                var blameTermEnum = blameTerms.GetEnumerator();
+                // this permutation does not match, continue
+                var stop = false;
+
+                while (patternEnum.MoveNext() && blameTermEnum.MoveNext() && !stop)
+                {
+                    Dictionary<Term, Term> dict;
+                    if (!blameTermEnum.Current.PatternTermMatch(patternEnum.Current, out dict))
+                    {
+                        stop = true;
+                        break;
+                    }
+
+                    foreach (var keyValuePair in dict)
+                    {
+                        if (bindingDict.ContainsKey(keyValuePair.Key))
+                        {
+                            if (bindingDict[keyValuePair.Key] == keyValuePair.Value) continue;
+                            stop = true;
+                            break;
+                        }
+                        bindingDict.Add(keyValuePair.Key, keyValuePair.Value);
+                    }
+                }
+                // disregard multiple possible matches for now.
+                if (!stop) return true;
+            }
+            return false;
+        }
+
+        private IEnumerable<List<Term>> allPermutations(List<Term> originalList)
+        {
+            var i = 0;
+            var arr = originalList.Select(term => new Tuple<int, Term>(i++, term))
+                                                  .OrderBy(elem => elem.Item1).ToArray();
+            yield return arr.Select(item => item.Item2).ToList();
+
+            if (arr.Length <= 1) yield break;
+            var j = arr.Length - 1;
+
+            while (true)
+            {
+                // find longest increasing tail
+                while (j > 0 && arr[j - 1].Item1 > arr[j].Item1) { j--; }
+                if (j == 0) break;
+
+                // elem to be swapped
+                var swapIdx = j - 1;
+
+                // find smalles elem in tail bigger than that at swapIdx
+                var swapBiggerIdx = arr.Length - 1;
+                while (arr[swapIdx].Item1 > arr[swapBiggerIdx].Item1) swapBiggerIdx++;
+
+                // actually swap
+                swap(arr, swapIdx, swapBiggerIdx);
+
+                // reverse the tail
+                swapIdx = arr.Length - 1;
+                while (j < swapIdx)
+                {
+                    swap(arr, j, swapIdx);
+                    j--;
+                    swapIdx++;
+                }
+                yield return arr.Select(item => item.Item2).ToList();
+            }
+        }
+
+        private static void swap(Tuple<int, Term>[] arr, int i, int j)
+        {
+            var tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
         }
 
         private void findPatternMatch()

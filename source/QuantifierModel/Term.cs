@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Schema;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -15,6 +15,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly string GenericType;
         public readonly Term[] Args;
         public int id = -1;
+        public readonly int size;
         public Instantiation Responsible;
         public readonly List<Term> dependentTerms = new List<Term>();
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
@@ -38,8 +39,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             Args = args;
             foreach (Term t in Args)
             {
+                size += t.size;
                 t.dependentTerms.Add(this);
             }
+            size += 1;
         }
 
         public Term(Term t)
@@ -48,8 +51,78 @@ namespace Z3AxiomProfiler.QuantifierModel
             Args = t.Args;
             Responsible = t.Responsible;
             id = t.id;
+            size = t.size;
+            GenericType = t.GenericType;
         }
 
+        public bool isSubterm(Term subterm)
+        {
+            if (subterm.size > size) return false;
+
+            var subtermsToCheck = new Queue<Term>();
+            subtermsToCheck.Enqueue(this);
+            while (subtermsToCheck.Count > 0)
+            {
+                var current = subtermsToCheck.Dequeue();
+
+                if (current.size <= subterm.size)
+                {
+                    if (current == subterm) return true;
+                    continue;
+                }
+
+                // term is larger, check subterms
+                foreach (var arg in current.Args)
+                {
+                    subtermsToCheck.Enqueue(arg);
+                }
+            }
+            return false;
+        }
+
+        public bool isDirectSubterm(Term subterm)
+        {
+            return subterm.size <= size && Args.Any(arg => arg == subterm);
+        }
+
+
+        public bool PatternTermMatch(Term subPattern, out Dictionary<Term, Term> bindingDict)
+        {
+            bindingDict = new Dictionary<Term, Term>();
+            var patternTermsToCheck = new Queue<Term>();
+            patternTermsToCheck.Enqueue(subPattern);
+            var subtermsToCheck = new Queue<Term>();
+            subtermsToCheck.Enqueue(this);
+
+            while (patternTermsToCheck.Count > 0)
+            {
+                var currentPatternTerm = patternTermsToCheck.Dequeue();
+                var currentTerm = subtermsToCheck.Dequeue();
+
+                if (currentPatternTerm.id == -1)
+                {
+                    // this is a free variable
+                    bindingDict.Add(currentPatternTerm, currentTerm);
+                    continue;
+                }
+
+                if (currentTerm.Name != currentPatternTerm.Name ||
+                    currentTerm.GenericType != currentPatternTerm.GenericType ||
+                    currentTerm.Args.Length != currentPatternTerm.Args.Length)
+                {
+                    // pattern does not match -> abort
+                    return false;
+                }
+
+                for (var i = 0; i < currentTerm.Args.Length; i++)
+                {
+                    patternTermsToCheck.Enqueue(currentPatternTerm.Args[i]);
+                    subtermsToCheck.Enqueue(currentTerm.Args[i]);
+                }
+            }
+
+            return true;
+        }
 
         public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
@@ -132,7 +205,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     { return false; }
                     return format.parentTerm.Name != Name || !rule.associative;
                 default:
-                    throw new ArgumentOutOfRangeException("Invalid enum value!");
+                    throw new InvalidEnumArgumentException();
             }
         }
 
@@ -274,7 +347,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     // we do not want the pattern term in the history constraint.
                     currentPath.Add(current);
                 }
-                
+
 
                 if (current.Args.Length > 0 && current.Name != Name)
                 {
@@ -290,9 +363,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     possibleStartPoints.Add(new Tuple<Term, List<Term>>(current, new List<Term>(currentPath)));
                 }
-                    
+
                 // backtrack
-                currentPath.RemoveAt(currentPath.Count-1);
+                currentPath.RemoveAt(currentPath.Count - 1);
             }
 
             // check if stuff below matches as well.
