@@ -310,10 +310,12 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         private bool historyConstraintSatisfied(PrintRule rule)
         {
+            if (rule.historyConstraints.Count == 0) return true;
             return (from historyConstraint in rule.historyConstraints
                     where historyConstraint.Count <= history.Count
                         let slice = history.GetRange(history.Count - historyConstraint.Count, historyConstraint.Count)
-                        where slice.SequenceEqual(historyConstraint) select historyConstraint).Any();
+                        where slice.SequenceEqual(historyConstraint)
+                            select historyConstraint).Any();
         }
 
         public void addTemporaryRule(string match, PrintRule rule)
