@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -86,25 +87,45 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
 
-        public bool PatternTermMatch(Term subPattern, out Dictionary<Term, Term> bindingDict)
+        public bool PatternTermMatch(Term subPattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
         {
-            bindingDict = new Dictionary<Term, Term>();
-            var patternTermsToCheck = new Queue<Term>();
-            patternTermsToCheck.Enqueue(subPattern);
-            var subtermsToCheck = new Queue<Term>();
-            subtermsToCheck.Enqueue(this);
+            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            var patternTermsToCheck = new Stack<Term>();
+            patternTermsToCheck.Push(subPattern);
+            var subtermsToCheck = new Stack<Term>();
+            subtermsToCheck.Push(this);
 
+            var history = new Stack<Term>();
+            var visited = new HashSet<Term>();
             while (patternTermsToCheck.Count > 0)
             {
-                var currentPatternTerm = patternTermsToCheck.Dequeue();
-                var currentTerm = subtermsToCheck.Dequeue();
-
+                var currentPatternTerm = patternTermsToCheck.Peek();
+                var currentTerm = subtermsToCheck.Peek();
+                if (visited.Contains(currentTerm))
+                {
+                    patternTermsToCheck.Pop();
+                    subtermsToCheck.Pop();
+                    if (currentPatternTerm.id != -1) history.Pop();
+                    continue;
+                }
+                visited.Add(currentTerm);
                 if (currentPatternTerm.id == -1)
                 {
                     // this is a free variable
-                    bindingDict.Add(currentPatternTerm, currentTerm);
+                    if (bindingDict.ContainsKey(currentTerm))
+                    {
+                        Debug.Assert(bindingDict[currentTerm].Item1 != currentPatternTerm);
+                        bindingDict[currentTerm].Item2.Add(history.ToList());
+                    }
+                    else
+                    {
+                        var tuple = new Tuple<Term, List<List<Term>>>(currentTerm, new List<List<Term>>());
+                        tuple.Item2.Add(history.ToList());
+                        bindingDict.Add(currentPatternTerm, tuple);
+                    }
                     continue;
                 }
+                history.Push(currentTerm);
 
                 if (currentTerm.Name != currentPatternTerm.Name ||
                     currentTerm.GenericType != currentPatternTerm.GenericType ||
@@ -114,10 +135,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                     return false;
                 }
 
-                for (var i = 0; i < currentTerm.Args.Length; i++)
+                for (var i = 0; i < currentPatternTerm.Args.Length; i++)
                 {
-                    patternTermsToCheck.Enqueue(currentPatternTerm.Args[i]);
-                    subtermsToCheck.Enqueue(currentTerm.Args[i]);
+                    patternTermsToCheck.Push(currentPatternTerm.Args[i]);
+                    subtermsToCheck.Push(currentTerm.Args[i]);
                 }
             }
 
@@ -127,7 +148,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
         {
             var printRule = format.getPrintRule(this);
-            var parentRule = format.getPrintRule(format.parentTerm);
+            var parentRule = format.GetParentPrintRule();
             var isMultiline = false;
             var breakIndices = new List<int>();
             var startLength = content.Length;
@@ -190,7 +211,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 case PrintRule.ParenthesesSetting.Never:
                     return false;
                 case PrintRule.ParenthesesSetting.Precedence:
-                    if (format.parentTerm == null) return false;
+                    if (format.history.Count == 0) return false;
                     if (parentRule.precedence < rule.precedence) return false;
                     if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
                         !string.IsNullOrWhiteSpace(parentRule.suffix))
@@ -201,9 +222,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                     { return false; }
                     if (!string.IsNullOrWhiteSpace(parentRule.infix) &&
                         !string.IsNullOrWhiteSpace(parentRule.suffix) &&
-                        format.childIndex == format.parentTerm.Args.Length - 1)
+                        format.childIndex == format.history.Last().Args.Length - 1)
                     { return false; }
-                    return format.parentTerm.Name != Name || !rule.associative;
+                    return format.history.Last().Name != Name || !rule.associative;
                 default:
                     throw new InvalidEnumArgumentException();
             }

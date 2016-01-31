@@ -132,6 +132,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public LineBreakSetting suffixLineBreak;
         public ParenthesesSetting parentheses;
         public bool isDefault;
+        public List<List<Term>> historyConstraints;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
         public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
@@ -153,6 +154,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 indent = true,
                 isDefault = true,
                 precedence = 0,
+                historyConstraints = new List<List<Term>>(),
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,
                 suffixLineBreak = LineBreakSetting.Before,
@@ -234,6 +236,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 infixLineBreak = infixLineBreak,
                 suffixLineBreak = suffixLineBreak,
                 associative = associative,
+                historyConstraints = new List<List<Term>>(historyConstraints),
                 indent = indent,
                 isDefault = isDefault,
                 parentheses = parentheses,
@@ -250,14 +253,14 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
-        public Term parentTerm;
+        public readonly List<Term> history = new List<Term>();
         public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
 
         public PrettyPrintFormat nextDepth(Term parent, int childNo)
         {
-            return new PrettyPrintFormat
+            var nextFormat =  new PrettyPrintFormat
             {
                 maxWidth = maxWidth,
                 maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
@@ -265,9 +268,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                parentTerm = parent,
                 childIndex = childNo
             };
+            nextFormat.history.AddRange(history);
+            nextFormat.history.Add(parent);
+            return nextFormat;
         }
 
         public static PrettyPrintFormat DefaultPrettyPrintFormat()
@@ -288,9 +293,27 @@ namespace Z3AxiomProfiler.PrettyPrinting
             if (t == null) return null;
             if (rewritingEnabled && printRuleDict.hasRule(t))
             {
-                return printRuleDict.getRewriteRule(t);
+                var rule =  printRuleDict.getRewriteRule(t);
+                if (historyConstraintSatisfied(rule))
+                {
+                    return rule;
+                }
             }
             return PrintRule.DefaultRewriteRule(t, this);
+        }
+
+        public PrintRule GetParentPrintRule()
+        {
+            if (history.Count == 0) return null;
+            return getPrintRule(history.Last());
+        }
+
+        private bool historyConstraintSatisfied(PrintRule rule)
+        {
+            return (from historyConstraint in rule.historyConstraints
+                    where historyConstraint.Count <= history.Count
+                        let slice = history.GetRange(history.Count - historyConstraint.Count, historyConstraint.Count)
+                        where slice.SequenceEqual(historyConstraint) select historyConstraint).Any();
         }
 
         public void addTemporaryRule(string match, PrintRule rule)

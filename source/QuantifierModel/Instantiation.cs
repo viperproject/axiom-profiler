@@ -96,7 +96,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            var pattern = findPatternThatMatched();
+            Dictionary<Term, Tuple<Term, List<List<Term>>>> bindigs;
+            var pattern = findPatternThatMatched(out bindigs);
             if (pattern != null)
             {
                 var tmp = format.getPrintRule(pattern).Clone();
@@ -134,12 +135,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             return distinctBlameTerms;
         }
 
-        private Term findPatternThatMatched()
+        private Term findPatternThatMatched(out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
         {
+            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             foreach (var pattern in Quant.Patterns())
             {
-                Dictionary<Term, Term> dict;
-                if (matchesBlameTerms(pattern, out dict))
+                if (matchesBlameTerms(pattern, out bindingDict))
                 {
                     return pattern;
                 }
@@ -147,9 +148,18 @@ namespace Z3AxiomProfiler.QuantifierModel
             return null;
         }
 
-        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Term> bindingDict)
+
+        // The dictionary stores the following information:
+        // The key is a the free variable term.
+        // The value is structured as follows:
+        // It's a tuple with the first item being bound term.
+        // The second item is a list of histories such that occurrences of bound terms in blamed terms,
+        // that were actually bound in that position, can be distinguished from occurrences that were not bound.
+        // A history is represented as a list of terms.
+        // That's why the value type is Tuple<Term, List<List<Term>>>.
+        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
         {
-            bindingDict = new Dictionary<Term, Term>();
+            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             var blameTerms = getDistinctBlameTerms();
 
             // Number of distinct terms does not match.
@@ -167,7 +177,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                 while (patternEnum.MoveNext() && blameTermEnum.MoveNext() && !stop)
                 {
-                    Dictionary<Term, Term> dict;
+                    Dictionary<Term, Tuple<Term, List<List<Term>>>> dict;
                     if (!blameTermEnum.Current.PatternTermMatch(patternEnum.Current, out dict))
                     {
                         stop = true;
@@ -178,14 +188,22 @@ namespace Z3AxiomProfiler.QuantifierModel
                     {
                         if (bindingDict.ContainsKey(keyValuePair.Key))
                         {
-                            if (bindingDict[keyValuePair.Key] == keyValuePair.Value) continue;
+                            // check if the thing bound to the free variable is consistent with whats at the current position.
+                            if (bindingDict[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
+                            {
+                                // consistent, merge history constraints (e.g. add all histories)
+                                bindingDict[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
+                                continue;
+                            }
+                            // inconsistent
                             stop = true;
                             break;
                         }
                         bindingDict.Add(keyValuePair.Key, keyValuePair.Value);
                     }
                 }
-                // disregard multiple possible matches for now.
+
+                // todo: disregard multiple possible matches for now.
                 if (!stop) return true;
             }
             return false;
