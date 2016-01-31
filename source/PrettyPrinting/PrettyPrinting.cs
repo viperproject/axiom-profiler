@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Security.Policy;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler.PrettyPrinting
@@ -28,6 +29,21 @@ namespace Z3AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
+        public PrintRule getRewriteRule(string match)
+        {
+
+            int id;
+            if (int.TryParse(match, out id) && specificTermTranslations.ContainsKey(id))
+            {
+                return specificTermTranslations[id];
+            }
+            if (termTranslations.ContainsKey(match))
+            {
+                return termTranslations[match];
+            }
+            throw new KeyNotFoundException($"No rewrite rule for match {match}!");
+        }
+
         public string getMatch(Term t)
         {
             if (specificTermTranslations.ContainsKey(t.id))
@@ -43,11 +59,6 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 return t.Name;
             }
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
-        }
-
-        public bool hasSpecificRule(Term t)
-        {
-            return specificTermTranslations.ContainsKey(t.id);
         }
 
         public KeyValuePair<string, PrintRule> getGeneralTermTranslationPair(Term t)
@@ -87,17 +98,12 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public void addRule(string ruleMatch, PrintRule rule)
         {
-            if (hasRule(ruleMatch))
-            {
-                removeRule(ruleMatch);
-            }
-
             int id;
             if (int.TryParse(ruleMatch, out id))
             {
-                specificTermTranslations.Add(id, rule);
+                specificTermTranslations[id] = rule;
             }
-            termTranslations.Add(ruleMatch, rule);
+            termTranslations[ruleMatch] = rule;
         }
 
         public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
@@ -125,6 +131,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public LineBreakSetting infixLineBreak;
         public LineBreakSetting suffixLineBreak;
         public ParenthesesSetting parentheses;
+        public bool isDefault;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
         public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
@@ -144,6 +151,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 printChildren = true,
                 associative = false,
                 indent = true,
+                isDefault = true,
                 precedence = 0,
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,
@@ -227,6 +235,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 suffixLineBreak = suffixLineBreak,
                 associative = associative,
                 indent = indent,
+                isDefault = isDefault,
                 parentheses = parentheses,
                 precedence = precedence,
                 printChildren = printChildren
@@ -244,6 +253,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public Term parentTerm;
         public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
+        private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
 
         public PrettyPrintFormat nextDepth(Term parent, int childNo)
         {
@@ -281,6 +291,61 @@ namespace Z3AxiomProfiler.PrettyPrinting
                 return printRuleDict.getRewriteRule(t);
             }
             return PrintRule.DefaultRewriteRule(t, this);
+        }
+
+        public void addTemporaryRule(string match, PrintRule rule)
+        {
+
+            // save old rule
+            PrintRule oldRule = null;
+            if (printRuleDict.hasRule(match))
+            {
+                oldRule = printRuleDict.getRewriteRule(match);
+            }
+            // save original rule only if it was not already a temporary rule.
+            if (!originalRulesReplacedByTemp.ContainsKey(match))
+            {
+                originalRulesReplacedByTemp.Add(match, oldRule);
+            }
+            
+            // add new one
+            printRuleDict.addRule(match, rule);
+        }
+
+        public void restoreOriginalRule(string match)
+        {
+            // no original save -> nothing to do
+            // maybe it was already replaced...
+            if (!originalRulesReplacedByTemp.ContainsKey(match)) return;
+
+            
+            if (originalRulesReplacedByTemp[match] != null && !originalRulesReplacedByTemp[match].isDefault)
+            {
+                // insert old rule again (unles its just the default rule or null)
+                printRuleDict.addRule(match, originalRulesReplacedByTemp[match]);
+            }
+            else
+            {
+                // otherwise just delete the temporary rule
+                printRuleDict.removeRule(match);
+            }
+            originalRulesReplacedByTemp.Remove(match);
+        }
+
+        public void restoreAllOriginalRules()
+        {
+            foreach (var rule in originalRulesReplacedByTemp)
+            {
+                if (rule.Value == null || rule.Value.isDefault)
+                {
+                    printRuleDict.removeRule(rule.Key);
+                }
+                else
+                {
+                    printRuleDict.addRule(rule.Key, rule.Value);
+                }
+            }
+            originalRulesReplacedByTemp.Clear();
         }
     }
 }

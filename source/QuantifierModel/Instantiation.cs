@@ -87,10 +87,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Number of unique ones: " + getDistinctBlameTerms().Count);
             content.Append('\n');
 
-            var pattern = findPatternThatMatched();
-            content.Append(pattern?.Name).Append("[" + pattern?.id + "]").Append('\n');
-
-
             content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
@@ -100,10 +96,20 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
+            var pattern = findPatternThatMatched();
+            if (pattern != null)
+            {
+                var tmp = format.getPrintRule(pattern).Clone();
+                tmp.color = Color.Coral;
+                format.addTemporaryRule(pattern.id + "", tmp);
+            }
+
             content.switchToDefaultFormat();
             content.Append("The quantifier body:\n\n");
             Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
             content.Append("\n\n");
+
+            format.restoreAllOriginalRules();
 
             if (dependentTerms.Count > 0)
             {
