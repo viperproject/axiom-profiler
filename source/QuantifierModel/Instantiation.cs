@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Z3AxiomProfiler.PrettyPrinting;
@@ -97,7 +98,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             Dictionary<Term, Tuple<Term, List<List<Term>>>> bindigs;
-            var pattern = findPatternThatMatched(out bindigs);
+            var pattern = findMatchingPattern(out bindigs);
             if (pattern != null)
             {
                 var tmp = format.getPrintRule(pattern).Clone();
@@ -120,22 +121,45 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
+        public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints;
+
         private List<Term> getDistinctBlameTerms()
         {
-            var blameTerms = new List<Term>(Responsible);
-            blameTerms.Sort((term1, term2) => term2.size.CompareTo(term1.size));
-            var distinctBlameTerms = new List<Term>();
-
-            foreach (var blameTerm in blameTerms
-                .Where(blameTerm => !distinctBlameTerms.Any(term => term.isDirectSubterm(blameTerm))))
+            if (blameTermsToPathConstraints == null)
             {
-                distinctBlameTerms.Add(blameTerm);
+                buildBlameTermPathConstraints();
             }
 
-            return distinctBlameTerms;
+            return (from termConstraintPair in blameTermsToPathConstraints
+                    where termConstraintPair.Value.Count == 0 select termConstraintPair.Key).ToList();
         }
 
-        private Term findPatternThatMatched(out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        private void buildBlameTermPathConstraints()
+        {
+            blameTermsToPathConstraints = new Dictionary<Term, List<List<Term>>>();
+            var blameTerms = new List<Term>(Responsible);
+            blameTerms.Sort((term1, term2) => term2.size.CompareTo(term1.size));
+
+            foreach (var blameTerm in blameTerms)
+            {
+                var pathConstraints = new List<List<Term>>();
+                foreach (var blameTermEntry in blameTermsToPathConstraints)
+                {
+                    if (!blameTermEntry.Key.isDirectSubterm(blameTerm)) continue;
+                    foreach (var constraintCopy in blameTermEntry.Value.Select(pathConstraint => new List<Term>(pathConstraint))
+                        )
+                    {
+                        constraintCopy.Add(blameTermEntry.Key);
+                        pathConstraints.Add(constraintCopy);
+                    }
+                }
+
+                // store for later use
+                blameTermsToPathConstraints[blameTerm] = pathConstraints;
+            }
+        }
+
+        private Term findMatchingPattern(out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
         {
             bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             foreach (var pattern in Quant.Patterns())
@@ -254,92 +278,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             arr[j] = tmp;
         }
 
-        private void findPatternMatch()
-        {
-            var bindings = new Dictionary<Term, string>();
-            foreach (var pattern in Quant.Patterns())
-            {
-                foreach (var blamed in Responsible)
-                {
-                    if (matchBlameTermToPattern(pattern, blamed, bindings))
-                    {
-                        Console.WriteLine("Matched blameterm <-> pattern: ");
-                        foreach (var binding in bindings)
-                        {
-                            Console.WriteLine(binding.Key + " binds to " + binding.Value);
-                        }
-                        bindings.Clear();
-                    }
-                }
-            }
-        }
-
-        public bool matchBlameTermToPattern(Term pattern, Term blamed, Dictionary<Term, string> bindingDictionary)
-        {
-            var todo = new Queue<Term>();
-            foreach (var term in pattern.Args)
-            {
-                todo.Enqueue(term);
-            }
-
-
-            while (todo.Count > 0)
-            {
-                var currentSubPattern = todo.Dequeue();
-
-                if (checkTermMatch(currentSubPattern, blamed, bindingDictionary))
-                {
-                    return true;
-                }
-
-                // reset bindings, check the next subpattern
-                bindingDictionary.Clear();
-            }
-            return false;
-        }
-
-        private static readonly Regex freeVarRegex = new Regex(@"#\d+");
-        private bool checkTermMatch(Term pattern, Term blamed, Dictionary<Term, string> bindingDictionary)
-        {
-            var patternTerms = new Queue<Term>();
-            patternTerms.Enqueue(pattern);
-
-            var blameTerms = new Queue<Term>();
-            blameTerms.Enqueue(blamed);
-
-            while (patternTerms.Count > 0 && blameTerms.Count > 0)
-            {
-                var currPatternChild = patternTerms.Dequeue();
-                var currBlameChild = blameTerms.Dequeue();
-
-                if (freeVarRegex.IsMatch(currPatternChild.Name))
-                {
-                    // a free variable is bound
-                    bindingDictionary.Add(currBlameChild, currPatternChild.Name);
-                    continue;
-                }
-
-                if (currPatternChild.Name != currBlameChild.Name)
-                {
-                    // does not match -> abort
-                    return false;
-                }
-
-                // size mismatch -> abort
-                if (patternTerms.Count != blameTerms.Count) return false;
-
-                // add terms of next level
-                foreach (var term in currPatternChild.Args)
-                {
-                    patternTerms.Enqueue(term);
-                }
-                foreach (var term in currBlameChild.Args)
-                {
-                    blameTerms.Enqueue(term);
-                }
-            }
-            return true;
-        }
 
         public override void SummaryInfo(InfoPanelContent content)
         {
