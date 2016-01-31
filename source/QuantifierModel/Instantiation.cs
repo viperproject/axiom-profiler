@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -97,8 +94,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            Dictionary<Term, Tuple<Term, List<List<Term>>>> bindigs;
-            var pattern = findMatchingPattern(out bindigs);
+            var pattern = findMatchingPattern();
             if (pattern != null)
             {
                 var tmp = format.getPrintRule(pattern).Clone();
@@ -122,7 +118,6 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints;
-
         private List<Term> getDistinctBlameTerms()
         {
             if (blameTermsToPathConstraints == null)
@@ -143,14 +138,25 @@ namespace Z3AxiomProfiler.QuantifierModel
             foreach (var blameTerm in blameTerms)
             {
                 var pathConstraints = new List<List<Term>>();
-                foreach (var blameTermEntry in blameTermsToPathConstraints)
+                foreach (var blameTermEntry in blameTermsToPathConstraints
+                    .Where(blameTermEntry => blameTermEntry.Key.isDirectSubterm(blameTerm)))
                 {
-                    if (!blameTermEntry.Key.isDirectSubterm(blameTerm)) continue;
-                    foreach (var constraintCopy in blameTermEntry.Value.Select(pathConstraint => new List<Term>(pathConstraint))
-                        )
+                    // either add new list with constraint or copy the existing ones and add more terms to 
+                    // the path constraints.
+                    if (blameTermEntry.Value.Count == 0)
                     {
-                        constraintCopy.Add(blameTermEntry.Key);
-                        pathConstraints.Add(constraintCopy);
+                        var newConstraint = new List<Term>();
+                        newConstraint.Add(blameTermEntry.Key);
+                        pathConstraints.Add(newConstraint);
+                    }
+                    else
+                    {
+                        foreach (var constraintCopy in blameTermEntry.Value
+                            .Select(pathConstraint => new List<Term>(pathConstraint)))
+                        {
+                            constraintCopy.Add(blameTermEntry.Key);
+                            pathConstraints.Add(constraintCopy);
+                        }
                     }
                 }
 
@@ -159,17 +165,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private Term findMatchingPattern(out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        private Term findMatchingPattern()
         {
-            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            foreach (var pattern in Quant.Patterns())
-            {
-                if (matchesBlameTerms(pattern, out bindingDict))
-                {
-                    return pattern;
-                }
-            }
-            return null;
+            if(matchedPattern != null) return matchedPattern;
+            return Quant.Patterns().FirstOrDefault(pattern => matchesBlameTerms(pattern));
         }
 
 
@@ -181,9 +180,11 @@ namespace Z3AxiomProfiler.QuantifierModel
         // that were actually bound in that position, can be distinguished from occurrences that were not bound.
         // A history is represented as a list of terms.
         // That's why the value type is Tuple<Term, List<List<Term>>>.
-        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        public Term matchedPattern;
+        public Dictionary<Term, Tuple<Term, List<List<Term>>>> freeVariableToBindingsAndPathConstraints;
+        private bool matchesBlameTerms(Term pattern)
         {
-            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             var blameTerms = getDistinctBlameTerms();
 
             // Number of distinct terms does not match.
@@ -192,7 +193,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
             {
-                bindingDict.Clear();
+                freeVariableToBindingsAndPathConstraints.Clear();
 
                 var patternEnum = patternPermutation.GetEnumerator();
                 var blameTermEnum = blameTerms.GetEnumerator();
@@ -210,25 +211,27 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                     foreach (var keyValuePair in dict)
                     {
-                        if (bindingDict.ContainsKey(keyValuePair.Key))
+                        if (freeVariableToBindingsAndPathConstraints.ContainsKey(keyValuePair.Key))
                         {
                             // check if the thing bound to the free variable is consistent with whats at the current position.
-                            if (bindingDict[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
+                            if (freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
                             {
                                 // consistent, merge history constraints (e.g. add all histories)
-                                bindingDict[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
+                                freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
                                 continue;
                             }
                             // inconsistent
                             stop = true;
                             break;
                         }
-                        bindingDict.Add(keyValuePair.Key, keyValuePair.Value);
+                        freeVariableToBindingsAndPathConstraints.Add(keyValuePair.Key, keyValuePair.Value);
                     }
                 }
 
                 // todo: disregard multiple possible matches for now.
-                if (!stop) return true;
+                if (stop) continue;
+                matchedPattern = pattern;
+                return true;
             }
             return false;
         }
