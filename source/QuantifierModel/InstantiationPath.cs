@@ -58,10 +58,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            content.switchToDefaultFormat();
+            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
             content.Append("Path explanation:");
-            content.Append("\n------------------------\n");
-            content.Append("Length: " + Length()).Append('\n');
+            content.switchToDefaultFormat();
+            content.Append("\n\nLength: " + Length()).Append('\n');
             content.Append("Highlighted terms are ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
             content.Append("blamed or matched");
@@ -70,7 +70,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(".\n");
+            content.Append(", respectively.\n");
 
             Instantiation previous = null;
             Instantiation current = null;
@@ -79,11 +79,36 @@ namespace Z3AxiomProfiler.QuantifierModel
                 current = instantiation;
                 if (previous == null)
                 {
+                    content.Append("\nStarting from the following term(s):\n");
+
+                    highlightBlameBindTerms(format, instantiation.matchedPattern, instantiation);
+                    foreach (var distinctBlameTerm in instantiation.getDistinctBlameTerms())
+                    {
+                        distinctBlameTerm.PrettyPrint(content, new StringBuilder(), format);
+                    }
                     previous = instantiation;
                     continue;
                 }
 
+
+                highlightBlameBindTerms(format, instantiation.matchedPattern, instantiation);
+
+                // Other prerequisites:
+                var otherRequiredTerms = instantiation.getDistinctBlameTerms()
+                    .FindAll(term => !previous.dependentTerms.Last().isSubterm(term)).ToList();
+                
+                if(otherRequiredTerms.Count > 0)
+                {
+                    content.switchToDefaultFormat();
+                    content.Append("\nTogether with the following term(s):\n");
+                    foreach (var distinctBlameTerm in otherRequiredTerms)
+                    {
+                        distinctBlameTerm.PrettyPrint(content, new StringBuilder(), format);
+                    }
+                }
+
                 // Quantifier info
+                content.switchToDefaultFormat();
                 content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
                 content.Append("\n\n");
 
@@ -91,8 +116,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 highlightPattern(format, previous.matchedPattern);
                 previous.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
 
-                highlightBlameBindTerms(format, instantiation.matchedPattern, instantiation);
-
+                content.switchToDefaultFormat();
                 content.Append("\n\nThis instantiation yields:\n\n");
                 previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
 
@@ -101,44 +125,57 @@ namespace Z3AxiomProfiler.QuantifierModel
                 previous = instantiation;
             }
 
+            if (current == null) return;
+            // Quantifier info for last in chain
+            content.switchToDefaultFormat();
+            content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
+            content.Append("\n\n");
+            highlightPattern(format, current.matchedPattern);
+            current.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
 
+            content.switchToDefaultFormat();
+            content.Append("\n\nThis instantiation yields:\n\n");
+            if(previous.dependentTerms.Last() != null)
+            {
+                previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
+            }
+            format.restoreAllOriginalRules();
         }
 
+        // todo: move to term
         private static void highlightPattern(PrettyPrintFormat format, Term previousPattern)
         {
-            if (previousPattern != null)
-            {
-                var tmp = format.getPrintRule(previousPattern).Clone();
-                tmp.color = Color.Coral;
-                format.addTemporaryRule(previousPattern.id + "", tmp);
-            }
+            if (previousPattern == null) return;
+            var tmp = format.getPrintRule(previousPattern).Clone();
+            tmp.color = Color.Coral;
+            format.addTemporaryRule(previousPattern.id + "", tmp);
         }
 
+
+        // todo: move to instantiation
         private static void highlightBlameBindTerms(PrettyPrintFormat format, Term currentPattern, Instantiation instantiation)
         {
-            if (currentPattern != null)
+            if (currentPattern == null) return;
+            // blame terms
+            foreach (var blameTermsToPathConstraint in instantiation.blameTermsToPathConstraints)
             {
-                // blame terms
-                foreach (var blameTermsToPathConstraint in instantiation.blameTermsToPathConstraints)
-                {
-                    var tmp = format.getPrintRule(blameTermsToPathConstraint.Key).Clone();
-                    tmp.color = Color.Coral;
-                    // add all history constraints
-                    tmp.historyConstraints.AddRange(blameTermsToPathConstraint.Value);
+                var tmp = format.getPrintRule(blameTermsToPathConstraint.Key).Clone();
+                tmp.color = Color.Coral;
+                // add all history constraints
+                tmp.historyConstraints.AddRange(blameTermsToPathConstraint.Value);
 
-                    format.addTemporaryRule(blameTermsToPathConstraint.Key.id + "", tmp);
-                }
+                format.addTemporaryRule(blameTermsToPathConstraint.Key.id + "", tmp);
+            }
 
-                // bound terms
-                foreach (var termWithConstraints in instantiation.freeVariableToBindingsAndPathConstraints.Values)
-                {
-                    var tmp = format.getPrintRule(termWithConstraints.Item1).Clone();
-                    tmp.color = Color.DeepSkyBlue;
-                    // add all history constraints
-                    tmp.historyConstraints.AddRange(termWithConstraints.Item2);
+            // bound terms
+            foreach (var termWithConstraints in instantiation.freeVariableToBindingsAndPathConstraints.Values)
+            {
+                var tmp = format.getPrintRule(termWithConstraints.Item1).Clone();
+                tmp.color = Color.DeepSkyBlue;
+                // add all history constraints
+                tmp.historyConstraints.AddRange(termWithConstraints.Item2);
 
-                    format.addTemporaryRule(termWithConstraints.Item1.id + "", tmp);
-                }
+                format.addTemporaryRule(termWithConstraints.Item1.id + "", tmp);
             }
         }
 

@@ -68,7 +68,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                 if (current.size <= subterm.size)
                 {
-                    if (current == subterm) return true;
+                    if (current.id == subterm.id) return true;
                     continue;
                 }
 
