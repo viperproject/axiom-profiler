@@ -120,7 +120,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                     else
                     {
                         var tuple = new Tuple<Term, List<List<Term>>>(currentTerm, new List<List<Term>>());
-                        tuple.Item2.Add(history.ToList());
+                        var historyConstraint = history.ToList();
+                        historyConstraint.Reverse();
+                        tuple.Item2.Add(historyConstraint);
                         bindingDict.Add(currentPatternTerm, tuple);
                     }
                     continue;

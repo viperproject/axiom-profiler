@@ -58,9 +58,19 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
+            content.switchToDefaultFormat();
             content.Append("Path explanation:");
             content.Append("\n------------------------\n");
             content.Append("Length: " + Length()).Append('\n');
+            content.Append("Highlighted terms are ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.Append("blamed or matched");
+            content.switchToDefaultFormat();
+            content.Append(" and ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
+            content.Append("bound");
+            content.switchToDefaultFormat();
+            content.Append(".\n\n");
 
             Instantiation previous = null;
             Instantiation current = null;
@@ -73,43 +83,50 @@ namespace Z3AxiomProfiler.QuantifierModel
                     continue;
                 }
 
-                var boundTerms = new List<Term>();
-                var restoreRules = new List<Tuple<string, PrintRule>>();
-
-                // add the rules for highlighting the blame terms
-                var terms = findBlameTerms(previous, instantiation);
-                foreach (var term in terms)
-                {
-                    var highlightRule = getHighlightRule(format, term, restoreRules);
-                    highlightTerm(format, highlightRule, term, Color.Red);
-                    boundTerms.AddRange(findBoundTermsInBlameTerm(current, term));
-                }
-                // Note: Some terms might appear multiple times. We just want them once.
-                boundTerms = boundTerms.Distinct().ToList();
-
-                // add the rules for highlighting the bound terms
-                foreach (var boundTerm in boundTerms)
-                {
-                    var highlightRule = getHighlightRule(format, boundTerm, restoreRules);
-                    highlightTerm(format, highlightRule, boundTerm, Color.DeepSkyBlue);
-                }
-
-                // print the blame term
+                // Quantifier info
+                content.Append("Application of ").Append(previous.Quant.PrintName);
                 content.Append("\n\n");
-                previous.SummaryInfo(content);
-                content.switchToDefaultFormat();
+
+                // Quantifier body with highlights (if applicable)
+                var previousPattern = previous.findMatchingPattern();
+                if (previousPattern != null)
+                {
+                    var tmp = format.getPrintRule(previousPattern).Clone();
+                    tmp.color = Color.Coral;
+                    format.addTemporaryRule(previousPattern.id + "", tmp);
+                }
+                previous.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
+
+                var currentPattern = instantiation.findMatchingPattern();
+                if (currentPattern != null)
+                {
+                    // blame terms
+                    foreach (var blameTermsToPathConstraint in instantiation.blameTermsToPathConstraints)
+                    {
+                        var tmp = format.getPrintRule(blameTermsToPathConstraint.Key).Clone();
+                        tmp.color = Color.Coral;
+                        // add all history constraints
+                        tmp.historyConstraints.AddRange(blameTermsToPathConstraint.Value);
+
+                        format.addTemporaryRule(blameTermsToPathConstraint.Key.id + "", tmp);
+                    }
+                    
+                    // bound terms
+                    foreach (var termWithConstraints in instantiation.freeVariableToBindingsAndPathConstraints.Values)
+                    {
+                        var tmp = format.getPrintRule(termWithConstraints.Item1).Clone();
+                        tmp.color = Color.DeepSkyBlue;
+                        // add all history constraints
+                        tmp.historyConstraints.AddRange(termWithConstraints.Item2);
+
+                        format.addTemporaryRule(termWithConstraints.Item1.id + "", tmp);
+                    }
+                }
+
                 content.Append("\nThis instantiation yields:\n\n");
                 previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
 
-                // restore old formatting
-                foreach (var term in terms.Concat(boundTerms))
-                {
-                    format.printRuleDict.removeRule(term.id + "");
-                }
-                foreach (var restoreRule in restoreRules)
-                {
-                    format.printRuleDict.addRule(restoreRule.Item1, restoreRule.Item2);
-                }
+                format.restoreAllOriginalRules();
 
                 previous = instantiation;
             }

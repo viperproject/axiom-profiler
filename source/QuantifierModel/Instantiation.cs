@@ -118,7 +118,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints;
-        private List<Term> getDistinctBlameTerms()
+        public List<Term> getDistinctBlameTerms()
         {
             if (blameTermsToPathConstraints == null)
             {
@@ -165,7 +165,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private Term findMatchingPattern()
+        public Term findMatchingPattern()
         {
             if(matchedPattern != null) return matchedPattern;
             return Quant.Patterns().FirstOrDefault(pattern => matchesBlameTerms(pattern));
@@ -184,12 +184,13 @@ namespace Z3AxiomProfiler.QuantifierModel
         public Dictionary<Term, Tuple<Term, List<List<Term>>>> freeVariableToBindingsAndPathConstraints;
         private bool matchesBlameTerms(Term pattern)
         {
-            freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             var blameTerms = getDistinctBlameTerms();
 
             // Number of distinct terms does not match.
             // (e.g. multipattern on single blame term or single pattern on multiple terms)
             if (pattern.Args.Length != blameTerms.Count) return false;
+
+            freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
 
             foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
             {
@@ -233,6 +234,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                 matchedPattern = pattern;
                 return true;
             }
+
+            freeVariableToBindingsAndPathConstraints = null;
             return false;
         }
 

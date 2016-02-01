@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
+using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler
 {
@@ -222,7 +223,9 @@ namespace Z3AxiomProfiler
                     associative = associative,
                     parentheses = parenthesesSettings,
                     precedence = precedence,
-                    indent = indent
+                    indent = indent,
+                    historyConstraints = new List<List<Term>>(),
+                    isDefault = false
                 });
             }
 

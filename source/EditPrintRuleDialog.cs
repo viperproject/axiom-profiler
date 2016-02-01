@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
+using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler
 {
@@ -154,7 +156,9 @@ namespace Z3AxiomProfiler
                 associative = associativeCB.Checked,
                 indent = indentCB.Checked,
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
-                precedence = (int)precedenceUD.Value
+                precedence = (int)precedenceUD.Value,
+                historyConstraints = new List<List<Term>>(),
+                isDefault = false
             };
         }
 
