@@ -69,7 +69,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             }
 
             return new KeyValuePair<string, PrintRule>(t.Name, termTranslations[t.Name]);
-        } 
+        }
 
         public bool hasRule(Term t)
         {
@@ -103,7 +103,10 @@ namespace Z3AxiomProfiler.PrettyPrinting
             {
                 specificTermTranslations[id] = rule;
             }
-            termTranslations[ruleMatch] = rule;
+            else
+            {
+                termTranslations[ruleMatch] = rule;
+            }
         }
 
         public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
@@ -260,7 +263,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public PrettyPrintFormat nextDepth(Term parent, int childNo)
         {
-            var nextFormat =  new PrettyPrintFormat
+            var nextFormat = new PrettyPrintFormat
             {
                 maxWidth = maxWidth,
                 maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
@@ -293,7 +296,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             if (t == null) return null;
             if (rewritingEnabled && printRuleDict.hasRule(t))
             {
-                var rule =  printRuleDict.getRewriteRule(t);
+                var rule = printRuleDict.getRewriteRule(t);
                 if (historyConstraintSatisfied(rule))
                 {
                     return rule;
@@ -335,7 +338,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             {
                 originalRulesReplacedByTemp.Add(match, oldRule);
             }
-            
+
             // add new one
             printRuleDict.addRule(match, rule);
         }
@@ -346,7 +349,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             // maybe it was already replaced...
             if (!originalRulesReplacedByTemp.ContainsKey(match)) return;
 
-            
+
             if (originalRulesReplacedByTemp[match] != null && !originalRulesReplacedByTemp[match].isDefault)
             {
                 // insert old rule again (unles its just the default rule or null)

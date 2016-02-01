@@ -95,13 +95,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-
-            if (matchedPattern != null)
-            {
-                var tmp = format.getPrintRule(matchedPattern).Clone();
-                tmp.color = Color.Coral;
-                format.addTemporaryRule(matchedPattern.id + "", tmp);
-            }
+            matchedPattern?.highlightTemporarily(format, Color.Coral);
 
             content.switchToDefaultFormat();
             content.Append("The quantifier body:\n\n");
@@ -115,6 +109,22 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
                 content.Append("The resulting term:\n\n");
                 dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, new StringBuilder(), format);
+            }
+        }
+
+        public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
+        {
+            if (matchedPattern == null) return;
+            // blame terms
+            foreach (var blameWithConstraints in blameTermsToPathConstraints)
+            {
+                blameWithConstraints.Key.highlightTemporarily(format, Color.Coral, blameWithConstraints.Value);
+            }
+
+            // bound terms
+            foreach (var termWithConstraints in freeVariableToBindingsAndPathConstraints.Values)
+            {
+                termWithConstraints.Item1.highlightTemporarily(format, Color.DeepSkyBlue, termWithConstraints.Item2);
             }
         }
 

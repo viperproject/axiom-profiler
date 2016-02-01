@@ -56,6 +56,21 @@ namespace Z3AxiomProfiler.QuantifierModel
             GenericType = t.GenericType;
         }
 
+        public void highlightTemporarily(PrettyPrintFormat format, Color color)
+        {
+            var tmp = format.getPrintRule(this).Clone();
+            tmp.color = color;
+            format.addTemporaryRule(id + "", tmp);
+        }
+
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<List<Term>> pathConstraints)
+        {
+            var tmp = format.getPrintRule(this).Clone();
+            tmp.color = color;
+            tmp.historyConstraints.AddRange(pathConstraints);
+            format.addTemporaryRule(id + "", tmp);
+        }
+
         public bool isSubterm(Term subterm)
         {
             if (subterm.size > size) return false;

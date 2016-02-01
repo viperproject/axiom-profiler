@@ -108,8 +108,6 @@ namespace Z3AxiomProfiler
                     // do not close yet, as the user must have the possibility to correct the match value.
                     return;
                 }
-                // remove the old one
-                printRuleDictionary.removeRule(matchTextBox.Text);
             }
             printRuleDictionary.addRule(matchTextBox.Text, buildRuleFromForm());
             DialogResult = DialogResult.OK;
