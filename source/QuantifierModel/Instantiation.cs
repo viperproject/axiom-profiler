@@ -83,6 +83,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         private void legacyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             SummaryInfo(content);
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
             content.Append("Blamed terms:\n\n");
             content.switchToDefaultFormat();
 
@@ -95,7 +96,9 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             content.Append('\n');
             content.switchToDefaultFormat();
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
             content.Append("Bound terms:\n\n");
+            content.switchToDefaultFormat();
             foreach (var t in Bindings)
             {
                 t.SummaryInfo(content);
