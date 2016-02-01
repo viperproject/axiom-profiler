@@ -35,7 +35,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             SummaryInfo(content);
-            BodyTerm.PrettyPrint(content, new StringBuilder(), format);
+            BodyTerm.PrettyPrint(content, format);
         }
 
         // ToDo: find better implementation!

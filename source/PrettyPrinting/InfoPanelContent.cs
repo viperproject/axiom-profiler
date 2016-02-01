@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Windows.Forms;
 
@@ -70,17 +71,88 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public InfoPanelContent Insert(int index, string text)
         {
+            if (string.IsNullOrEmpty(text)) return this;
             textBuilder.Insert(index, text);
 
             foreach (var format in formats.Where(format => format.startIdx >= index))
             {
                 format.startIdx += text.Length;
             }
-            if (currentFormat.startIdx > index)
+
+            if (currentFormat.startIdx >= index)
             {
                 currentFormat.startIdx += text.Length;
             }
             return this;
+        }
+
+        public InfoPanelContent Insert(int index, string text, Font font, Color color)
+        {
+            if (string.IsNullOrEmpty(text)) return this;
+            Insert(index, text);
+            var insertFormat = new TextFormat(index, font, color);
+
+            if (currentFormat.startIdx < index)
+            {
+                // case0a: format is the same as current -> no change necessary
+                if (textformatEqual(currentFormat, insertFormat)) return this;
+
+                // case0b: insert into current format space
+                formats.Add(currentFormat);
+                formats.Add(insertFormat);
+                currentFormat = new TextFormat(index + text.Length, currentFormat.font, currentFormat.textColor);
+                return this;
+            }
+
+            // case1: insert is before current format
+
+            // find out whether inserting the format is necessary
+            TextFormat prevFormat = null;
+            TextFormat afterFormat = null;
+            var insertIdx = -1;
+            foreach (var format in formats)
+            {
+                insertIdx++;
+                prevFormat = afterFormat;
+                afterFormat = format;
+                if (afterFormat.startIdx > index) break;
+            }
+
+            if (prevFormat == null)
+            {
+                // all the same, nothing to do.
+                if (textformatEqual(insertFormat, afterFormat)) return this;
+                //case1a: only one format has been stored until now.
+                if (insertFormat.startIdx < afterFormat.startIdx)
+                {
+                    // insert before and be finished
+                    formats.Insert(0, insertFormat);
+                }
+                else
+                {
+                    // insert after and duplicate afterFormat
+                    formats.Add(insertFormat);
+                    formats.Add(new TextFormat(index + text.Length, afterFormat.font, afterFormat.textColor));
+                }
+                return this;
+            }
+
+            // all the same, nothing to do.
+            if (textformatEqual(insertFormat, prevFormat)) return this;
+
+            // insert after prevFormat and duplicate prevFormat in reverse order (at the same idx)
+            if (index + text.Length != afterFormat.startIdx)
+            {
+                formats.Insert(insertIdx, new TextFormat(index + text.Length, prevFormat.font, prevFormat.textColor));
+            }
+            formats.Insert(insertIdx, insertFormat);
+            return this;
+        }
+
+        private bool textformatEqual(TextFormat format1, TextFormat format2)
+        {
+            return format1.font.Equals(format2.font)
+                   && format1.textColor.ToArgb() == format2.textColor.ToArgb();
         }
 
         public void switchFormat(Font font, Color color)

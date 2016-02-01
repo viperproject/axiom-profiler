@@ -84,7 +84,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                     foreach (var distinctBlameTerm in instantiation.getDistinctBlameTerms())
                     {
-                        distinctBlameTerm.PrettyPrint(content, new StringBuilder(), format);
+                        distinctBlameTerm.PrettyPrint(content, format);
                     }
                     previous = instantiation;
                     format.restoreAllOriginalRules();
@@ -95,14 +95,14 @@ namespace Z3AxiomProfiler.QuantifierModel
                 // Other prerequisites:
                 var otherRequiredTerms = instantiation.getDistinctBlameTerms()
                     .FindAll(term => !previous.dependentTerms.Last().isSubterm(term)).ToList();
-                
-                if(otherRequiredTerms.Count > 0)
+
+                if (otherRequiredTerms.Count > 0)
                 {
                     content.switchToDefaultFormat();
                     content.Append("\nTogether with the following term(s):\n");
                     foreach (var distinctBlameTerm in otherRequiredTerms)
                     {
-                        distinctBlameTerm.PrettyPrint(content, new StringBuilder(), format);
+                        distinctBlameTerm.PrettyPrint(content, format);
                     }
                 }
 
@@ -113,11 +113,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                 // Quantifier body with highlights (if applicable)
                 previous.matchedPattern?.highlightTemporarily(format, Color.Coral);
-                previous.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
+                previous.Quant.BodyTerm.PrettyPrint(content, format);
 
                 content.switchToDefaultFormat();
                 content.Append("\n\nThis instantiation yields:\n\n");
-                previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
+                previous.dependentTerms.Last().PrettyPrint(content, format);
 
                 format.restoreAllOriginalRules();
 
@@ -130,13 +130,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
             content.Append("\n\n");
             current.matchedPattern?.highlightTemporarily(format, Color.Coral);
-            current.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
+            current.Quant.BodyTerm.PrettyPrint(content, format);
 
             content.switchToDefaultFormat();
             content.Append("\n\nThis instantiation yields:\n\n");
-            if(previous.dependentTerms.Last() != null)
+            if (previous.dependentTerms.Last() != null)
             {
-                previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
+                previous.dependentTerms.Last().PrettyPrint(content, format);
             }
             format.restoreAllOriginalRules();
         }

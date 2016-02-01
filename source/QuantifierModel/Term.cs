@@ -162,7 +162,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             return true;
         }
 
-        public bool PrettyPrint(InfoPanelContent content, StringBuilder indentBuilder, PrettyPrintFormat format)
+        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            PrettyPrint(content, new Stack<Color>(), format);
+        }
+
+        private bool PrettyPrint(InfoPanelContent content, Stack<Color> indentFormats, PrettyPrintFormat format)
         {
             var printRule = format.getPrintRule(this);
             var parentRule = format.GetParentPrintRule();
@@ -180,7 +185,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 return false;
             }
 
-            if (printRule.indent) indentBuilder.Append(indentDiff);
+            if (printRule.indent) indentFormats.Push(printRule.color);
             if (needsParenthesis) content.Append('(');
             addPrefix(printRule, content, breakIndices);
 
@@ -191,7 +196,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(content, indentBuilder, format.nextDepth(this, i))
+                    isMultiline = t.PrettyPrint(content, indentFormats, format.nextDepth(this, i))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
@@ -208,12 +213,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             var lineBreaks = linebreaksNecessary(content, format, isMultiline && (breakIndices.Count > 0), startLength);
             if (lineBreaks)
             {
-                addLinebreaks(printRule, content, indentBuilder, breakIndices);
+                addLinebreaks(printRule, content, indentFormats, breakIndices);
             }
             else if (printRule.indent)
             {
                 // just remove indent if necessary
-                indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                indentFormats.Pop();
             }
 
             return lineBreaks;
@@ -254,7 +259,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         private static void addLinebreaks(PrintRule rule, InfoPanelContent content,
-            StringBuilder indentBuilder, List<int> breakIndices)
+            Stack<Color> indents, List<int> breakIndices)
         {
             var offset = 0;
             var oldLength = content.Length;
@@ -262,12 +267,24 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 if (rule.indent && i == breakIndices.Count - 1)
                 {
-                    indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                    indents.Pop();
+                    //indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
                 }
 
-                content.Insert(breakIndices[i] + offset, "\n" + indentBuilder);
+                // add the actual linebreak
+                content.Insert(breakIndices[i] + offset, "\n");
                 offset += content.Length - oldLength;
                 oldLength = content.Length;
+
+                // add the indents
+                foreach (var color in indents)
+                {
+                    //content.Insert(breakIndices[i] + offset, indentDiff);
+                    content.Insert(breakIndices[i] + offset, indentDiff, InfoPanelContent.DefaultFont, color);
+                    offset += content.Length - oldLength;
+                    oldLength = content.Length;
+                }
+                //content.Insert(breakIndices[i] + offset, "\n" + indentBuilder);  
             }
         }
 
@@ -324,7 +341,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             SummaryInfo(content);
             content.Append('\n');
-            PrettyPrint(content, new StringBuilder(), format);
+            PrettyPrint(content, new Stack<Color>(), format);
         }
 
         public override bool HasChildren()

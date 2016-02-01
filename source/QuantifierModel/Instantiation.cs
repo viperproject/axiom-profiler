@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -77,7 +76,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 t.SummaryInfo(content);
                 content.Append("\n");
-                t.PrettyPrint(content, new StringBuilder(), format);
+                t.PrettyPrint(content, format);
                 content.Append("\n\n");
             }
             content.Append("\n");
@@ -91,7 +90,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 t.SummaryInfo(content);
                 content.Append("\n");
-                t.PrettyPrint(content, new StringBuilder(), format);
+                t.PrettyPrint(content, format);
                 content.Append("\n\n");
             }
 
@@ -99,7 +98,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             content.switchToDefaultFormat();
             content.Append("The quantifier body:\n\n");
-            Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
+            Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
 
             format.restoreAllOriginalRules();
@@ -108,7 +107,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 content.switchToDefaultFormat();
                 content.Append("The resulting term:\n\n");
-                dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, new StringBuilder(), format);
+                dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
             }
         }
 
@@ -405,11 +404,11 @@ namespace Z3AxiomProfiler.QuantifierModel
                 });
                 foreach (var i in ResponsibleInsts)
                     yield return i;
-                yield return Callback("BLAME", delegate () { return Responsible; });
+                yield return Callback("BLAME", () => Responsible);
             }
             if (Bindings.Length > 0)
             {
-                yield return Callback("BIND", delegate () { return Bindings; });
+                yield return Callback("BIND", () => Bindings);
             }
         }
 

@@ -40,8 +40,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 var content0 = new InfoPanelContent();
                 var content1 = new InfoPanelContent();
-                Term.Args[0].PrettyPrint(content0, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
-                Term.Args[1].PrettyPrint(content1, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
+                Term.Args[0].PrettyPrint(content0, PrettyPrintFormat.DefaultPrettyPrintFormat());
+                Term.Args[1].PrettyPrint(content1, PrettyPrintFormat.DefaultPrettyPrintFormat());
                 content0.finalize();
                 content1.finalize();
                 t = $"{content0}  {Term.Name}  {content1}";
@@ -49,7 +49,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             else
             {
                 var content = new InfoPanelContent();
-                Term.PrettyPrint(content, new StringBuilder(), PrettyPrintFormat.DefaultPrettyPrintFormat());
+                Term.PrettyPrint(content, PrettyPrintFormat.DefaultPrettyPrintFormat());
                 content.finalize();
                 t = content.ToString();
             }
