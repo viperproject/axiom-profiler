@@ -22,6 +22,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
 
+        public readonly List<Tuple<Term, Term>> equalityInformation = new List<Tuple<Term, Term>>(); 
+
         public void CopyTo(Instantiation inst)
         {
             inst.Quant = Quant;
@@ -68,9 +70,21 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            processPattern();
+            if (matchedPattern != null)
+            {
+                FancyInfoPanelText(content, format);
+            }
+            else
+            {
+                legacyInfoPanelText(content, format);
+            }
+        }
+
+        private void legacyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
+        {
             SummaryInfo(content);
             content.Append("Blamed terms:\n\n");
+            content.switchToDefaultFormat();
 
             foreach (var t in Responsible)
             {
@@ -79,12 +93,8 @@ namespace Z3AxiomProfiler.QuantifierModel
                 t.PrettyPrint(content, format);
                 content.Append("\n\n");
             }
-            content.Append("\n");
-
-            content.switchToDefaultFormat();
-            content.Append("Number of unique ones: " + getDistinctBlameTerms().Count);
             content.Append('\n');
-
+            content.switchToDefaultFormat();
             content.Append("Bound terms:\n\n");
             foreach (var t in Bindings)
             {
@@ -94,21 +104,77 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            matchedPattern?.highlightTemporarily(format, Color.Coral);
-
             content.switchToDefaultFormat();
             content.Append("The quantifier body:\n\n");
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
 
+            if (dependentTerms.Count <= 0) return;
+
+            content.switchToDefaultFormat();
+            content.Append("The resulting term:\n\n");
+            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+        }
+
+        private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            SummaryInfo(content);
+            content.Append("Highlighted terms are ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.Append("blamed or matched");
+            content.switchToDefaultFormat();
+            content.Append(" and ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
+            content.Append("bound");
+            content.switchToDefaultFormat();
+            content.Append(", respectively.\n\n");
+
+            matchedPattern.highlightTemporarily(format, Color.Coral);
+            tempHighlightBlameBindTerms(format);
+
+            foreach (var t in getDistinctBlameTerms())
+            {
+                t.SummaryInfo(content);
+                content.Append("\n");
+                t.PrettyPrint(content, format);
+                content.Append("\n\n");
+            }
+
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.Append("Binding information:\n\n");
+            content.switchToDefaultFormat();
+
+            foreach (var bindings in freeVariableToBindingsAndPathConstraints)
+            {
+                content.Append(bindings.Key.Name).Append(" was bound to ");
+                bindings.Value.Item1.printName(content, format);
+                content.Append('\n');
+            }
+
+            if (equalityInformation.Count > 0)
+            {
+                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.Append("\n\nRelevant equalities:\n\n");
+                content.switchToDefaultFormat();
+                foreach (var equality in equalityInformation)
+                {
+                    equality.Item1.printName(content, format);
+                    content.Append(" = ");
+                    equality.Item2.printName(content, format);
+                    content.Append('\n');
+                }
+            }
+
+            content.Append("\n\nThe quantifier body:\n\n");
+            Quant.BodyTerm.PrettyPrint(content, format);
+            content.Append("\n\n");
             format.restoreAllOriginalRules();
 
-            if (dependentTerms.Count > 0)
-            {
-                content.switchToDefaultFormat();
-                content.Append("The resulting term:\n\n");
-                dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
-            }
+            if (dependentTerms.Count <= 0) return;
+
+            content.switchToDefaultFormat();
+            content.Append("The resulting term:\n\n");
+            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
         }
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
@@ -232,6 +298,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
         private bool matchesBlameTerms(Term pattern)
         {
+            equalityInformation.Clear();
             var blameTerms = getDistinctBlameTerms();
 
             // Number of distinct terms does not match.
@@ -262,13 +329,23 @@ namespace Z3AxiomProfiler.QuantifierModel
                     {
                         if (_freeVariableToBindingsAndPathConstraints.ContainsKey(keyValuePair.Key))
                         {
+                            var term1 = _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1;
+                            var term2 = keyValuePair.Value.Item1;
                             // check if the thing bound to the free variable is consistent with whats at the current position.
-                            if (_freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
+                            if (term1.id == term2.id)
                             {
                                 // consistent, merge history constraints (e.g. add all histories)
-                                _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
+                                _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2
+                                    .AddRange(keyValuePair.Value.Item2);
                                 continue;
                             }
+
+                            if (equalityLookUp(term1, term2))
+                            {
+                                equalityInformation.Add(new Tuple<Term, Term>(term1, term2));
+                                continue;
+                            }
+
                             // inconsistent
                             stop = true;
                             break;
@@ -285,6 +362,26 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             _freeVariableToBindingsAndPathConstraints = null;
             return false;
+        }
+
+        private static bool equalityLookUp(Term term1, Term term2)
+        {
+            Term searchTerm;
+            Term lookUpTerm;
+            if (term1.dependentTerms.Count < term2.dependentTerms.Count)
+            {
+                searchTerm = term1;
+                lookUpTerm = term2;
+            }
+            else
+            {
+                searchTerm = term2;
+                lookUpTerm = term1;
+            }
+
+            return searchTerm.dependentTerms
+                .Where(dependentTerm => dependentTerm.Name == "=")
+                .Any(dependentTerm => dependentTerm.Args.Any(term => term.id == lookUpTerm.id));
         }
 
         private IEnumerable<List<Term>> allPermutations(List<Term> originalList)

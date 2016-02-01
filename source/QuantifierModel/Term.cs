@@ -101,6 +101,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             return subterm.size <= size && Args.Any(arg => arg == subterm);
         }
 
+        public void printName(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            content.Append(Name);
+            if (format.showType) content.Append(GenericType);
+            if (format.showTermId) content.Append("[" + id + "]");
+        }
+
 
         public bool PatternTermMatch(Term subPattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
         {
