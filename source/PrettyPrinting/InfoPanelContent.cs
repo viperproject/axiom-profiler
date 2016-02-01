@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -92,6 +93,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
             Insert(index, text);
             var insertFormat = new TextFormat(index, font, color);
 
+            // insert somwhere after current format
             if (currentFormat.startIdx < index)
             {
                 // case0a: format is the same as current -> no change necessary
@@ -105,47 +107,64 @@ namespace Z3AxiomProfiler.PrettyPrinting
             }
 
             // case1: insert is before current format
-
-            // find out whether inserting the format is necessary
-            TextFormat prevFormat = null;
-            TextFormat afterFormat = null;
-            var insertIdx = -1;
+            TextFormat before = null;
+            TextFormat after = null;
+            var idx = -1;
             foreach (var format in formats)
             {
-                insertIdx++;
-                prevFormat = afterFormat;
-                afterFormat = format;
-                if (afterFormat.startIdx > index) break;
+                idx++;
+                before = after;
+                after = format;
+                if (after.startIdx > index) break;
             }
 
-            if (prevFormat == null)
+            if (after == null)
             {
-                // all the same, nothing to do.
-                if (textformatEqual(insertFormat, afterFormat)) return this;
-                //case1a: only one format has been stored until now.
-                if (insertFormat.startIdx < afterFormat.startIdx)
+                if (textformatEqual(insertFormat, currentFormat))
                 {
-                    // insert before and be finished
-                    formats.Insert(0, insertFormat);
+                    currentFormat.startIdx = index;
                 }
                 else
                 {
-                    // insert after and duplicate afterFormat
                     formats.Add(insertFormat);
-                    formats.Add(new TextFormat(index + text.Length, afterFormat.font, afterFormat.textColor));
                 }
                 return this;
             }
 
-            // all the same, nothing to do.
-            if (textformatEqual(insertFormat, prevFormat)) return this;
-
-            // insert after prevFormat and duplicate prevFormat in reverse order (at the same idx)
-            if (index + text.Length != afterFormat.startIdx)
+            if (before == null && after.startIdx > index)
             {
-                formats.Insert(insertIdx, new TextFormat(index + text.Length, prevFormat.font, prevFormat.textColor));
+                if (textformatEqual(insertFormat, after))
+                {
+                    after.startIdx = index;
+                }
+                else
+                {
+                    formats.Insert(0, insertFormat);
+                }
+                return this;
             }
-            formats.Insert(insertIdx, insertFormat);
+            if (after.startIdx < index)
+            {
+                before = after;
+                after = currentFormat;
+                idx++;
+            }
+
+            // before and after formats exist and are different
+            // before and insert are equal -> formatting stays the same
+            if (textformatEqual(insertFormat, before)) return this;
+
+            // before and insert are different -> check if after can be pulled back
+            if (textformatEqual(insertFormat, after) && index + text.Length == after.startIdx)
+            {
+                after.startIdx = index;
+                return this;
+            }
+
+            // insert and add before again
+            formats.Insert(idx, new TextFormat(index + text.Length, before.font, before.textColor));
+            formats.Insert(idx, insertFormat);
+
             return this;
         }
 

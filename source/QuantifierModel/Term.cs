@@ -261,6 +261,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         private static void addLinebreaks(PrintRule rule, InfoPanelContent content,
             Stack<Color> indents, List<int> breakIndices)
         {
+            var indentColors = indents.ToList();
+            indentColors.Reverse();
             var offset = 0;
             var oldLength = content.Length;
             for (var i = 0; i < breakIndices.Count; i++)
@@ -268,7 +270,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (rule.indent && i == breakIndices.Count - 1)
                 {
                     indents.Pop();
-                    //indentBuilder.Remove(indentBuilder.Length - indentDiff.Length, indentDiff.Length);
+                    indentColors.RemoveAt(indentColors.Count - 1);
                 }
 
                 // add the actual linebreak
@@ -277,14 +279,12 @@ namespace Z3AxiomProfiler.QuantifierModel
                 oldLength = content.Length;
 
                 // add the indents
-                foreach (var color in indents)
+                foreach (var color in indentColors)
                 {
-                    //content.Insert(breakIndices[i] + offset, indentDiff);
                     content.Insert(breakIndices[i] + offset, indentDiff, InfoPanelContent.DefaultFont, color);
                     offset += content.Length - oldLength;
                     oldLength = content.Length;
                 }
-                //content.Insert(breakIndices[i] + offset, "\n" + indentBuilder);  
             }
         }
 
