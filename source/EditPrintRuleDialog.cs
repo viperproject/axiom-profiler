@@ -156,7 +156,8 @@ namespace Z3AxiomProfiler
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
                 precedence = (int)precedenceUD.Value,
                 historyConstraints = new List<List<Term>>(),
-                isDefault = false
+                isDefault = false,
+                isUserdefined = true
             };
         }
 

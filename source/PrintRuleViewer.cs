@@ -225,7 +225,8 @@ namespace Z3AxiomProfiler
                     precedence = precedence,
                     indent = indent,
                     historyConstraints = new List<List<Term>>(),
-                    isDefault = false
+                    isDefault = false,
+                    isUserdefined = true
                 });
             }
 

@@ -135,6 +135,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public LineBreakSetting suffixLineBreak;
         public ParenthesesSetting parentheses;
         public bool isDefault;
+        public bool isUserdefined;
         public List<List<Term>> historyConstraints;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
@@ -294,10 +295,11 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public PrintRule getPrintRule(Term t)
         {
             if (t == null) return null;
-            if (rewritingEnabled && printRuleDict.hasRule(t))
+            if (printRuleDict.hasRule(t))
             {
                 var rule = printRuleDict.getRewriteRule(t);
-                if (historyConstraintSatisfied(rule))
+                if ((rewritingEnabled || !rule.isUserdefined)
+                    && historyConstraintSatisfied(rule))
                 {
                     return rule;
                 }
