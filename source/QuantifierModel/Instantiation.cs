@@ -69,6 +69,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
+            processPattern();
             SummaryInfo(content);
             content.Append("Blamed terms:\n\n");
 
@@ -94,12 +95,12 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            var pattern = findMatchingPattern();
-            if (pattern != null)
+
+            if (matchedPattern != null)
             {
-                var tmp = format.getPrintRule(pattern).Clone();
+                var tmp = format.getPrintRule(matchedPattern).Clone();
                 tmp.color = Color.Coral;
-                format.addTemporaryRule(pattern.id + "", tmp);
+                format.addTemporaryRule(matchedPattern.id + "", tmp);
             }
 
             content.switchToDefaultFormat();
@@ -117,28 +118,40 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints;
+        private Dictionary<Term, List<List<Term>>> _blameTermsToPathConstraints;
+        public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints
+        {
+            get
+            {
+                if (!didPatternMatch)
+                {
+                    processPattern();
+                }
+                return _blameTermsToPathConstraints;
+            }
+        }
+
         public List<Term> getDistinctBlameTerms()
         {
-            if (blameTermsToPathConstraints == null)
+            if (!didPatternMatch)
             {
                 buildBlameTermPathConstraints();
             }
-
-            return (from termConstraintPair in blameTermsToPathConstraints
-                    where termConstraintPair.Value.Count == 0 select termConstraintPair.Key).ToList();
+            return (from termConstraintPair in _blameTermsToPathConstraints
+                    where termConstraintPair.Value.Count == 0
+                    select termConstraintPair.Key).ToList();
         }
 
         private void buildBlameTermPathConstraints()
         {
-            blameTermsToPathConstraints = new Dictionary<Term, List<List<Term>>>();
+            _blameTermsToPathConstraints = new Dictionary<Term, List<List<Term>>>();
             var blameTerms = new List<Term>(Responsible);
             blameTerms.Sort((term1, term2) => term2.size.CompareTo(term1.size));
 
             foreach (var blameTerm in blameTerms)
             {
                 var pathConstraints = new List<List<Term>>();
-                foreach (var blameTermEntry in blameTermsToPathConstraints
+                foreach (var blameTermEntry in _blameTermsToPathConstraints
                     .Where(blameTermEntry => blameTermEntry.Key.isDirectSubterm(blameTerm)))
                 {
                     // either add new list with constraint or copy the existing ones and add more terms to 
@@ -161,14 +174,15 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
 
                 // store for later use
-                blameTermsToPathConstraints[blameTerm] = pathConstraints;
+                _blameTermsToPathConstraints[blameTerm] = pathConstraints;
             }
         }
 
-        public Term findMatchingPattern()
+        public void processPattern()
         {
-            if(matchedPattern != null) return matchedPattern;
-            return Quant.Patterns().FirstOrDefault(pattern => matchesBlameTerms(pattern));
+            if (didPatternMatch) return;
+            Quant.Patterns().FirstOrDefault(matchesBlameTerms);
+            didPatternMatch = true;
         }
 
 
@@ -180,8 +194,33 @@ namespace Z3AxiomProfiler.QuantifierModel
         // that were actually bound in that position, can be distinguished from occurrences that were not bound.
         // A history is represented as a list of terms.
         // That's why the value type is Tuple<Term, List<List<Term>>>.
-        public Term matchedPattern;
-        public Dictionary<Term, Tuple<Term, List<List<Term>>>> freeVariableToBindingsAndPathConstraints;
+        private Term _matchedPattern;
+        private bool didPatternMatch;
+        public Term matchedPattern
+        {
+            get
+            {
+                if (!didPatternMatch)
+                {
+                    processPattern();
+                }
+                return _matchedPattern;
+            }
+        }
+
+
+        private Dictionary<Term, Tuple<Term, List<List<Term>>>> _freeVariableToBindingsAndPathConstraints;
+        public Dictionary<Term, Tuple<Term, List<List<Term>>>> freeVariableToBindingsAndPathConstraints
+        {
+            get
+            {
+                if (!didPatternMatch)
+                {
+                    processPattern();
+                }
+                return _freeVariableToBindingsAndPathConstraints;
+            }
+        }
         private bool matchesBlameTerms(Term pattern)
         {
             var blameTerms = getDistinctBlameTerms();
@@ -190,11 +229,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             // (e.g. multipattern on single blame term or single pattern on multiple terms)
             if (pattern.Args.Length != blameTerms.Count) return false;
 
-            freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            _freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
 
             foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
             {
-                freeVariableToBindingsAndPathConstraints.Clear();
+                _freeVariableToBindingsAndPathConstraints.Clear();
 
                 var patternEnum = patternPermutation.GetEnumerator();
                 var blameTermEnum = blameTerms.GetEnumerator();
@@ -212,30 +251,30 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                     foreach (var keyValuePair in dict)
                     {
-                        if (freeVariableToBindingsAndPathConstraints.ContainsKey(keyValuePair.Key))
+                        if (_freeVariableToBindingsAndPathConstraints.ContainsKey(keyValuePair.Key))
                         {
                             // check if the thing bound to the free variable is consistent with whats at the current position.
-                            if (freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
+                            if (_freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1 == keyValuePair.Value.Item1)
                             {
                                 // consistent, merge history constraints (e.g. add all histories)
-                                freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
+                                _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2.AddRange(keyValuePair.Value.Item2);
                                 continue;
                             }
                             // inconsistent
                             stop = true;
                             break;
                         }
-                        freeVariableToBindingsAndPathConstraints.Add(keyValuePair.Key, keyValuePair.Value);
+                        _freeVariableToBindingsAndPathConstraints.Add(keyValuePair.Key, keyValuePair.Value);
                     }
                 }
 
                 // todo: disregard multiple possible matches for now.
                 if (stop) continue;
-                matchedPattern = pattern;
+                _matchedPattern = pattern;
                 return true;
             }
 
-            freeVariableToBindingsAndPathConstraints = null;
+            _freeVariableToBindingsAndPathConstraints = null;
             return false;
         }
 

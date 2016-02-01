@@ -70,7 +70,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(".\n\n");
+            content.Append(".\n");
 
             Instantiation previous = null;
             Instantiation current = null;
@@ -84,127 +84,67 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
 
                 // Quantifier info
-                content.Append("Application of ").Append(previous.Quant.PrintName);
+                content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
                 content.Append("\n\n");
 
                 // Quantifier body with highlights (if applicable)
-                var previousPattern = previous.findMatchingPattern();
-                if (previousPattern != null)
-                {
-                    var tmp = format.getPrintRule(previousPattern).Clone();
-                    tmp.color = Color.Coral;
-                    format.addTemporaryRule(previousPattern.id + "", tmp);
-                }
+                highlightPattern(format, previous.matchedPattern);
                 previous.Quant.BodyTerm.PrettyPrint(content, new StringBuilder(), format);
 
-                var currentPattern = instantiation.findMatchingPattern();
-                if (currentPattern != null)
-                {
-                    // blame terms
-                    foreach (var blameTermsToPathConstraint in instantiation.blameTermsToPathConstraints)
-                    {
-                        var tmp = format.getPrintRule(blameTermsToPathConstraint.Key).Clone();
-                        tmp.color = Color.Coral;
-                        // add all history constraints
-                        tmp.historyConstraints.AddRange(blameTermsToPathConstraint.Value);
+                highlightBlameBindTerms(format, instantiation.matchedPattern, instantiation);
 
-                        format.addTemporaryRule(blameTermsToPathConstraint.Key.id + "", tmp);
-                    }
-                    
-                    // bound terms
-                    foreach (var termWithConstraints in instantiation.freeVariableToBindingsAndPathConstraints.Values)
-                    {
-                        var tmp = format.getPrintRule(termWithConstraints.Item1).Clone();
-                        tmp.color = Color.DeepSkyBlue;
-                        // add all history constraints
-                        tmp.historyConstraints.AddRange(termWithConstraints.Item2);
-
-                        format.addTemporaryRule(termWithConstraints.Item1.id + "", tmp);
-                    }
-                }
-
-                content.Append("\nThis instantiation yields:\n\n");
+                content.Append("\n\nThis instantiation yields:\n\n");
                 previous.dependentTerms.Last().PrettyPrint(content, new StringBuilder(), format);
 
                 format.restoreAllOriginalRules();
 
                 previous = instantiation;
             }
+
+
         }
 
-        private static PrintRule getHighlightRule(PrettyPrintFormat format, Term term, List<Tuple<string, PrintRule>> restoreRules)
+        private static void highlightPattern(PrettyPrintFormat format, Term previousPattern)
         {
-            var previousRule = format.getPrintRule(term);
-            var needRestore = format.printRuleDict.hasRule(term) &&
-                              format.printRuleDict.getMatch(term) == term.id + "";
-            if (needRestore)
+            if (previousPattern != null)
             {
-                restoreRules.Add(new Tuple<string, PrintRule>(term.id + "", previousRule));
+                var tmp = format.getPrintRule(previousPattern).Clone();
+                tmp.color = Color.Coral;
+                format.addTemporaryRule(previousPattern.id + "", tmp);
             }
-            return previousRule.Clone();
         }
 
-        private static void highlightTerm(PrettyPrintFormat format, PrintRule highlightRule, Term term, Color color)
+        private static void highlightBlameBindTerms(PrettyPrintFormat format, Term currentPattern, Instantiation instantiation)
         {
-            highlightRule.color = color;
-            format.printRuleDict.addRule(term.id + "", highlightRule);
+            if (currentPattern != null)
+            {
+                // blame terms
+                foreach (var blameTermsToPathConstraint in instantiation.blameTermsToPathConstraints)
+                {
+                    var tmp = format.getPrintRule(blameTermsToPathConstraint.Key).Clone();
+                    tmp.color = Color.Coral;
+                    // add all history constraints
+                    tmp.historyConstraints.AddRange(blameTermsToPathConstraint.Value);
+
+                    format.addTemporaryRule(blameTermsToPathConstraint.Key.id + "", tmp);
+                }
+
+                // bound terms
+                foreach (var termWithConstraints in instantiation.freeVariableToBindingsAndPathConstraints.Values)
+                {
+                    var tmp = format.getPrintRule(termWithConstraints.Item1).Clone();
+                    tmp.color = Color.DeepSkyBlue;
+                    // add all history constraints
+                    tmp.historyConstraints.AddRange(termWithConstraints.Item2);
+
+                    format.addTemporaryRule(termWithConstraints.Item1.id + "", tmp);
+                }
+            }
         }
 
         public IEnumerable<Instantiation> getInstantiations()
         {
             return pathInstantiations;
-        }
-
-        private List<Term> findBlameTerms(Instantiation parent, Instantiation child)
-        {
-            var termsToCheck = new Queue<Term>();
-            foreach (var dependentTerm in parent.dependentTerms)
-            {
-                termsToCheck.Enqueue(dependentTerm);
-            }
-            var results = new List<Term>();
-
-            while (termsToCheck.Count > 0)
-            {
-                var current = termsToCheck.Dequeue();
-                if (child.Responsible.Contains(current) && !results.Contains(current))
-                {
-                    results.Add(current);
-                    foreach (var term in current.Args)
-                    {
-                        termsToCheck.Enqueue(term);
-                    }
-                }
-            }
-
-            return results;
-        }
-
-        private List<Term> findBoundTermsInBlameTerm(Instantiation child, Term blameTerm)
-        {
-            var termsToCheck = new Queue<Term>();
-            termsToCheck.Enqueue(blameTerm);
-
-            var results = new List<Term>();
-
-            while (termsToCheck.Count > 0)
-            {
-                var current = termsToCheck.Dequeue();
-                // Note: Some terms might appear multiple times. We just want them once.
-                if (child.Bindings.Contains(current) && !results.Contains(current))
-                {
-                    results.Add(current);
-                }
-                else
-                {
-                    foreach (var term in current.Args)
-                    {
-                        termsToCheck.Enqueue(term);
-                    }
-                }
-            }
-
-            return results;
         }
     }
 }
