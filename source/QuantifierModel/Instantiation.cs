@@ -22,7 +22,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
 
-        public readonly List<Tuple<Term, Term>> equalityInformation = new List<Tuple<Term, Term>>(); 
+        public readonly List<Tuple<Term, Term>> equalityInformation = new List<Tuple<Term, Term>>();
 
         public void CopyTo(Instantiation inst)
         {
@@ -82,6 +82,10 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void legacyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
+            content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+            content.Append(isAmbiguous
+                ? "Pattern match detection failed due to ambiguosity. Multiple patterns matched.\n"
+                : "No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
             SummaryInfo(content);
             content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
             content.Append("Blamed terms:\n\n");
@@ -256,10 +260,32 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        public void processPattern()
+        private void processPattern()
         {
             if (didPatternMatch) return;
-            Quant.Patterns().FirstOrDefault(matchesBlameTerms);
+            var bindingInfos = new List<Dictionary<Term, Tuple<Term, List<List<Term>>>>>();
+            foreach (var pattern in Quant.Patterns())
+            {
+                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
+                List<Tuple<Term, Term>> currEqInfo;
+
+                if (!matchesBlameTerms(pattern, out currBind, out currEqInfo)) continue;
+
+                _matchedPattern = pattern;
+                equalityInformation.Clear();
+                equalityInformation.AddRange(currEqInfo);
+                bindingInfos.Add(currBind);
+            }
+            if (bindingInfos.Count > 1)
+            {
+                equalityInformation.Clear();
+                _matchedPattern = null;
+                isAmbiguous = true;
+            }
+            else if(bindingInfos.Count == 1)
+            {
+                _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
+            }
             didPatternMatch = true;
         }
 
@@ -274,6 +300,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         // That's why the value type is Tuple<Term, List<List<Term>>>.
         private Term _matchedPattern;
         private bool didPatternMatch;
+        public bool isAmbiguous;
         public Term matchedPattern
         {
             get
@@ -299,21 +326,22 @@ namespace Z3AxiomProfiler.QuantifierModel
                 return _freeVariableToBindingsAndPathConstraints;
             }
         }
-        private bool matchesBlameTerms(Term pattern)
+        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingInfo,
+            out List<Tuple<Term, Term>> equaltiyInfo)
         {
-            equalityInformation.Clear();
+            equaltiyInfo = new List<Tuple<Term, Term>>();
             var blameTerms = getDistinctBlameTerms();
-
+            bindingInfo = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
             // Number of distinct terms does not match.
             // (e.g. multipattern on single blame term or single pattern on multiple terms)
             if (pattern.Args.Length != blameTerms.Count) return false;
 
-            _freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+
 
             foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
             {
-                _freeVariableToBindingsAndPathConstraints.Clear();
-
+                equaltiyInfo.Clear();
+                bindingInfo.Clear();
                 var patternEnum = patternPermutation.GetEnumerator();
                 var blameTermEnum = blameTerms.GetEnumerator();
                 // this permutation does not match, continue
@@ -330,22 +358,22 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                     foreach (var keyValuePair in dict)
                     {
-                        if (_freeVariableToBindingsAndPathConstraints.ContainsKey(keyValuePair.Key))
+                        if (bindingInfo.ContainsKey(keyValuePair.Key))
                         {
-                            var term1 = _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item1;
+                            var term1 = bindingInfo[keyValuePair.Key].Item1;
                             var term2 = keyValuePair.Value.Item1;
                             // check if the thing bound to the free variable is consistent with whats at the current position.
                             if (term1.id == term2.id)
                             {
                                 // consistent, merge history constraints (e.g. add all histories)
-                                _freeVariableToBindingsAndPathConstraints[keyValuePair.Key].Item2
+                                bindingInfo[keyValuePair.Key].Item2
                                     .AddRange(keyValuePair.Value.Item2);
                                 continue;
                             }
 
                             if (equalityLookUp(term1, term2))
                             {
-                                equalityInformation.Add(new Tuple<Term, Term>(term1, term2));
+                                equaltiyInfo.Add(new Tuple<Term, Term>(term1, term2));
                                 continue;
                             }
 
@@ -353,17 +381,15 @@ namespace Z3AxiomProfiler.QuantifierModel
                             stop = true;
                             break;
                         }
-                        _freeVariableToBindingsAndPathConstraints.Add(keyValuePair.Key, keyValuePair.Value);
+                        bindingInfo.Add(keyValuePair.Key, keyValuePair.Value);
                     }
                 }
 
-                // todo: disregard multiple possible matches for now.
                 if (stop) continue;
-                _matchedPattern = pattern;
                 return true;
             }
-
-            _freeVariableToBindingsAndPathConstraints = null;
+            bindingInfo.Clear();
+            equaltiyInfo.Clear();
             return false;
         }
 
