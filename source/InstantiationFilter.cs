@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Windows.Navigation;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler
@@ -31,11 +30,16 @@ namespace Z3AxiomProfiler
             {
                 quantSelectionBox.Items.Add(quant, true);
             }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
             doFilter();
         }
 
         private void doFilter()
         {
+            if (!IsHandleCreated) return;
             var list = new List<Instantiation>();
             inProgress.Enqueue(list);
             numberNodesMatchingLabel.Text = "Recalculating...";
@@ -54,9 +58,9 @@ namespace Z3AxiomProfiler
         private void updateFilteredNodes()
         {
             if (inProgress.Count == 0) return;
-            if (numberNodesMatchingLabel.InvokeRequired)
+            if (InvokeRequired)
             {
-                numberNodesMatchingLabel.Invoke(new Action(updateFilteredNodes));
+                BeginInvoke(new Action(updateFilteredNodes));
                 return;
             }
             filtered = inProgress.Dequeue();
@@ -80,7 +84,7 @@ namespace Z3AxiomProfiler
 
         private void quantSelectionBox_ItemCheck(object sender, ItemCheckEventArgs e)
         {
-            BeginInvoke((Action)doFilter);
+            doFilter();
         }
 
         private void updateFilter(object sender, EventArgs e)

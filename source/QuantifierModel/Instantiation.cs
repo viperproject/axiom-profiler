@@ -82,10 +82,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void legacyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
-            content.Append(isAmbiguous
-                ? "Pattern match detection failed due to ambiguosity. Multiple patterns matched.\n"
-                : "No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
+            printNoMatchdisclaimer(content);
             SummaryInfo(content);
             content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
             content.Append("Blamed terms:\n\n");
@@ -93,7 +90,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             foreach (var t in Responsible)
             {
-                t.SummaryInfo(content);
                 content.Append("\n");
                 t.PrettyPrint(content, format);
                 content.Append("\n\n");
@@ -105,7 +101,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             foreach (var t in Bindings)
             {
-                t.SummaryInfo(content);
                 content.Append("\n");
                 t.PrettyPrint(content, format);
                 content.Append("\n\n");
@@ -121,6 +116,15 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("The resulting term:\n\n");
             dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+        }
+
+        public void printNoMatchdisclaimer(InfoPanelContent content)
+        {
+            content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+            content.Append(isAmbiguous
+                ? "Pattern match detection failed due to ambiguosity. Multiple patterns matched.\n"
+                : "No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
+            content.switchToDefaultFormat();
         }
 
         private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
@@ -139,9 +143,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             matchedPattern.highlightTemporarily(format, Color.Coral);
             tempHighlightBlameBindTerms(format);
 
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.Append("Blamed Terms:\n\n");
+
             foreach (var t in getDistinctBlameTerms())
             {
-                t.SummaryInfo(content);
                 content.Append("\n");
                 t.PrettyPrint(content, format);
                 content.Append("\n\n");

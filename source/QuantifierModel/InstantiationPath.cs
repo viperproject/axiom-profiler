@@ -99,10 +99,11 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (otherRequiredTerms.Count > 0)
                 {
                     content.switchToDefaultFormat();
-                    content.Append("\nTogether with the following term(s):\n");
+                    content.Append("\n\nTogether with the following term(s):\n\n");
                     foreach (var distinctBlameTerm in otherRequiredTerms)
                     {
                         distinctBlameTerm.PrettyPrint(content, format);
+                        content.Append('\n');
                     }
                 }
 
@@ -112,7 +113,40 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
 
                 // Quantifier body with highlights (if applicable)
-                previous.matchedPattern?.highlightTemporarily(format, Color.Coral);
+                if (previous.matchedPattern != null)
+                {
+                    previous.matchedPattern.highlightTemporarily(format, Color.Coral);
+                }
+                else
+                {
+                    previous.printNoMatchdisclaimer(content);
+                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+                    content.Append("\n\nBlamed terms:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var t in previous.Responsible)
+                    {
+                        content.Append("\n");
+                        t.PrettyPrint(content, format);
+                        content.Append("\n\n");
+                    }
+
+                    content.Append('\n');
+                    content.switchToDefaultFormat();
+                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+                    content.Append("Bound terms:\n\n");
+                    content.switchToDefaultFormat();
+                    foreach (var t in previous.Bindings)
+                    {
+                        content.Append("\n");
+                        t.PrettyPrint(content, format);
+                        content.Append("\n\n");
+                    }
+
+                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+                    content.Append("Quantifier Body:\n\n");
+                }
+                
                 previous.Quant.BodyTerm.PrettyPrint(content, format);
 
                 content.switchToDefaultFormat();
@@ -125,6 +159,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             if (current == null) return;
+
             // Quantifier info for last in chain
             content.switchToDefaultFormat();
             content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);

@@ -295,16 +295,21 @@ namespace Z3AxiomProfiler.PrettyPrinting
         public PrintRule getPrintRule(Term t)
         {
             if (t == null) return null;
-            if (printRuleDict.hasRule(t))
-            {
-                var rule = printRuleDict.getRewriteRule(t);
-                if ((rewritingEnabled || !rule.isUserdefined)
-                    && historyConstraintSatisfied(rule))
-                {
-                    return rule;
-                }
-            }
-            return PrintRule.DefaultRewriteRule(t, this);
+            // no rule -> default
+            if (!printRuleDict.hasRule(t)) return PrintRule.DefaultRewriteRule(t, this);
+
+            var rule = printRuleDict.getRewriteRule(t);
+
+            // userdefined & disabled --> default
+            if (!rewritingEnabled && rule.isUserdefined) return PrintRule.DefaultRewriteRule(t, this);
+            // history constraint ok --> rule ok
+            if(historyConstraintSatisfied(rule)) return rule;
+
+            // history constraint violated --> find less specific rules (but more specific than default)
+            if (printRuleDict.hasRule(t.Name + t.GenericType))
+                return printRuleDict.getRewriteRule(t.Name + t.GenericType);
+            return printRuleDict.hasRule(t.Name) ? 
+                printRuleDict.getRewriteRule(t.Name) : PrintRule.DefaultRewriteRule(t, this);
         }
 
         public PrintRule GetParentPrintRule()
