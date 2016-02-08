@@ -295,6 +295,7 @@ namespace Z3AxiomProfiler
 
             model = loader.GetModel();
             loadTree();
+            dagView.drawGraphNoFilterQuestion();
         }
 
         private void resetProfiler()

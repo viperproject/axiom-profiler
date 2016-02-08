@@ -6,7 +6,6 @@ using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Microsoft.Msagl.Layout.Layered;
-using Z3AxiomProfiler.PrettyPrinting;
 using Z3AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
@@ -20,7 +19,7 @@ namespace Z3AxiomProfiler
         private readonly Z3AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
         private Graph graph;
-        private static int newNodeWarningThreshold = 20;
+        private static int newNodeWarningThreshold = 40;
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
@@ -60,9 +59,29 @@ namespace Z3AxiomProfiler
 
         private void drawGraph()
         {
+            var newNodeInsts = _z3AxiomProfiler.model.instances
+                                       .Where(inst => inst.Depth <= maxRenderDepth.Value)
+                                       .OrderByDescending(inst => inst.Cost)
+                                       .ToList();
+
+            drawGraphWithInstantiations(newNodeInsts);
+        }
+
+        public void drawGraphNoFilterQuestion()
+        {
+            var newNodeInsts = _z3AxiomProfiler.model.instances
+                                       .Where(inst => inst.Depth <= maxRenderDepth.Value)
+                                       .OrderByDescending(inst => inst.Cost)
+                                       .Take(newNodeWarningThreshold)
+                                       .ToList();
+
+            drawGraphWithInstantiations(newNodeInsts);
+        }
+
+        private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts)
+        {
             colorMap.Clear();
             currColorIdx = 0;
-            Text = $"Instantiations dependencies [{maxRenderDepth.Value} levels]";
 
             var edgeRoutingSettings = new EdgeRoutingSettings
             {
@@ -82,9 +101,6 @@ namespace Z3AxiomProfiler
                 LayoutAlgorithmSettings = layoutSettings
             };
 
-            var newNodeInsts = _z3AxiomProfiler.model.instances
-                                    .Where(inst => inst.Depth <= maxRenderDepth.Value)
-                                    .ToList();
             if (checkNumNodesWithDialog(ref newNodeInsts)) return;
 
             foreach (var node in newNodeInsts.Select(connectToVisibleNodes))
@@ -129,12 +145,6 @@ namespace Z3AxiomProfiler
             currColorIdx++;
             return colorMap[quant];
         }
-
-        private void DAGView_Load(object sender, EventArgs e)
-        {
-            drawGraph();
-        }
-
 
         private int oldX = -1;
         private int oldY = -1;

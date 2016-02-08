@@ -65,7 +65,7 @@
             this.maxDepthUpDown.Size = new System.Drawing.Size(58, 20);
             this.maxDepthUpDown.TabIndex = 1;
             this.maxDepthUpDown.Value = new decimal(new int[] {
-            10,
+            20,
             0,
             0,
             0});
@@ -136,7 +136,7 @@
             this.maxNewNodesUpDown.Size = new System.Drawing.Size(71, 20);
             this.maxNewNodesUpDown.TabIndex = 2;
             this.maxNewNodesUpDown.Value = new decimal(new int[] {
-            20,
+            40,
             0,
             0,
             0});
