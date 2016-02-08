@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -134,6 +135,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 if (currentPatternTerm.id == -1)
                 {
                     // this is a free variable
+                    // todo: Bug!!
                     if (bindingDict.ContainsKey(currentTerm))
                     {
                         Debug.Assert(bindingDict[currentTerm].Item1 != currentPatternTerm);
@@ -156,6 +158,106 @@ namespace Z3AxiomProfiler.QuantifierModel
                     currentTerm.Args.Length != currentPatternTerm.Args.Length)
                 {
                     // pattern does not match -> abort
+                    return false;
+                }
+
+                for (var i = 0; i < currentPatternTerm.Args.Length; i++)
+                {
+                    patternTermsToCheck.Push(currentPatternTerm.Args[i]);
+                    subtermsToCheck.Push(currentTerm.Args[i]);
+                }
+            }
+
+            return true;
+        }
+
+
+        // matches greedily!
+        public bool matchPartiallyUsingBindings(Term pattern, ICollection<Term> boundTerms,
+            out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        {
+            var patternTraversal = new Queue<Term>();
+            patternTraversal.Enqueue(pattern);
+            while (patternTraversal.Count > 0)
+            {
+                var currentSubPattern = patternTraversal.Dequeue();
+                if (currentSubPattern.Name == Name &&
+                    matchUsingBindings(currentSubPattern, boundTerms, out bindingDict)) return true;
+
+                // try children
+                foreach (var arg in currentSubPattern.Args)
+                {
+                    patternTraversal.Enqueue(arg);
+                }
+            }
+
+            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            return false;
+        }
+
+        // match while verifying with known, bound terms
+        private bool matchUsingBindings(Term patternTerm, ICollection<Term> boundTerms, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        {
+            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            var patternTermsToCheck = new Stack<Term>();
+            patternTermsToCheck.Push(patternTerm);
+            var subtermsToCheck = new Stack<Term>();
+            subtermsToCheck.Push(this);
+
+            var history = new Stack<Term>();
+            var visited = new HashSet<Term>();
+            while (patternTermsToCheck.Count > 0)
+            {
+                var currentPatternTerm = patternTermsToCheck.Peek();
+                var currentTerm = subtermsToCheck.Peek();
+
+                // backtrack
+                if (visited.Contains(currentTerm))
+                {
+                    patternTermsToCheck.Pop();
+                    subtermsToCheck.Pop();
+                    if (currentPatternTerm.id != -1) history.Pop();
+                    continue;
+                }
+
+                visited.Add(currentTerm);
+
+                // check if free variable
+                if (currentPatternTerm.id == -1)
+                {
+                    if (boundTerms.All(term => term.id != currentTerm.id))
+                    {
+                        // this is not a valid binding
+                        bindingDict.Clear();
+                        return false;
+                    }
+
+                    var historyConstraint = history.ToList();
+                    historyConstraint.Reverse();
+
+                    if (bindingDict.ContainsKey(currentPatternTerm))
+                    {
+                        // the same thing is bound in different locations.
+                        Debug.Assert(bindingDict[currentPatternTerm].Item1 == currentTerm);
+                        bindingDict[currentPatternTerm].Item2.Add(historyConstraint.ToList());
+                    }
+                    else
+                    {
+                        var tuple = new Tuple<Term, List<List<Term>>>(currentTerm, new List<List<Term>>());
+                        tuple.Item2.Add(historyConstraint);
+                        bindingDict.Add(currentPatternTerm, tuple);
+                    }
+                    continue;
+                }
+
+                history.Push(currentTerm);
+
+                if (currentTerm.Name != currentPatternTerm.Name ||
+                    currentTerm.GenericType != currentPatternTerm.GenericType ||
+                    currentTerm.Args.Length != currentPatternTerm.Args.Length)
+                {
+                    // this does not match
+                    bindingDict.Clear();
                     return false;
                 }
 
@@ -390,90 +492,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("\nIdentifier: " + id).Append('\n');
             content.Append("Number of Children: " + Args.Length).Append('\n');
-        }
-
-        public bool matchesPattern(Term pattern, out List<List<Term>> historyConstraints)
-        {
-            historyConstraints = new List<List<Term>>();
-            var possibleStartPoints = new List<Tuple<Term, List<Term>>>();
-            var todo = new Stack<Term>();
-            todo.Push(pattern);
-
-            // find entry point, if this term is a subterm of the pattern
-            var currentPath = new List<Term>();
-            while (todo.Count > 0)
-            {
-                var current = todo.Pop();
-                if (current.Name != "Pattern")
-                {
-                    // we do not want the pattern term in the history constraint.
-                    currentPath.Add(current);
-                }
-
-
-                if (current.Args.Length > 0 && current.Name != Name)
-                {
-                    foreach (var child in current.Args)
-                    {
-                        todo.Push(child);
-                    }
-                    continue;
-                }
-
-                // possible match candidate
-                if (current.Name == Name)
-                {
-                    possibleStartPoints.Add(new Tuple<Term, List<Term>>(current, new List<Term>(currentPath)));
-                }
-
-                // backtrack
-                currentPath.RemoveAt(currentPath.Count - 1);
-            }
-
-            // check if stuff below matches as well.
-            foreach (var startPoint in possibleStartPoints)
-            {
-                var patternTraversalStack = new Stack<Term>();
-                patternTraversalStack.Push(startPoint.Item1);
-                var thisTraversalStack = new Stack<Term>();
-                thisTraversalStack.Push(this);
-                var match = true;
-
-                while (patternTraversalStack.Count > 0)
-                {
-                    var current = patternTraversalStack.Pop();
-                    var thisCurrent = thisTraversalStack.Pop();
-
-                    if (current.id == -1)
-                    {
-                        // free variable
-                        continue;
-                    }
-
-                    if (current.Name != thisCurrent.Name ||
-                        current.GenericType != thisCurrent.GenericType ||
-                        current.Args.Length != thisCurrent.Args.Length)
-                    {
-                        // does not match!
-                        match = false;
-                        break;
-                    }
-
-                    for (var i = 0; i < current.Args.Length; i++)
-                    {
-                        patternTraversalStack.Push(current.Args[i]);
-                        thisTraversalStack.Push(thisCurrent.Args[i]);
-                    }
-                }
-
-                if (match)
-                {
-                    // match given the recorded history
-                    historyConstraints.Add(startPoint.Item2);
-                }
-            }
-
-            return historyConstraints.Count > 0;
         }
     }
 }

@@ -269,6 +269,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         private void processPattern()
         {
             if (didPatternMatch) return;
+
             var bindingInfos = new List<Dictionary<Term, Tuple<Term, List<List<Term>>>>>();
             foreach (var pattern in Quant.Patterns())
             {
@@ -288,11 +289,82 @@ namespace Z3AxiomProfiler.QuantifierModel
                 _matchedPattern = null;
                 isAmbiguous = true;
             }
-            else if(bindingInfos.Count == 1)
+            else if (bindingInfos.Count == 1)
             {
                 _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
             }
+            else
+            {
+                // try this totally new startegy ;-)
+                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
+                foreach (var blameTerm in getBlameTermsContainigBoundVars())
+                {
+                    blameTerm.matchPartiallyUsingBindings(Quant.Patterns()[0], Bindings, out currBind);
+                }
+            }
             didPatternMatch = true;
+        }
+
+
+        private void tryMatch(Term pattern)
+        {
+            Dictionary<Term, Tuple<Term, List<List<Term>>>> bindings;
+            List<Term> validateTerms;
+
+            if (inferBindings(pattern, out bindings, out validateTerms))
+            {
+                // collect equalities
+                foreach (var validateTerm in validateTerms)
+                {
+                    
+                }
+            }
+
+        }
+
+        private bool inferBindings(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindings, out List<Term> validateTerms)
+        {
+            bindings = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            validateTerms = new List<Term>();
+            foreach (var matchTerm in Responsible.OrderBy(term => term.size))
+            {
+                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
+
+                if (!matchTerm.matchPartiallyUsingBindings(pattern, Bindings, out currBind))
+                {
+                    validateTerms.Add(matchTerm);
+                }
+                if (!mergeBindings(bindings, currBind)) return false;
+            }
+            return true;
+        }
+
+        private static bool mergeBindings(Dictionary<Term, Tuple<Term, List<List<Term>>>> dict1,
+            IDictionary<Term, Tuple<Term, List<List<Term>>>> dict2)
+        {
+            foreach (var keyValuePair in dict2)
+            {
+                if (dict1.ContainsKey(keyValuePair.Key))
+                {
+                    var term1 = dict1[keyValuePair.Key].Item1;
+                    var term2 = keyValuePair.Value.Item1;
+
+                    // check if the thing already bound to the free variable is consistent.
+                    if (term1.id != term2.id) return false;
+
+                    // consistent, merge history constraints (e.g. add all histories)
+                    dict1[keyValuePair.Key].Item2
+                        .AddRange(keyValuePair.Value.Item2);
+                }
+
+                dict1.Add(keyValuePair.Key, keyValuePair.Value);
+            }
+            return true;
+        }
+
+        private IEnumerable<Term> getBlameTermsContainigBoundVars()
+        {
+            return Responsible.Where(term => Bindings.Any(term.isSubterm)).OrderByDescending(term => term.size);
         }
 
 
