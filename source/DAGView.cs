@@ -59,6 +59,7 @@ namespace Z3AxiomProfiler
 
         private void drawGraph()
         {
+            if (_z3AxiomProfiler.model == null) return;
             var newNodeInsts = _z3AxiomProfiler.model.instances
                                        .Where(inst => inst.Depth <= maxRenderDepth.Value)
                                        .OrderByDescending(inst => inst.Cost)

@@ -9,14 +9,13 @@ namespace Z3AxiomProfiler.PrettyPrinting
 {
     public class PrintRuleDictionary
     {
-        private readonly Dictionary<int, PrintRule> specificTermTranslations = new Dictionary<int, PrintRule>();
         private readonly Dictionary<string, PrintRule> termTranslations = new Dictionary<string, PrintRule>();
 
         public PrintRule getRewriteRule(Term t)
         {
-            if (specificTermTranslations.ContainsKey(t.id))
+            if (termTranslations.ContainsKey(t.id + ""))
             {
-                return specificTermTranslations[t.id];
+                return termTranslations[t.id + ""];
             }
             if (termTranslations.ContainsKey(t.Name + t.GenericType))
             {
@@ -31,12 +30,6 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public PrintRule getRewriteRule(string match)
         {
-
-            int id;
-            if (int.TryParse(match, out id) && specificTermTranslations.ContainsKey(id))
-            {
-                return specificTermTranslations[id];
-            }
             if (termTranslations.ContainsKey(match))
             {
                 return termTranslations[match];
@@ -46,7 +39,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public string getMatch(Term t)
         {
-            if (specificTermTranslations.ContainsKey(t.id))
+            if (termTranslations.ContainsKey(t.id + ""))
             {
                 return t.id + "";
             }
@@ -73,48 +66,45 @@ namespace Z3AxiomProfiler.PrettyPrinting
 
         public bool hasRule(Term t)
         {
-            return specificTermTranslations.ContainsKey(t.id) ||
+            return termTranslations.ContainsKey(t.id + "") ||
                 termTranslations.ContainsKey(t.Name + t.GenericType) ||
                 termTranslations.ContainsKey(t.Name);
         }
 
         public bool hasRule(string ruleMatch)
         {
-            int id;
-            return int.TryParse(ruleMatch, out id) ?
-                specificTermTranslations.ContainsKey(id) :
-                termTranslations.ContainsKey(ruleMatch);
+            return termTranslations.ContainsKey(ruleMatch);
         }
 
         public void removeRule(string ruleMatch)
         {
-            int id;
-            if (int.TryParse(ruleMatch, out id))
-            {
-                specificTermTranslations.Remove(id);
-            }
             termTranslations.Remove(ruleMatch);
         }
 
         public void addRule(string ruleMatch, PrintRule rule)
         {
-            int id;
-            if (int.TryParse(ruleMatch, out id))
-            {
-                specificTermTranslations[id] = rule;
-            }
-            else
-            {
-                termTranslations[ruleMatch] = rule;
-            }
+            termTranslations[ruleMatch] = rule;
         }
 
         public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
         {
-            return specificTermTranslations
-                .OrderBy(kvPair => kvPair.Key)
-                .Select(translation => new KeyValuePair<string, PrintRule>(translation.Key + "", translation.Value))
-                .Concat(termTranslations.OrderBy(kvPair => kvPair.Key));
+            return termTranslations.OrderBy(kvPair => kvPair.Key);
+        }
+
+        public PrintRuleDictionary()
+        {
+        }
+
+
+        private PrintRuleDictionary(PrintRuleDictionary other)
+        {
+            termTranslations = new Dictionary<string, PrintRule>(other.termTranslations);
+        }
+
+        public PrintRuleDictionary clone()
+        {
+            var dict = new PrintRuleDictionary(this);
+            return dict;
         }
     }
 
@@ -303,12 +293,12 @@ namespace Z3AxiomProfiler.PrettyPrinting
             // userdefined & disabled --> default
             if (!rewritingEnabled && rule.isUserdefined) return PrintRule.DefaultRewriteRule(t, this);
             // history constraint ok --> rule ok
-            if(historyConstraintSatisfied(rule)) return rule;
+            if (historyConstraintSatisfied(rule)) return rule;
 
             // history constraint violated --> find less specific rules (but more specific than default)
             if (printRuleDict.hasRule(t.Name + t.GenericType))
                 return printRuleDict.getRewriteRule(t.Name + t.GenericType);
-            return printRuleDict.hasRule(t.Name) ? 
+            return printRuleDict.hasRule(t.Name) ?
                 printRuleDict.getRewriteRule(t.Name) : PrintRule.DefaultRewriteRule(t, this);
         }
 

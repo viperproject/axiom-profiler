@@ -625,7 +625,7 @@ namespace Z3AxiomProfiler
                 maxWidth = (int)maxTermWidthUD.Value,
                 maxDepth = (int)maxTermDepthUD.Value,
                 rewritingEnabled = enableRewritingCB.Checked,
-                printRuleDict = printRuleDict
+                printRuleDict = printRuleDict.clone()
             };
         }
 
@@ -731,13 +731,6 @@ namespace Z3AxiomProfiler
                 var fInfo = parameterConfiguration?.preludeBplFileInfo;
                 GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
             }
-        }
-
-        private void instantiationGraphToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (model == null) return;
-            var dagView = new DAGView(this);
-            dagView.Show();
         }
 
         private void showTypesCB_CheckedChanged(object sender, EventArgs e)

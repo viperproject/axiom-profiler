@@ -41,7 +41,6 @@
             this.colorVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchTreeVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.quantifierBlameVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.instantiationGraphToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cSVToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
@@ -145,7 +144,6 @@
             this.colorVisualizationToolStripMenuItem,
             this.searchTreeVisualizationToolStripMenuItem,
             this.quantifierBlameVisualizationToolStripMenuItem,
-            this.instantiationGraphToolStripMenuItem,
             this.toolStripSeparator1,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -205,13 +203,6 @@
             this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
             this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
             this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
-            // 
-            // instantiationGraphToolStripMenuItem
-            // 
-            this.instantiationGraphToolStripMenuItem.Name = "instantiationGraphToolStripMenuItem";
-            this.instantiationGraphToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.instantiationGraphToolStripMenuItem.Text = "Instantiation Graph";
-            this.instantiationGraphToolStripMenuItem.Click += new System.EventHandler(this.instantiationGraphToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
@@ -455,7 +446,6 @@
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem1;
         private System.Windows.Forms.MenuStrip menuStrip1;
-        private System.Windows.Forms.ToolStripMenuItem instantiationGraphToolStripMenuItem;
         private System.Windows.Forms.Panel toolsPanel;
         private System.Windows.Forms.NumericUpDown maxTermWidthUD;
         private System.Windows.Forms.Label widthLabel;
