@@ -293,14 +293,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
             }
-            else
+            else if(Quant.Patterns().Count == 1)
             {
                 // try this totally new startegy ;-)
-                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
-                foreach (var blameTerm in getBlameTermsContainigBoundVars())
-                {
-                    blameTerm.matchPartiallyUsingBindings(Quant.Patterns()[0], Bindings, out currBind);
-                }
+                tryMatch(Quant.Patterns()[0]);
             }
             didPatternMatch = true;
         }
@@ -308,63 +304,61 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void tryMatch(Term pattern)
         {
-            Dictionary<Term, Tuple<Term, List<List<Term>>>> bindings;
-            List<Term> validateTerms;
 
-            if (inferBindings(pattern, out bindings, out validateTerms))
+            List<BindingInfo> results = feasibleBindingInfos(pattern).ToList();
+            // todo: if multiple feasible results -> validate!!
+            if (results.Count == 1)
             {
-                // collect equalities
-                foreach (var validateTerm in validateTerms)
-                {
-                    
-                }
+                
             }
-
         }
 
-        private bool inferBindings(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindings, out List<Term> validateTerms)
+        private IEnumerable<BindingInfo> feasibleBindingInfos(Term pattern)
         {
-            bindings = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            validateTerms = new List<Term>();
-            foreach (var matchTerm in Responsible.OrderBy(term => term.size))
+            var result = allBindingPossibilities(pattern).ToArray();
+            var enums = new IEnumerator<BindingInfo>[result.Length];
+            for (var i = 0; i < result.Length; i++)
             {
-                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
-
-                if (!matchTerm.matchPartiallyUsingBindings(pattern, Bindings, out currBind))
-                {
-                    validateTerms.Add(matchTerm);
-                }
-                if (!mergeBindings(bindings, currBind)) return false;
+                enums[i] = result[i].GetEnumerator();
             }
-            return true;
-        }
 
-        private static bool mergeBindings(Dictionary<Term, Tuple<Term, List<List<Term>>>> dict1,
-            IDictionary<Term, Tuple<Term, List<List<Term>>>> dict2)
-        {
-            foreach (var keyValuePair in dict2)
+            var index = 0;
+            while (index < result.Length)
             {
-                if (dict1.ContainsKey(keyValuePair.Key))
+                var currBindingInfo = new BindingInfo();
+
+                // try to merge across all bound terms
+                if (enums.All(enumerator => currBindingInfo.merge(enumerator.Current, Bindings)))
                 {
-                    var term1 = dict1[keyValuePair.Key].Item1;
-                    var term2 = keyValuePair.Value.Item1;
-
-                    // check if the thing already bound to the free variable is consistent.
-                    if (term1.id != term2.id) return false;
-
-                    // consistent, merge history constraints (e.g. add all histories)
-                    dict1[keyValuePair.Key].Item2
-                        .AddRange(keyValuePair.Value.Item2);
+                    // merge success
+                    if (currBindingInfo.bindings.Count == Bindings.Length &&
+                        currBindingInfo.bindings.Values.All(term => Bindings.Any(bdng => bdng.id == term.id)))
+                    {
+                        // all free variables are bound.
+                        yield return currBindingInfo;
+                    }
                 }
 
-                dict1.Add(keyValuePair.Key, keyValuePair.Value);
+                // advance to next configuration
+                var resetPrevious = false;
+                while (index < enums.Length && !enums[index].MoveNext())
+                {
+                    index++;
+                    resetPrevious = true;
+                }
+                if (index == result.Length || !resetPrevious) continue;
+                // reset the previous enumerators
+                for (var j = 0; j < index; j++)
+                {
+                    enums[j] = result[j].GetEnumerator();
+                }
+                index = 0;
             }
-            return true;
         }
 
-        private IEnumerable<Term> getBlameTermsContainigBoundVars()
+        private List<List<BindingInfo>> allBindingPossibilities(Term pattern)
         {
-            return Responsible.Where(term => Bindings.Any(term.isSubterm)).OrderByDescending(term => term.size);
+            return getDistinctBlameTerms().Select(blameTerm => blameTerm.matchPartiallyUsingBindings(pattern, Bindings)).ToList();
         }
 
 

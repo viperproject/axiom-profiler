@@ -171,34 +171,36 @@ namespace Z3AxiomProfiler.QuantifierModel
             return true;
         }
 
-
-        // matches greedily!
-        public bool matchPartiallyUsingBindings(Term pattern, ICollection<Term> boundTerms,
-            out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        public List<BindingInfo> matchPartiallyUsingBindings(Term pattern, ICollection<Term> boundTerms)
         {
+            var bindingInfos = new List<BindingInfo>();
             var patternTraversal = new Queue<Term>();
             patternTraversal.Enqueue(pattern);
             while (patternTraversal.Count > 0)
             {
                 var currentSubPattern = patternTraversal.Dequeue();
-                if (currentSubPattern.Name == Name &&
-                    matchUsingBindings(currentSubPattern, boundTerms, out bindingDict)) return true;
+                var bindingInfo = matchUsingBindings(currentSubPattern, boundTerms);
+
+                if (bindingInfo != null)
+                {
+                    bindingInfos.Add(bindingInfo);
+                }
 
                 // try children
-                foreach (var arg in currentSubPattern.Args)
+                foreach (var arg in currentSubPattern.Args.Where(arg => arg.id != -1))
                 {
                     patternTraversal.Enqueue(arg);
                 }
             }
 
-            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            return false;
+            return bindingInfos;
         }
 
         // match while verifying with known, bound terms
-        private bool matchUsingBindings(Term patternTerm, ICollection<Term> boundTerms, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
+        private BindingInfo matchUsingBindings(Term patternTerm, ICollection<Term> boundTerms)
         {
-            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            var matchinfo = new BindingInfo();
+
             var patternTermsToCheck = new Stack<Term>();
             patternTermsToCheck.Push(patternTerm);
             var subtermsToCheck = new Stack<Term>();
@@ -225,27 +227,24 @@ namespace Z3AxiomProfiler.QuantifierModel
                 // check if free variable
                 if (currentPatternTerm.id == -1)
                 {
+                    /*
                     if (boundTerms.All(term => term.id != currentTerm.id))
                     {
                         // this is not a valid binding
-                        bindingDict.Clear();
-                        return false;
+                        return null;
                     }
+                    */
 
                     var historyConstraint = history.ToList();
                     historyConstraint.Reverse();
 
-                    if (bindingDict.ContainsKey(currentPatternTerm))
+                    if (matchinfo.addBinding(currentPatternTerm, currentTerm))
                     {
-                        // the same thing is bound in different locations.
-                        Debug.Assert(bindingDict[currentPatternTerm].Item1 == currentTerm);
-                        bindingDict[currentPatternTerm].Item2.Add(historyConstraint.ToList());
+                        matchinfo.addHistoryConstraint(currentTerm, historyConstraint);
                     }
                     else
                     {
-                        var tuple = new Tuple<Term, List<List<Term>>>(currentTerm, new List<List<Term>>());
-                        tuple.Item2.Add(historyConstraint);
-                        bindingDict.Add(currentPatternTerm, tuple);
+                        return null;
                     }
                     continue;
                 }
@@ -257,8 +256,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     currentTerm.Args.Length != currentPatternTerm.Args.Length)
                 {
                     // this does not match
-                    bindingDict.Clear();
-                    return false;
+                    return null;
                 }
 
                 for (var i = 0; i < currentPatternTerm.Args.Length; i++)
@@ -268,7 +266,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
             }
 
-            return true;
+            return matchinfo;
         }
 
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format)

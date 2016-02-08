@@ -166,6 +166,7 @@
     <Compile Include="QuantifierModel\Literal.cs" />
     <Compile Include="QuantifierModel\Model.cs" />
     <Compile Include="QuantifierModel\Partition.cs" />
+    <Compile Include="QuantifierModel\BindingInfo.cs" />
     <Compile Include="QuantifierModel\Quantifier.cs" />
     <Compile Include="QuantifierModel\Scope.cs" />
     <Compile Include="QuantifierModel\Term.cs" />
