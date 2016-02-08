@@ -32,11 +32,6 @@
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.toolTipBox = new System.Windows.Forms.RichTextBox();
             this.z3AxiomTree = new System.Windows.Forms.TreeView();
-            this.InstantiationPathView = new System.Windows.Forms.ListView();
-            this.DepthHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.PrintNameHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.QIdHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.InstancesCountHeader = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadZ3TraceLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.profileZ3TraceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -67,7 +62,6 @@
             this.widthLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
-            this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
             this.splitContainer2.Panel1.SuspendLayout();
@@ -90,10 +84,6 @@
             // splitContainer1.Panel1
             // 
             this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
-            // 
-            // splitContainer1.Panel2
-            // 
-            this.splitContainer1.Panel2.Controls.Add(this.InstantiationPathView);
             this.splitContainer1.Size = new System.Drawing.Size(1184, 655);
             this.splitContainer1.SplitterDistance = 894;
             this.splitContainer1.TabIndex = 3;
@@ -142,46 +132,6 @@
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
             this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);
             this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
-            // 
-            // InstantiationPathView
-            // 
-            this.InstantiationPathView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.DepthHeader,
-            this.PrintNameHeader,
-            this.QIdHeader,
-            this.InstancesCountHeader});
-            this.InstantiationPathView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.InstantiationPathView.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.InstantiationPathView.FullRowSelect = true;
-            this.InstantiationPathView.Location = new System.Drawing.Point(0, 0);
-            this.InstantiationPathView.MultiSelect = false;
-            this.InstantiationPathView.Name = "InstantiationPathView";
-            this.InstantiationPathView.Size = new System.Drawing.Size(286, 655);
-            this.InstantiationPathView.TabIndex = 2;
-            this.InstantiationPathView.UseCompatibleStateImageBehavior = false;
-            this.InstantiationPathView.View = System.Windows.Forms.View.Details;
-            this.InstantiationPathView.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.PathItemClick);
-            this.InstantiationPathView.Enter += new System.EventHandler(this.InstantiationPathView_Enter);
-            // 
-            // DepthHeader
-            // 
-            this.DepthHeader.Text = "Depth";
-            this.DepthHeader.Width = 50;
-            // 
-            // PrintNameHeader
-            // 
-            this.PrintNameHeader.Text = "Print Name";
-            this.PrintNameHeader.Width = 130;
-            // 
-            // QIdHeader
-            // 
-            this.QIdHeader.Text = "QId";
-            this.QIdHeader.Width = 200;
-            // 
-            // InstancesCountHeader
-            // 
-            this.InstancesCountHeader.Text = "#Instances Total";
-            this.InstancesCountHeader.Width = 150;
             // 
             // fileToolStripMenuItem
             // 
@@ -464,7 +414,6 @@
             this.Text = "Z3 Axiom Profiler";
             this.Load += new System.EventHandler(this.Z3AxiomProfiler_OnLoadEvent);
             this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
             this.splitContainer2.Panel1.ResumeLayout(false);
@@ -485,12 +434,7 @@
         #endregion
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.RichTextBox toolTipBox;
-        private System.Windows.Forms.ListView InstantiationPathView;
         private System.Windows.Forms.SplitContainer splitContainer2;
-        private System.Windows.Forms.ColumnHeader PrintNameHeader;
-        private System.Windows.Forms.ColumnHeader DepthHeader;
-        private System.Windows.Forms.ColumnHeader InstancesCountHeader;
-        private System.Windows.Forms.ColumnHeader QIdHeader;
         private System.Windows.Forms.TreeView z3AxiomTree;
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadZ3TraceLogToolStripMenuItem;

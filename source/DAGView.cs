@@ -14,7 +14,7 @@ using Size = System.Drawing.Size;
 
 namespace Z3AxiomProfiler
 {
-    public partial class DAGView : Form
+    public partial class DAGView : UserControl
     {
 
         private readonly Z3AxiomProfiler _z3AxiomProfiler;

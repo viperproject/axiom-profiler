@@ -167,13 +167,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             current.matchedPattern?.highlightTemporarily(format, Color.Coral);
             current.Quant.BodyTerm.PrettyPrint(content, format);
 
+            format.restoreAllOriginalRules();
             content.switchToDefaultFormat();
             content.Append("\n\nThis instantiation yields:\n\n");
             if (previous.dependentTerms.Last() != null)
             {
                 previous.dependentTerms.Last().PrettyPrint(content, format);
             }
-            format.restoreAllOriginalRules();
         }
 
         public IEnumerable<Instantiation> getInstantiations()

@@ -57,12 +57,12 @@
             this.panel1.Controls.Add(this.maxRenderDepth);
             this.panel1.Location = new System.Drawing.Point(0, 0);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(777, 27);
+            this.panel1.Size = new System.Drawing.Size(538, 60);
             this.panel1.TabIndex = 1;
             // 
             // pathExplanationButton
             // 
-            this.pathExplanationButton.Location = new System.Drawing.Point(694, 2);
+            this.pathExplanationButton.Location = new System.Drawing.Point(295, 32);
             this.pathExplanationButton.Name = "pathExplanationButton";
             this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
             this.pathExplanationButton.TabIndex = 7;
@@ -72,7 +72,7 @@
             // 
             // sourceTreeButton
             // 
-            this.sourceTreeButton.Location = new System.Drawing.Point(583, 2);
+            this.sourceTreeButton.Location = new System.Drawing.Point(95, 31);
             this.sourceTreeButton.Name = "sourceTreeButton";
             this.sourceTreeButton.Size = new System.Drawing.Size(105, 23);
             this.sourceTreeButton.TabIndex = 6;
@@ -92,7 +92,7 @@
             // 
             // showChainButton
             // 
-            this.showChainButton.Location = new System.Drawing.Point(452, 2);
+            this.showChainButton.Location = new System.Drawing.Point(274, 3);
             this.showChainButton.Name = "showChainButton";
             this.showChainButton.Size = new System.Drawing.Size(125, 23);
             this.showChainButton.TabIndex = 5;
@@ -102,7 +102,7 @@
             // 
             // showChildrenButton
             // 
-            this.showChildrenButton.Location = new System.Drawing.Point(363, 2);
+            this.showChildrenButton.Location = new System.Drawing.Point(206, 32);
             this.showChildrenButton.Name = "showChildrenButton";
             this.showChildrenButton.Size = new System.Drawing.Size(83, 23);
             this.showChildrenButton.TabIndex = 4;
@@ -112,7 +112,7 @@
             // 
             // showParentsButton
             // 
-            this.showParentsButton.Location = new System.Drawing.Point(274, 2);
+            this.showParentsButton.Location = new System.Drawing.Point(6, 31);
             this.showParentsButton.Name = "showParentsButton";
             this.showParentsButton.Size = new System.Drawing.Size(83, 23);
             this.showParentsButton.TabIndex = 3;
@@ -163,13 +163,9 @@
             // 
             // DAGView
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(777, 485);
             this.Controls.Add(this.panel1);
             this.Name = "DAGView";
-            this.Text = "DAGView";
-            this.Load += new System.EventHandler(this.DAGView_Load);
+            this.Size = new System.Drawing.Size(538, 485);
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxRenderDepth)).EndInit();

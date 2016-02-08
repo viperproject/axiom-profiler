@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -54,6 +53,7 @@ namespace Z3AxiomProfiler
         public Z3AxiomProfiler()
         {
             InitializeComponent();
+            splitContainer1.Panel2.Controls.Add(new DAGView(this));
             uiUpdateTimer.Interval = 5;
             uiUpdateTimer.Tick += treeUiUpdateTimerTick;
             uiUpdateTimer.Tick += InfoPanelUpdateTick;
@@ -300,7 +300,6 @@ namespace Z3AxiomProfiler
             // reset everything
             model = null;
             z3AxiomTree.Nodes.Clear();
-            InstantiationPathView.Items.Clear();
             toolTipBox.Clear();
             printRuleDict = new PrintRuleDictionary();
             expanded.Clear();
@@ -594,7 +593,7 @@ namespace Z3AxiomProfiler
             Instantiation inst = c as Instantiation;
             if (inst != null)
             {
-                SetInstantiationPath(inst);
+                // maybe highlight in graph?
             }
         }
 
@@ -656,36 +655,6 @@ namespace Z3AxiomProfiler
             }
         }
 
-        private void SetInstantiationPath(Instantiation inst)
-        {
-            // delete old content
-            InstantiationPathView.BeginUpdate();
-            InstantiationPathView.Items.Clear();
-            List<Instantiation> instantiationPath = model.LongestPathWithInstantiation(inst);
-            foreach (Instantiation i in instantiationPath)
-            {
-                ListViewItem item = new ListViewItem
-                {
-                    Text = i.Depth.ToString(),
-                    Name = $"Quantifier Instantiation @{i.LineNo}",
-                    Tag = i
-                };
-                item.SubItems.Add(i.Quant.PrintName);
-                item.SubItems.Add(i.Quant.Qid);
-                item.SubItems.Add(i.Quant.Instances.Count.ToString());
-
-                InstantiationPathView.Items.Add(item);
-
-
-                if (i != inst) continue;
-
-                item.BackColor = Color.GreenYellow;
-                item.Focused = true;
-                item.EnsureVisible();
-            }
-            InstantiationPathView.EndUpdate();
-        }
-
         void Search()
         {
             var searchBox = new SearchBox(this);
@@ -738,20 +707,6 @@ namespace Z3AxiomProfiler
             searchTree.Show();
         }
 
-        private void PathItemClick(object sender, ListViewItemSelectionChangedEventArgs e)
-        {
-            Common c = e.Item.Tag as Common;
-            if (c != null)
-            {
-                SetInfoPanel(c);
-            }
-            var inst = c as Instantiation;
-            if (inst != null)
-            {
-                addInstantiationToHistory(inst);
-            }
-        }
-
         private bool isLastInHistory(Instantiation inst)
         {
             if (historyNode.Nodes.Count == 0) return false;
@@ -763,13 +718,6 @@ namespace Z3AxiomProfiler
             TreeNode t = z3AxiomTree.SelectedNode;
             if (t == null) return;
             Common c = t.Tag as Common;
-            SetInfoPanel(c);
-        }
-
-        private void InstantiationPathView_Enter(object sender, EventArgs e)
-        {
-            if (InstantiationPathView.SelectedItems.Count <= 0) return;
-            var c = InstantiationPathView.SelectedItems[0].Tag as Common;
             SetInfoPanel(c);
         }
 
