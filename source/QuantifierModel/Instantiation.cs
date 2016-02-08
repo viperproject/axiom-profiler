@@ -307,10 +307,20 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             List<BindingInfo> results = feasibleBindingInfos(pattern).ToList();
             // todo: if multiple feasible results -> validate!!
-            if (results.Count == 1)
+            if (results.Count != 1) return;
+
+            // we were lucky :-)
+            _freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
+            _matchedPattern = pattern;
+            isAmbiguous = false;
+            var bindingInfo = results[0];
+            foreach (var binding in bindingInfo.bindings)
             {
-                
+                var resultTuple = new Tuple<Term, List<List<Term>>>(binding.Value, bindingInfo.highlightingInfo[binding.Value]);
+                _freeVariableToBindingsAndPathConstraints[binding.Key] = resultTuple;
             }
+            equalityInformation.Clear();
+            equalityInformation.AddRange(bindingInfo.equalities);
         }
 
         private IEnumerable<BindingInfo> feasibleBindingInfos(Term pattern)

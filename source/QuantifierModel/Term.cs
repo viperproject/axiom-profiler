@@ -256,7 +256,12 @@ namespace Z3AxiomProfiler.QuantifierModel
                     currentTerm.Args.Length != currentPatternTerm.Args.Length)
                 {
                     // this does not match
-                    return null;
+
+                    // todo: handle this case properly
+                    // add equality, obviously^^
+                    matchinfo.equalities.Add(new Tuple<Term, Term>(currentTerm, currentPatternTerm));
+                    // do not add children, this has all kinds of other problems
+                    continue;
                 }
 
                 for (var i = 0; i < currentPatternTerm.Args.Length; i++)
