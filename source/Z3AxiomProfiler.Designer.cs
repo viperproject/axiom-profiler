@@ -84,8 +84,9 @@
             // splitContainer1.Panel1
             // 
             this.splitContainer1.Panel1.Controls.Add(this.splitContainer2);
+            this.splitContainer1.Panel2MinSize = 400;
             this.splitContainer1.Size = new System.Drawing.Size(1184, 655);
-            this.splitContainer1.SplitterDistance = 894;
+            this.splitContainer1.SplitterDistance = 779;
             this.splitContainer1.TabIndex = 3;
             // 
             // splitContainer2
@@ -101,8 +102,8 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.z3AxiomTree);
-            this.splitContainer2.Size = new System.Drawing.Size(894, 655);
-            this.splitContainer2.SplitterDistance = 281;
+            this.splitContainer2.Size = new System.Drawing.Size(779, 655);
+            this.splitContainer2.SplitterDistance = 359;
             this.splitContainer2.TabIndex = 3;
             // 
             // toolTipBox
@@ -114,7 +115,7 @@
             this.toolTipBox.Location = new System.Drawing.Point(0, 0);
             this.toolTipBox.Name = "toolTipBox";
             this.toolTipBox.ReadOnly = true;
-            this.toolTipBox.Size = new System.Drawing.Size(281, 655);
+            this.toolTipBox.Size = new System.Drawing.Size(359, 655);
             this.toolTipBox.TabIndex = 0;
             this.toolTipBox.Text = "";
             this.toolTipBox.WordWrap = false;
@@ -126,7 +127,7 @@
             this.z3AxiomTree.HideSelection = false;
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
-            this.z3AxiomTree.Size = new System.Drawing.Size(609, 655);
+            this.z3AxiomTree.Size = new System.Drawing.Size(416, 655);
             this.z3AxiomTree.TabIndex = 1;
             this.z3AxiomTree.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.HandleExpand);
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);

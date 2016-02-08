@@ -109,11 +109,7 @@ namespace Z3AxiomProfiler
             {
                 currNode.Label.FontColor = Color.White;
             }
-            
-            var content = new InfoPanelContent();
-            inst.SummaryInfo(content);
-            content.finalize();
-            currNode.LabelText = content.ToString();
+            currNode.LabelText = " ";
         }
 
         private void redrawGraph_Click(object sender, EventArgs e)

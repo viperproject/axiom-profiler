@@ -32,6 +32,7 @@ namespace Z3AxiomProfiler
         private IPrintable currentInfoPanelPrintable;
         private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private ParameterConfiguration parameterConfiguration;
+        private DAGView dagView;
         public Model model;
 
         private readonly TreeNode historyNode = new TreeNode
@@ -53,7 +54,8 @@ namespace Z3AxiomProfiler
         public Z3AxiomProfiler()
         {
             InitializeComponent();
-            splitContainer1.Panel2.Controls.Add(new DAGView(this));
+            dagView = new DAGView(this) {Dock = DockStyle.Fill};
+            splitContainer1.Panel2.Controls.Add(dagView);
             uiUpdateTimer.Interval = 5;
             uiUpdateTimer.Tick += treeUiUpdateTimerTick;
             uiUpdateTimer.Tick += InfoPanelUpdateTick;
