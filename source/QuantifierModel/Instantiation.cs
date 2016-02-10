@@ -293,12 +293,24 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
             }
-            else if(Quant.Patterns().Count == 1)
-            {
                 // try this totally new startegy ;-)
-                tryMatch(Quant.Patterns()[0]);
-            }
+            List<BindingInfo> bindings = findAllMatches();
             didPatternMatch = true;
+        }
+
+        private List<BindingInfo> findAllMatches()
+        {
+            var plausibleMatches = new List<BindingInfo>();
+            foreach (var matchList in 
+                from pattern in Quant.Patterns()
+                let emptyBindingInfo = new BindingInfo(pattern, Responsible, Bindings)
+                let matchList = new List<BindingInfo> {emptyBindingInfo}
+                select pattern.Args
+                .Aggregate(matchList, (current, subPattern) => parallelDescent(subPattern, current)))
+            {
+                plausibleMatches.AddRange(matchList.Where(bindingInfo => bindingInfo.isFinishedPlausible()));
+            }
+            return plausibleMatches;
         }
 
         private List<BindingInfo> parallelDescent(Term pattern, List<BindingInfo> previousMatches)
@@ -306,95 +318,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             var plausibleMatches = new List<BindingInfo>(); // empty list to collect all possible matches
 
             // parallel exploration of matches
-            foreach (var match in previousMatches)
+            foreach (var nextMatches in previousMatches.Select(match => match.allNextMatches(pattern)))
             {
-                var candidates = match.FindCandidates(pattern);
-                // find all unmatched blame terms that match the current pattern
-
-                foreach(var candidate in candidates)
-                {
-                    // clone the current state and assume candidate matches
-                    var newMatch = match.AddMatching(pattern, candidate); // also does the "outstanding match processing"
-                    if (newMatch != null)
-                    {
-                        plausibleMatches.Add(newMatch);
-                    }
-
-                }
+                plausibleMatches.AddRange(nextMatches);
             }
 
             // now check all subPatterns
             return pattern.Args.Aggregate(plausibleMatches, (current, subPattern) => parallelDescent(subPattern, current));
-        }
-
-
-        private void tryMatch(Term pattern)
-        {
-
-            List<BindingInfo> results = feasibleBindingInfos(pattern).ToList();
-            // todo: if multiple feasible results -> validate!!
-            if (results.Count != 1) return;
-
-            // we were lucky :-)
-            _freeVariableToBindingsAndPathConstraints = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            _matchedPattern = pattern;
-            isAmbiguous = false;
-            var bindingInfo = results[0];
-            foreach (var binding in bindingInfo.bindings)
-            {
-                var resultTuple = new Tuple<Term, List<List<Term>>>(binding.Value, bindingInfo.matchContext[binding.Value]);
-                _freeVariableToBindingsAndPathConstraints[binding.Key] = resultTuple;
-            }
-            equalityInformation.Clear();
-            equalityInformation.AddRange(bindingInfo.equalities);
-        }
-
-        private IEnumerable<BindingInfo> feasibleBindingInfos(Term pattern)
-        {
-            var result = allBindingPossibilities(pattern).ToArray();
-            var enums = new IEnumerator<BindingInfo>[result.Length];
-            for (var i = 0; i < result.Length; i++)
-            {
-                enums[i] = result[i].GetEnumerator();
-            }
-
-            var index = 0;
-            while (index < result.Length)
-            {
-                var currBindingInfo = new BindingInfo(Responsible.ToList());
-
-                // try to merge across all bound terms
-                if (enums.All(enumerator => currBindingInfo.merge(enumerator.Current, Bindings)))
-                {
-                    // merge success
-                    if (currBindingInfo.bindings.Count == Bindings.Length &&
-                        currBindingInfo.bindings.Values.All(term => Bindings.Any(bdng => bdng.id == term.id)))
-                    {
-                        // all free variables are bound.
-                        yield return currBindingInfo;
-                    }
-                }
-
-                // advance to next configuration
-                var resetPrevious = false;
-                while (index < enums.Length && !enums[index].MoveNext())
-                {
-                    index++;
-                    resetPrevious = true;
-                }
-                if (index == result.Length || !resetPrevious) continue;
-                // reset the previous enumerators
-                for (var j = 0; j < index; j++)
-                {
-                    enums[j] = result[j].GetEnumerator();
-                }
-                index = 0;
-            }
-        }
-
-        private List<List<BindingInfo>> allBindingPossibilities(Term pattern)
-        {
-            return getDistinctBlameTerms().Select(blameTerm => blameTerm.matchPartiallyUsingBindings(pattern, Bindings)).ToList();
         }
 
 
