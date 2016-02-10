@@ -301,6 +301,32 @@ namespace Z3AxiomProfiler.QuantifierModel
             didPatternMatch = true;
         }
 
+        private List<BindingInfo> parallelDescent(Term pattern, List<BindingInfo> previousMatches)
+        {
+            var plausibleMatches = new List<BindingInfo>(); // empty list to collect all possible matches
+
+            // parallel exploration of matches
+            foreach (var match in previousMatches)
+            {
+                var candidates = match.FindCandidates(pattern);
+                // find all unmatched blame terms that match the current pattern
+
+                foreach(var candidate in candidates)
+                {
+                    // clone the current state and assume candidate matches
+                    var newMatch = match.AddMatching(pattern, candidate); // also does the "outstanding match processing"
+                    if (newMatch != null)
+                    {
+                        plausibleMatches.Add(newMatch);
+                    }
+
+                }
+            }
+
+            // now check all subPatterns
+            return pattern.Args.Aggregate(plausibleMatches, (current, subPattern) => parallelDescent(subPattern, current));
+        }
+
 
         private void tryMatch(Term pattern)
         {
@@ -316,7 +342,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             var bindingInfo = results[0];
             foreach (var binding in bindingInfo.bindings)
             {
-                var resultTuple = new Tuple<Term, List<List<Term>>>(binding.Value, bindingInfo.highlightingInfo[binding.Value]);
+                var resultTuple = new Tuple<Term, List<List<Term>>>(binding.Value, bindingInfo.matchContext[binding.Value]);
                 _freeVariableToBindingsAndPathConstraints[binding.Key] = resultTuple;
             }
             equalityInformation.Clear();
@@ -335,7 +361,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             var index = 0;
             while (index < result.Length)
             {
-                var currBindingInfo = new BindingInfo();
+                var currBindingInfo = new BindingInfo(Responsible.ToList());
 
                 // try to merge across all bound terms
                 if (enums.All(enumerator => currBindingInfo.merge(enumerator.Current, Bindings)))
