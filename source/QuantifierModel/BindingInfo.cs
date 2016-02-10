@@ -16,7 +16,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         private readonly List<Term> unusedBlameTerms;
 
         // outstanding checks
-        private readonly Dictionary<Term, List<Tuple<Term, List<List<Term>>>>> outstandingChecks;
+        private readonly Dictionary<Term, List<Tuple<Term, List<List<Term>>>>> outstandingChecks = new Dictionary<Term, List<Tuple<Term, List<List<Term>>>>>();
 
         // bindings: freeVariable --> Term
         public readonly Dictionary<Term, Term> bindings = new Dictionary<Term, Term>();
@@ -47,13 +47,23 @@ namespace Z3AxiomProfiler.QuantifierModel
             boundTerms = other.boundTerms;
         }
 
-        public BindingInfo clone()
+        private BindingInfo clone()
         {
             return new BindingInfo(this);
         }
 
         public List<BindingInfo> allNextMatches(Term pattern)
         {
+            if (pattern.id == -1)
+            {
+                var bindingMatches = new List<BindingInfo>();
+                foreach (var boundTerm in boundTerms)
+                {
+                    var copy = clone();
+                    if(copy.handleOutstandingMatches(pattern, boundTerm)) bindingMatches.Add(copy);
+                }
+                return bindingMatches;
+            }
             return (from blameTerm in unusedBlameTerms
                     let copy = clone()
                     where copy.matchTerm(pattern, blameTerm)
@@ -66,40 +76,38 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (!matchCondition(pattern, matchTerm)) return false;
 
             unusedBlameTerms.Remove(matchTerm);
-            var matchTermContext = new List<List<Term>>();
-
-            if (outstandingChecks.ContainsKey(pattern))
-            {
-                if (!handleOutstandingMatches(pattern, matchTerm, matchTermContext)) return false;
-            }
-
-            return handleMatch(pattern, matchTerm, matchTermContext);
+            return handleOutstandingMatches(pattern, matchTerm) &&
+                handleMatch(pattern, matchTerm);
         }
 
-        private bool handleOutstandingMatches(Term pattern, Term matchTerm, List<List<Term>> matchTermContext)
+        private bool handleOutstandingMatches(Term pattern, Term matchTerm)
         {
-            foreach (var termWithContext in outstandingChecks[pattern])
+            if (outstandingChecks.ContainsKey(pattern))
             {
-                // outstanding term with its context
-                var term = termWithContext.Item1;
-                var context = termWithContext.Item2;
-
-                // ensure the key exists
-                addMatchContext(term, context);
-                if (matchCondition(pattern, term))
+                foreach (var termWithContext in outstandingChecks[pattern])
                 {
-                    if (!handleMatch(pattern, term, context)) return false;
-                    if (term.id == matchTerm.id)
+                    // outstanding term with its context
+                    var term = termWithContext.Item1;
+                    var context = termWithContext.Item2;
+
+                    // ensure the key exists
+                    addMatchContext(term, context);
+                    if (matchCondition(pattern, term))
                     {
-                        matchTermContext.AddRange(context); // carry on the history in nested blame terms
+                        if (!handleMatch(pattern, term)) return false;
+                        if (term.id == matchTerm.id)
+                        {
+                            addMatchContext(matchTerm, context); // carry on the history in nested blame terms
+                        }
+                    }
+                    else
+                    {
+                        // add equality requirement with current candidate
+                        // as the candidate is matched
+                        equalities.Add(new Tuple<Term, Term>(term, matchTerm));
                     }
                 }
-                else
-                {
-                    // add equality requirement with current candidate
-                    // as the candidate is matched
-                    equalities.Add(new Tuple<Term, Term>(term, matchTerm));
-                }
+                outstandingChecks.Remove(pattern);
             }
             return true;
         }
@@ -110,11 +118,17 @@ namespace Z3AxiomProfiler.QuantifierModel
             matchContext[term].AddRange(context);
         }
 
-        private bool handleMatch(Term pattern, Term term, List<List<Term>> context)
+        private List<List<Term>> getContext(Term term)
+        {
+            if (!matchContext.ContainsKey(term)) matchContext[term] = new List<List<Term>>();
+            return matchContext[term];
+        } 
+
+        private bool handleMatch(Term pattern, Term term)
         {
             if (pattern.id == -1)
             {
-                if (bindings[pattern] == null)
+                if (!bindings.ContainsKey(pattern))
                 {
                     // no binding yet, add one
                     bindings[pattern] = term;
@@ -146,14 +160,19 @@ namespace Z3AxiomProfiler.QuantifierModel
                 return true;
             }
 
+
             foreach (var subPatternWithSubTerm in pattern.Args.Zip(term.Args, Tuple.Create))
             {
                 var subPattern = subPatternWithSubTerm.Item1;
                 var subTerm = subPatternWithSubTerm.Item2;
                 var outstandingItem = new Tuple<Term, List<List<Term>>>(subTerm, new List<List<Term>>());
-                foreach (var copy in context.Select(history => new List<Term>(history) { term }))
+                foreach (var copy in getContext(term).Select(history => new List<Term>(history) { term }))
                 {
                     outstandingItem.Item2.Add(copy);
+                }
+                if (!outstandingChecks.ContainsKey(subPattern))
+                {
+                    outstandingChecks[subPattern] = new List<Tuple<Term, List<List<Term>>>>();
                 }
                 outstandingChecks[subPattern].Add(outstandingItem);
             }

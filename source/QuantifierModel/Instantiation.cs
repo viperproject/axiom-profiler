@@ -295,7 +295,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
                 // try this totally new startegy ;-)
             List<BindingInfo> bindings = findAllMatches();
-            didPatternMatch = true;
+            //didPatternMatch = true;
         }
 
         private List<BindingInfo> findAllMatches()
