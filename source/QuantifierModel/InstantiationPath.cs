@@ -113,9 +113,9 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
 
                 // Quantifier body with highlights (if applicable)
-                if (previous.matchedPattern != null)
+                if (previous.bindingInfo != null)
                 {
-                    previous.matchedPattern.highlightTemporarily(format, Color.Coral);
+                    previous.bindingInfo.fullPattern.highlightTemporarily(format, Color.Coral);
                 }
                 else
                 {
@@ -164,7 +164,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
             content.Append("\n\n");
-            current.matchedPattern?.highlightTemporarily(format, Color.Coral);
+            current.bindingInfo?.fullPattern.highlightTemporarily(format, Color.Coral);
             current.Quant.BodyTerm.PrettyPrint(content, format);
 
             format.restoreAllOriginalRules();

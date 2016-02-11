@@ -21,7 +21,16 @@ namespace Z3AxiomProfiler.QuantifierModel
         int wdepth = -1;
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
-        public BindingInfo bindingInfo;
+        private BindingInfo _bindingInfo;
+
+        public BindingInfo bindingInfo
+        {
+            get
+            {
+                if (!didPatternMatch) processPattern();
+                return _bindingInfo;
+            }
+        }
 
         public void CopyTo(Instantiation inst)
         {
@@ -69,7 +78,6 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            processPattern();
             if (bindingInfo != null)
             {
                 FancyInfoPanelText(content, format);
@@ -211,7 +219,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (didPatternMatch) return;
             var bindingCandidates = findAllMatches();
-            if (bindingCandidates.Count == 1) bindingInfo = bindingCandidates[0];
+            if (bindingCandidates.Count == 1) _bindingInfo = bindingCandidates[0];
             else if(bindingCandidates.Count > 1)
             {
                 isAmbiguous = true;
@@ -274,20 +282,8 @@ namespace Z3AxiomProfiler.QuantifierModel
         // that were actually bound in that position, can be distinguished from occurrences that were not bound.
         // A history is represented as a list of terms.
         // That's why the value type is Tuple<Term, List<List<Term>>>.
-        private Term _matchedPattern;
         private bool didPatternMatch;
         public bool isAmbiguous;
-        public Term matchedPattern
-        {
-            get
-            {
-                if (!didPatternMatch)
-                {
-                    processPattern();
-                }
-                return _matchedPattern;
-            }
-        }
       
         public override void SummaryInfo(InfoPanelContent content)
         {
