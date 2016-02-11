@@ -109,68 +109,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (format.showTermId) content.Append("[" + id + "]");
         }
 
-
-        public bool PatternTermMatch(Term subPattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingDict)
-        {
-            bindingDict = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            var patternTermsToCheck = new Stack<Term>();
-            patternTermsToCheck.Push(subPattern);
-            var subtermsToCheck = new Stack<Term>();
-            subtermsToCheck.Push(this);
-
-            var history = new Stack<Term>();
-            var visited = new HashSet<Term>();
-            while (patternTermsToCheck.Count > 0)
-            {
-                var currentPatternTerm = patternTermsToCheck.Peek();
-                var currentTerm = subtermsToCheck.Peek();
-                if (visited.Contains(currentTerm))
-                {
-                    patternTermsToCheck.Pop();
-                    subtermsToCheck.Pop();
-                    if (currentPatternTerm.id != -1) history.Pop();
-                    continue;
-                }
-                visited.Add(currentTerm);
-                if (currentPatternTerm.id == -1)
-                {
-                    // this is a free variable
-                    // todo: Bug!!
-                    if (bindingDict.ContainsKey(currentTerm))
-                    {
-                        Debug.Assert(bindingDict[currentTerm].Item1 != currentPatternTerm);
-                        bindingDict[currentTerm].Item2.Add(history.ToList());
-                    }
-                    else
-                    {
-                        var tuple = new Tuple<Term, List<List<Term>>>(currentTerm, new List<List<Term>>());
-                        var historyConstraint = history.ToList();
-                        historyConstraint.Reverse();
-                        tuple.Item2.Add(historyConstraint);
-                        bindingDict.Add(currentPatternTerm, tuple);
-                    }
-                    continue;
-                }
-                history.Push(currentTerm);
-
-                if (currentTerm.Name != currentPatternTerm.Name ||
-                    currentTerm.GenericType != currentPatternTerm.GenericType ||
-                    currentTerm.Args.Length != currentPatternTerm.Args.Length)
-                {
-                    // pattern does not match -> abort
-                    return false;
-                }
-
-                for (var i = 0; i < currentPatternTerm.Args.Length; i++)
-                {
-                    patternTermsToCheck.Push(currentPatternTerm.Args[i]);
-                    subtermsToCheck.Push(currentTerm.Args[i]);
-                }
-            }
-
-            return true;
-        }
-
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format)
         {
             PrettyPrint(content, new Stack<Color>(), format);
