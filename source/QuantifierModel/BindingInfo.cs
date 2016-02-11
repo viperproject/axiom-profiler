@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -32,7 +31,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
 
         // number of equalities
-        public int numEq = 0;
+        public int numEq;
 
 
         public BindingInfo(Term pattern, ICollection<Term> blameTerms)
@@ -77,13 +76,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public List<BindingInfo> allNextMatches(Term pattern)
         {
-            Debug.Assert(outstandingCandidates.Count == 0);
             if (pattern.id == -1)
             {
                 // free var, do not expect to find a blameterm
                 var copy = clone();
                 copy.handleOutstandingMatches(pattern);
-                Debug.Assert(outstandingCandidates.Count == 0);
                 return new List<BindingInfo> { copy };
             }
             return (from blameTerm in unusedBlameTerms
@@ -175,10 +172,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
                 else
                 {
-                    foreach (var copy in getContext(term).Select(history => new List<Term>(history) { term }))
-                    {
-                        subTermContext.Add(copy);
-                    }
+                    subTermContext.AddRange(getContext(term).Select(history => new List<Term>(history) {term}));
                 }
                 addOutstandingCandidate(term, subPattern, subTerm);
                 addMatchContext(subTerm, subTermContext);
@@ -315,15 +309,11 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public bool validate()
         {
-            foreach (var equality in equalities)
-            {
-                var eqBaseTerm = bindings[equality.Key];
-                if (equality.Value.Any(otherTerm => !recursiveEqualityLookUp(eqBaseTerm, otherTerm)))
-                {
-                    return false;
-                }
-            }
-            return true;
+            return !(from equality in equalities
+                     let eqBaseTerm = bindings[equality.Key]
+                     where equality.Value.Any(otherTerm => !recursiveEqualityLookUp(eqBaseTerm, otherTerm))
+                     select equality)
+                     .Any();
         }
     }
 }
