@@ -228,12 +228,22 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             // decouple collections
             var freeVarsToRebind = bindings.Where(kvPair => kvPair.Key.id == -1).Select(kvPair => kvPair.Key).ToList();
-            return !(from freeVar in freeVarsToRebind
-                     let term = bindings[freeVar]
-                     where boundTerms.All(bndTerm => bndTerm.id != term.id)
-                     where !fixBindingWithEqLookUp(boundTerms, term, freeVar)
-                     select freeVar)
-                     .Any();
+            if ((from freeVar in freeVarsToRebind
+                let term = bindings[freeVar]
+                where boundTerms.All(bndTerm => bndTerm.id != term.id)
+                where !fixBindingWithEqLookUp(boundTerms, term, freeVar)
+                select freeVar)
+                .Any())
+                return false;
+
+            // declutter equalities
+            // clutter happens if an evictor is evicted by the victim
+            foreach (var eqPatterns in equalities.Keys.ToList())
+            {
+                var matched = bindings[eqPatterns];
+                numEq -= equalities[eqPatterns].RemoveAll(eq => eq.id == matched.id);
+            }
+            return true;
         }
 
         private bool fixBindingWithEqLookUp(List<Term> boundTerms, Term term, Term freeVar)

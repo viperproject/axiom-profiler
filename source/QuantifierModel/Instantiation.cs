@@ -129,9 +129,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public void printNoMatchdisclaimer(InfoPanelContent content)
         {
             content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
-            content.Append(isAmbiguous
-                ? "Pattern match detection failed due to ambiguosity. Multiple patterns matched.\n"
-                : "No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
+            content.Append("No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
             content.switchToDefaultFormat();
         }
 
@@ -145,16 +143,24 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
-            content.Append("blamed or matched");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
+            content.Append("matched");
             content.switchToDefaultFormat();
-            content.Append(" and ");
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.Append("blamed");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.Append("blamed using equality");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(", respectively.\n\n");
+            content.Append(".\n\n");
 
-            bindingInfo.fullPattern.highlightTemporarily(format, Color.Coral);
+            bindingInfo.fullPattern.highlightTemporarily(format, Color.LimeGreen);
             tempHighlightBlameBindTerms(format);
 
             content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
@@ -235,11 +241,16 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (didPatternMatch) return;
             didPatternMatch = true;
             var bindingCandidates = findAllMatches();
-            if(bindingCandidates.Count == 0) return;
-
-            if (bindingCandidates.Count > 1)
+            switch (bindingCandidates.Count)
             {
-                _bindingInfo = bindingCandidates.First(candidate => candidate.validate());
+                case 0:
+                    return;
+                case 1:
+                    _bindingInfo = bindingCandidates[0];
+                    return;
+                default:
+                    _bindingInfo = bindingCandidates.First(candidate => candidate.validate());
+                    break;
             }
             if (_bindingInfo != null) return;
             isAmbiguous = true;
