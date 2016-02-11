@@ -279,7 +279,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 isAmbiguous = true;
             }
-            didPatternMatch = true;
+            //didPatternMatch = true;
             return;
             
 
@@ -326,7 +326,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         private List<BindingInfo> parallelDescent(Term pattern)
         {
             var plausibleMatches = new List<BindingInfo>(); // empty list to collect all possible matches
-            plausibleMatches.Add(new BindingInfo(pattern, Responsible, Bindings)); // empty binding info
+            plausibleMatches.Add(new BindingInfo(pattern, Responsible)); // empty binding info
             var patternQueue = new Queue<Term>();
 
             enqueueSubPatterns(pattern, patternQueue);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -7,13 +8,18 @@ namespace Z3AxiomProfiler.QuantifierModel
     public class BindingInfo
     {
         // Pattern used for this binding
-        public Term fullPattern;
+        public readonly Term fullPattern;
 
         // unmatched blame terms
         private readonly List<Term> unusedBlameTerms;
 
+        // outstanding check candidates
+        // parent term -> subpattern, subterm
+        // if parent is evicted the associated entry will be cleared
+        private readonly Dictionary<Term, List<Tuple<Term, Term>>> outstandingCandidates = new Dictionary<Term, List<Tuple<Term, Term>>>();
+
         // outstanding checks
-        private readonly Dictionary<Term, List<Tuple<Term, List<List<Term>>>>> outstandingMatches = new Dictionary<Term, List<Tuple<Term, List<List<Term>>>>>();
+        private readonly Dictionary<Term, List<Term>> outstandingMatches = new Dictionary<Term, List<Term>>();
 
         // bindings: freeVariable --> Term
         public readonly Dictionary<Term, Term> bindings = new Dictionary<Term, Term>();
@@ -26,7 +32,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
 
 
-        public BindingInfo(Term pattern, ICollection<Term> blameTerms, ICollection<Term> bindings)
+        public BindingInfo(Term pattern, ICollection<Term> blameTerms)
         {
             fullPattern = pattern;
             unusedBlameTerms = new List<Term>(blameTerms);
@@ -35,11 +41,30 @@ namespace Z3AxiomProfiler.QuantifierModel
         private BindingInfo(BindingInfo other)
         {
             bindings = new Dictionary<Term, Term>(other.bindings);
-            matchContext = new Dictionary<Term, List<List<Term>>>(other.matchContext);
-            equalities = new Dictionary<Term, List<Term>>(equalities);
+
+            // 'deeper' copy
+            matchContext = new Dictionary<Term, List<List<Term>>>();
+            foreach (var context in other.matchContext)
+            {
+                matchContext[context.Key] = new List<List<Term>>(context.Value);
+            }
+
+            // 'deeper' copy
+            equalities = new Dictionary<Term, List<Term>>();
+            foreach (var equality in other.equalities)
+            {
+                equalities[equality.Key] = new List<Term>(equality.Value);
+            }
+
             unusedBlameTerms = new List<Term>(other.unusedBlameTerms);
             fullPattern = other.fullPattern;
-            outstandingMatches = new Dictionary<Term, List<Tuple<Term, List<List<Term>>>>>(other.outstandingMatches);
+
+            // 'deeper' copy
+            outstandingMatches = new Dictionary<Term, List<Term>>();
+            foreach (var outstandingMatch in other.outstandingMatches)
+            {
+                outstandingMatches[outstandingMatch.Key] = new List<Term>(outstandingMatch.Value);
+            }
         }
 
         private BindingInfo clone()
@@ -49,11 +74,13 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public List<BindingInfo> allNextMatches(Term pattern)
         {
+            Debug.Assert(outstandingCandidates.Count == 0);
             if (pattern.id == -1)
             {
                 // free var, do not expect to find a blameterm
                 var copy = clone();
                 copy.handleOutstandingMatches(pattern);
+                Debug.Assert(outstandingCandidates.Count == 0);
                 return new List<BindingInfo> { copy };
             }
             return (from blameTerm in unusedBlameTerms
@@ -70,9 +97,29 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             // add blame term without context
             // context is provided by previous matches
-            addOutstandingMatch(pattern, new Tuple<Term, List<List<Term>>>(matchTerm, new List<List<Term>>()));
+            addOutstandingMatch(pattern, matchTerm);
             handleOutstandingMatches(pattern);
+            collectOutstandingCandidates();
             return true;
+        }
+
+        private void collectOutstandingCandidates()
+        {
+            foreach (var outstandingMatch in outstandingCandidates
+                .SelectMany(outstandingCandidate => outstandingCandidate.Value))
+            {
+                addOutstandingMatch(outstandingMatch.Item1, outstandingMatch.Item2);
+            }
+            outstandingCandidates.Clear();
+        }
+
+        private void addOutstandingMatch(Term subPattern, Term outstandingCandidate)
+        {
+            if (!outstandingMatches.ContainsKey(subPattern))
+            {
+                outstandingMatches[subPattern] = new List<Term>();
+            }
+            outstandingMatches[subPattern].Add(outstandingCandidate);
         }
 
         private void handleOutstandingMatches(Term pattern)
@@ -80,13 +127,8 @@ namespace Z3AxiomProfiler.QuantifierModel
             // nothing outstanding
             if (!outstandingMatches.ContainsKey(pattern)) return;
 
-            foreach (var termWithContext in outstandingMatches[pattern])
-            {
-                // outstanding term with its context
-                var term = termWithContext.Item1;
-                var context = termWithContext.Item2;
-
-                addMatchContext(term, context);
+            foreach (var term in outstandingMatches[pattern])
+            { 
                 handleMatch(pattern, term);
             }
             outstandingMatches.Remove(pattern);
@@ -111,6 +153,10 @@ namespace Z3AxiomProfiler.QuantifierModel
                 // already bound to something different!
                 var currBinding = bindings[pattern];
 
+                // eviction of the older bindings from outstanding candidates
+                outstandingCandidates.Remove(currBinding);
+
+                // add equality
                 addEquality(pattern, currBinding);
             }
 
@@ -119,38 +165,35 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 var subPattern = subPatternWithSubTerm.Item1;
                 var subTerm = subPatternWithSubTerm.Item2;
-                var outstandingItem = new Tuple<Term, List<List<Term>>>(subTerm, new List<List<Term>>());
+                var subTermContext = new List<List<Term>>();
 
                 // build context for subterms
                 if (getContext(term).Count == 0)
                 {
-                    outstandingItem.Item2.Add(new List<Term> { term });
+                    subTermContext.Add(new List<Term> { term });
                 }
                 else
                 {
                     foreach (var copy in getContext(term).Select(history => new List<Term>(history) { term }))
                     {
-                        outstandingItem.Item2.Add(copy);
+                        subTermContext.Add(copy);
                     }
                 }
-
-                addOutstandingMatch(subPattern, outstandingItem);
+                addOutstandingCandidate(term, subPattern, subTerm);
+                addMatchContext(subTerm, subTermContext);
             }
+        }
+
+        private void addOutstandingCandidate(Term term, Term subPattern, Term subTerm)
+        {
+            if (!outstandingCandidates.ContainsKey(term)) outstandingCandidates[term] = new List<Tuple<Term, Term>>();
+            outstandingCandidates[term].Add(new Tuple<Term, Term>(subPattern, subTerm));
         }
 
         private void addEquality(Term pattern, Term currBinding)
         {
             if (!equalities.ContainsKey(pattern)) equalities[pattern] = new List<Term>();
             equalities[pattern].Add(currBinding);
-        }
-
-        private void addOutstandingMatch(Term subPattern, Tuple<Term, List<List<Term>>> outstandingItem)
-        {
-            if (!outstandingMatches.ContainsKey(subPattern))
-            {
-                outstandingMatches[subPattern] = new List<Tuple<Term, List<List<Term>>>>();
-            }
-            outstandingMatches[subPattern].Add(outstandingItem);
         }
 
         private static bool matchCondition(Term pattern, Term term)
