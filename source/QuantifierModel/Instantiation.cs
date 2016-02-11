@@ -24,6 +24,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public readonly List<Tuple<Term, Term>> equalityInformation = new List<Tuple<Term, Term>>();
 
+        private BindingInfo bindingInfo;
+
         public void CopyTo(Instantiation inst)
         {
             inst.Quant = Quant;
@@ -70,7 +72,8 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            if (matchedPattern != null)
+            processPattern();
+            if (bindingInfo != null)
             {
                 FancyInfoPanelText(content, format);
             }
@@ -140,13 +143,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append(", respectively.\n\n");
 
-            matchedPattern.highlightTemporarily(format, Color.Coral);
+            bindingInfo.fullPattern.highlightTemporarily(format, Color.Coral);
             tempHighlightBlameBindTerms(format);
 
             content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
             content.Append("Blamed Terms:\n\n");
 
-            foreach (var t in getDistinctBlameTerms())
+            foreach (var t in bindingInfo.getDistinctBlameTerms())
             {
                 content.Append("\n");
                 t.PrettyPrint(content, format);
@@ -157,23 +160,27 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Binding information:\n\n");
             content.switchToDefaultFormat();
 
-            foreach (var bindings in freeVariableToBindingsAndPathConstraints)
+            foreach (var bindings in bindingInfo.getBindingsToFreeVars())
             {
                 content.Append(bindings.Key.Name).Append(" was bound to ");
-                bindings.Value.Item1.printName(content, format);
+                bindings.Value.printName(content, format);
                 content.Append('\n');
             }
 
-            if (equalityInformation.Count > 0)
+            if (bindingInfo.equalities.Count > 0)
             {
                 content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
                 content.Append("\n\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
-                foreach (var equality in equalityInformation)
+
+                foreach (var equality in bindingInfo.equalities)
                 {
-                    equality.Item1.printName(content, format);
-                    content.Append(" = ");
-                    equality.Item2.printName(content, format);
+                    bindingInfo.bindings[equality.Key].printName(content, format);
+                    foreach (var term in equality.Value)
+                    {
+                        content.Append(" = ");
+                        term.printName(content, format);
+                    }
                     content.Append('\n');
                 }
             }
@@ -192,17 +199,14 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
-            if (matchedPattern == null) return;
-            // blame terms
-            foreach (var blameWithConstraints in blameTermsToPathConstraints)
-            {
-                blameWithConstraints.Key.highlightTemporarily(format, Color.Coral, blameWithConstraints.Value);
-            }
+            if (bindingInfo == null) return;
 
-            // bound terms
-            foreach (var termWithConstraints in freeVariableToBindingsAndPathConstraints.Values)
+            foreach (var context in bindingInfo.matchContext)
             {
-                termWithConstraints.Item1.highlightTemporarily(format, Color.DeepSkyBlue, termWithConstraints.Item2);
+                var term = context.Key;
+                var pathConstraints = context.Value;
+                var color = Bindings.Any(bnd => bnd.id == term.id) ? Color.DeepSkyBlue : Color.Coral;
+                term.highlightTemporarily(format, color, pathConstraints);
             }
         }
 
@@ -269,6 +273,15 @@ namespace Z3AxiomProfiler.QuantifierModel
         private void processPattern()
         {
             if (didPatternMatch) return;
+            var bindingCandidates = findAllMatches();
+            if (bindingCandidates.Count == 1) bindingInfo = bindingCandidates[0];
+            else if(bindingCandidates.Count > 1)
+            {
+                isAmbiguous = true;
+            }
+            didPatternMatch = true;
+            return;
+            
 
             var bindingInfos = new List<Dictionary<Term, Tuple<Term, List<List<Term>>>>>();
             foreach (var pattern in Quant.Patterns())
@@ -293,38 +306,53 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
             }
-                // try this totally new startegy ;-)
-            List<BindingInfo> bindings = findAllMatches();
-            //didPatternMatch = true;
+            didPatternMatch = true;
         }
 
         private List<BindingInfo> findAllMatches()
         {
             var plausibleMatches = new List<BindingInfo>();
-            foreach (var matchList in 
-                from pattern in Quant.Patterns()
-                let emptyBindingInfo = new BindingInfo(pattern, Responsible, Bindings)
-                let matchList = new List<BindingInfo> {emptyBindingInfo}
-                select pattern.Args
-                .Aggregate(matchList, (current, subPattern) => parallelDescent(subPattern, current)))
+            foreach (var pattern in Quant.Patterns())
             {
-                plausibleMatches.AddRange(matchList.Where(bindingInfo => bindingInfo.isFinishedPlausible()));
+                var matches = parallelDescent(pattern);
+                foreach (var match in matches)
+                {
+                    if (match.finalize(Responsible.ToList(), Bindings.ToList())) plausibleMatches.Add(match);
+                }
             }
             return plausibleMatches;
         }
 
-        private List<BindingInfo> parallelDescent(Term pattern, List<BindingInfo> previousMatches)
+        private List<BindingInfo> parallelDescent(Term pattern)
         {
             var plausibleMatches = new List<BindingInfo>(); // empty list to collect all possible matches
+            plausibleMatches.Add(new BindingInfo(pattern, Responsible, Bindings)); // empty binding info
+            var patternQueue = new Queue<Term>();
 
-            // parallel exploration of matches
-            foreach (var nextMatches in previousMatches.Select(match => match.allNextMatches(pattern)))
+            enqueueSubPatterns(pattern, patternQueue);
+
+            while (patternQueue.Count > 0)
             {
-                plausibleMatches.AddRange(nextMatches);
+                var currentPattern = patternQueue.Dequeue();
+                var currMatches = new List<BindingInfo>();
+                foreach (var match in plausibleMatches)
+                {
+                    currMatches.AddRange(match.allNextMatches(currentPattern));
+                }
+                plausibleMatches = currMatches;
+
+                enqueueSubPatterns(currentPattern, patternQueue);
             }
 
-            // now check all subPatterns
-            return pattern.Args.Aggregate(plausibleMatches, (current, subPattern) => parallelDescent(subPattern, current));
+            return plausibleMatches;
+        }
+
+        private static void enqueueSubPatterns(Term pattern, Queue<Term> patternQueue)
+        {
+            foreach (var arg in pattern.Args)
+            {
+                patternQueue.Enqueue(arg);
+            }
         }
 
 
