@@ -295,6 +295,10 @@ namespace Z3AxiomProfiler.PrettyPrinting
             // history constraint ok --> rule ok
             if (historyConstraintSatisfied(rule)) return rule;
 
+            // freeVar --> no usable id, therefore specific rule is on name
+            // there is therefore no generale rule to fall back on.
+            if (t.id == -1) return PrintRule.DefaultRewriteRule(t, this);
+
             // history constraint violated --> find less specific rules (but more specific than default)
             if (printRuleDict.hasRule(t.Name + t.GenericType))
                 return printRuleDict.getRewriteRule(t.Name + t.GenericType);

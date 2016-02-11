@@ -237,7 +237,38 @@ namespace Z3AxiomProfiler.QuantifierModel
                 var matched = bindings[eqPatterns];
                 numEq -= equalities[eqPatterns].RemoveAll(eq => eq.id == matched.id);
             }
+
+            addPatternPathconditions();
             return true;
+        }
+
+        private void addPatternPathconditions()
+        {
+            var patternStack = new Stack<Term>();
+            patternStack.Push(fullPattern);
+            var history = new Stack<Term>();
+
+            while (patternStack.Count > 0)
+            {
+                var currentPattern = patternStack.Peek();
+                if (history.Count > 0 && history.Peek() == currentPattern)
+                {
+                    patternStack.Pop();
+                    history.Pop();
+                    continue;
+                }
+
+                var pathConstraint = history.ToList();
+                pathConstraint.Reverse();
+                addMatchContext(currentPattern, new List<List<Term>> { pathConstraint});
+                
+                history.Push(currentPattern);
+                foreach (var subPattern in currentPattern.Args)
+                {
+                    patternStack.Push(subPattern);
+                }
+
+            }
         }
 
         private bool fixBindingWithEqLookUp(List<Term> boundTerms, Term term, Term freeVar)

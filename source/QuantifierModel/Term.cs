@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -69,7 +65,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             var tmp = format.getPrintRule(this).Clone();
             tmp.color = color;
             tmp.historyConstraints.AddRange(pathConstraints);
-            format.addTemporaryRule(id + "", tmp);
+            if (id == -1)
+            {
+                format.addTemporaryRule(Name, tmp);
+            }
+            else
+            {
+                format.addTemporaryRule(id + "", tmp);
+            }
         }
 
         public bool isSubterm(Term subterm)
@@ -95,11 +98,6 @@ namespace Z3AxiomProfiler.QuantifierModel
                 }
             }
             return false;
-        }
-
-        public bool isDirectSubterm(Term subterm)
-        {
-            return subterm.size <= size && Args.Any(arg => arg == subterm);
         }
 
         public void printName(InfoPanelContent content, PrettyPrintFormat format)

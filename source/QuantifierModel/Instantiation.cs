@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -225,6 +224,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 var color = Color.Coral;
                 if (patternTerm.id == -1) color = Color.DeepSkyBlue;
 
+                patternTerm.highlightTemporarily(format, color, bindingInfo.matchContext[patternTerm]);
                 term.highlightTemporarily(format, color, bindingInfo.matchContext[term]);
                 if (!bindingInfo.equalities.ContainsKey(patternTerm)) continue;
 
@@ -271,10 +271,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             return plausibleMatches.OrderBy(match => match.numEq).ToList();
         }
 
-        private List<BindingInfo> parallelDescent(Term pattern)
+        private IEnumerable<BindingInfo> parallelDescent(Term pattern)
         {
-            var plausibleMatches = new List<BindingInfo>(); // empty list to collect all possible matches
-            plausibleMatches.Add(new BindingInfo(pattern, Responsible)); // empty binding info
+            // list with empty binding info to collect all possible matches
+            var plausibleMatches = new List<BindingInfo> {new BindingInfo(pattern, Responsible)};
+            
             var patternQueue = new Queue<Term>();
 
             enqueueSubPatterns(pattern, patternQueue);
@@ -313,7 +314,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         // A history is represented as a list of terms.
         // That's why the value type is Tuple<Term, List<List<Term>>>.
         private bool didPatternMatch;
-        public bool isAmbiguous;
+        private bool isAmbiguous;
 
         public override void SummaryInfo(InfoPanelContent content)
         {
@@ -330,7 +331,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (Responsible != null)
             {
-                List<Term> sortedResponsibleList = new List<Term>(Responsible);
+                var sortedResponsibleList = new List<Term>(Responsible);
                 sortedResponsibleList.Sort((t1, t2) =>
                 {
                     int d1 = t1.Responsible?.Depth ?? 0;
@@ -363,7 +364,7 @@ namespace Z3AxiomProfiler.QuantifierModel
     {
         public int UseCount;
         public int DepCount;
-        public List<ImportantInstantiation> ResponsibleInsts = new List<ImportantInstantiation>();
+        public readonly List<ImportantInstantiation> ResponsibleInsts = new List<ImportantInstantiation>();
 
         public ImportantInstantiation(Instantiation par)
         {
@@ -396,11 +397,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         public override Color ForeColor()
         {
-            if (Quant.Weight == 0)
-            {
-                return Color.DarkSeaGreen;
-            }
-            return base.ForeColor();
+            return Quant.Weight == 0 ? Color.DarkSeaGreen : base.ForeColor();
         }
     }
 }
