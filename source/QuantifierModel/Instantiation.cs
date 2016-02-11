@@ -21,10 +21,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         int wdepth = -1;
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
-
-        public readonly List<Tuple<Term, Term>> equalityInformation = new List<Tuple<Term, Term>>();
-
-        private BindingInfo bindingInfo;
+        public BindingInfo bindingInfo;
 
         public void CopyTo(Instantiation inst)
         {
@@ -210,66 +207,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
-        private Dictionary<Term, List<List<Term>>> _blameTermsToPathConstraints;
-        public Dictionary<Term, List<List<Term>>> blameTermsToPathConstraints
-        {
-            get
-            {
-                if (!didPatternMatch)
-                {
-                    processPattern();
-                }
-                return _blameTermsToPathConstraints;
-            }
-        }
-
-        public List<Term> getDistinctBlameTerms()
-        {
-            if (!didPatternMatch)
-            {
-                buildBlameTermPathConstraints();
-            }
-            return (from termConstraintPair in _blameTermsToPathConstraints
-                    where termConstraintPair.Value.Count == 0
-                    select termConstraintPair.Key).ToList();
-        }
-
-        private void buildBlameTermPathConstraints()
-        {
-            _blameTermsToPathConstraints = new Dictionary<Term, List<List<Term>>>();
-            var blameTerms = new List<Term>(Responsible);
-            blameTerms.Sort((term1, term2) => term2.size.CompareTo(term1.size));
-
-            foreach (var blameTerm in blameTerms)
-            {
-                var pathConstraints = new List<List<Term>>();
-                foreach (var blameTermEntry in _blameTermsToPathConstraints
-                    .Where(blameTermEntry => blameTermEntry.Key.isDirectSubterm(blameTerm)))
-                {
-                    // either add new list with constraint or copy the existing ones and add more terms to 
-                    // the path constraints.
-                    if (blameTermEntry.Value.Count == 0)
-                    {
-                        var newConstraint = new List<Term>();
-                        newConstraint.Add(blameTermEntry.Key);
-                        pathConstraints.Add(newConstraint);
-                    }
-                    else
-                    {
-                        foreach (var constraintCopy in blameTermEntry.Value
-                            .Select(pathConstraint => new List<Term>(pathConstraint)))
-                        {
-                            constraintCopy.Add(blameTermEntry.Key);
-                            pathConstraints.Add(constraintCopy);
-                        }
-                    }
-                }
-
-                // store for later use
-                _blameTermsToPathConstraints[blameTerm] = pathConstraints;
-            }
-        }
-
         private void processPattern()
         {
             if (didPatternMatch) return;
@@ -278,33 +215,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             else if(bindingCandidates.Count > 1)
             {
                 isAmbiguous = true;
-            }
-            //didPatternMatch = true;
-            return;
-            
-
-            var bindingInfos = new List<Dictionary<Term, Tuple<Term, List<List<Term>>>>>();
-            foreach (var pattern in Quant.Patterns())
-            {
-                Dictionary<Term, Tuple<Term, List<List<Term>>>> currBind;
-                List<Tuple<Term, Term>> currEqInfo;
-
-                if (!matchesBlameTerms(pattern, out currBind, out currEqInfo)) continue;
-
-                _matchedPattern = pattern;
-                equalityInformation.Clear();
-                equalityInformation.AddRange(currEqInfo);
-                bindingInfos.Add(currBind);
-            }
-            if (bindingInfos.Count > 1)
-            {
-                equalityInformation.Clear();
-                _matchedPattern = null;
-                isAmbiguous = true;
-            }
-            else if (bindingInfos.Count == 1)
-            {
-                _freeVariableToBindingsAndPathConstraints = bindingInfos[0];
             }
             didPatternMatch = true;
         }
@@ -378,153 +288,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 return _matchedPattern;
             }
         }
-
-
-        private Dictionary<Term, Tuple<Term, List<List<Term>>>> _freeVariableToBindingsAndPathConstraints;
-        public Dictionary<Term, Tuple<Term, List<List<Term>>>> freeVariableToBindingsAndPathConstraints
-        {
-            get
-            {
-                if (!didPatternMatch)
-                {
-                    processPattern();
-                }
-                return _freeVariableToBindingsAndPathConstraints;
-            }
-        }
-        private bool matchesBlameTerms(Term pattern, out Dictionary<Term, Tuple<Term, List<List<Term>>>> bindingInfo,
-            out List<Tuple<Term, Term>> equaltiyInfo)
-        {
-            equaltiyInfo = new List<Tuple<Term, Term>>();
-            var blameTerms = getDistinctBlameTerms();
-            bindingInfo = new Dictionary<Term, Tuple<Term, List<List<Term>>>>();
-            // Number of distinct terms does not match.
-            // (e.g. multipattern on single blame term or single pattern on multiple terms)
-            if (pattern.Args.Length != blameTerms.Count) return false;
-
-
-
-            foreach (var patternPermutation in allPermutations(pattern.Args.ToList()))
-            {
-                equaltiyInfo.Clear();
-                bindingInfo.Clear();
-                var patternEnum = patternPermutation.GetEnumerator();
-                var blameTermEnum = blameTerms.GetEnumerator();
-                // this permutation does not match, continue
-                var stop = false;
-
-                while (patternEnum.MoveNext() && blameTermEnum.MoveNext() && !stop)
-                {
-                    Dictionary<Term, Tuple<Term, List<List<Term>>>> dict;
-                    if (!blameTermEnum.Current.PatternTermMatch(patternEnum.Current, out dict))
-                    {
-                        stop = true;
-                        break;
-                    }
-
-                    foreach (var keyValuePair in dict)
-                    {
-                        if (bindingInfo.ContainsKey(keyValuePair.Key))
-                        {
-                            var term1 = bindingInfo[keyValuePair.Key].Item1;
-                            var term2 = keyValuePair.Value.Item1;
-                            // check if the thing bound to the free variable is consistent with whats at the current position.
-                            if (term1.id == term2.id)
-                            {
-                                // consistent, merge history constraints (e.g. add all histories)
-                                bindingInfo[keyValuePair.Key].Item2
-                                    .AddRange(keyValuePair.Value.Item2);
-                                continue;
-                            }
-
-                            if (equalityLookUp(term1, term2))
-                            {
-                                equaltiyInfo.Add(new Tuple<Term, Term>(term1, term2));
-                                continue;
-                            }
-
-                            // inconsistent
-                            stop = true;
-                            break;
-                        }
-                        bindingInfo.Add(keyValuePair.Key, keyValuePair.Value);
-                    }
-                }
-
-                if (stop) continue;
-                return true;
-            }
-            bindingInfo.Clear();
-            equaltiyInfo.Clear();
-            return false;
-        }
-
-        private static bool equalityLookUp(Term term1, Term term2)
-        {
-            Term searchTerm;
-            Term lookUpTerm;
-            if (term1.dependentTerms.Count < term2.dependentTerms.Count)
-            {
-                searchTerm = term1;
-                lookUpTerm = term2;
-            }
-            else
-            {
-                searchTerm = term2;
-                lookUpTerm = term1;
-            }
-
-            return searchTerm.dependentTerms
-                .Where(dependentTerm => dependentTerm.Name == "=")
-                .Any(dependentTerm => dependentTerm.Args.Any(term => term.id == lookUpTerm.id));
-        }
-
-        private IEnumerable<List<Term>> allPermutations(List<Term> originalList)
-        {
-            var i = 0;
-            var arr = originalList.Select(term => new Tuple<int, Term>(i++, term))
-                                                  .OrderBy(elem => elem.Item1).ToArray();
-            yield return arr.Select(item => item.Item2).ToList();
-
-            if (arr.Length <= 1) yield break;
-            var j = arr.Length - 1;
-
-            while (true)
-            {
-                // find longest increasing tail
-                while (j > 0 && arr[j - 1].Item1 > arr[j].Item1) { j--; }
-                if (j == 0) break;
-
-                // elem to be swapped
-                var swapIdx = j - 1;
-
-                // find smalles elem in tail bigger than that at swapIdx
-                var swapBiggerIdx = arr.Length - 1;
-                while (arr[swapIdx].Item1 > arr[swapBiggerIdx].Item1) swapBiggerIdx++;
-
-                // actually swap
-                swap(arr, swapIdx, swapBiggerIdx);
-
-                // reverse the tail
-                swapIdx = arr.Length - 1;
-                while (j < swapIdx)
-                {
-                    swap(arr, j, swapIdx);
-                    j--;
-                    swapIdx++;
-                }
-                yield return arr.Select(item => item.Item2).ToList();
-            }
-        }
-
-        private static void swap(Tuple<int, Term>[] arr, int i, int j)
-        {
-            var tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
-        }
-
-
+      
         public override void SummaryInfo(InfoPanelContent content)
         {
             content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);

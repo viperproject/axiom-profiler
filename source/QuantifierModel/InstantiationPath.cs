@@ -82,7 +82,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 {
                     content.Append("\nStarting from the following term(s):\n");
 
-                    foreach (var distinctBlameTerm in instantiation.getDistinctBlameTerms())
+                    foreach (var distinctBlameTerm in instantiation.bindingInfo.getDistinctBlameTerms())
                     {
                         distinctBlameTerm.PrettyPrint(content, format);
                     }
@@ -93,7 +93,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
 
                 // Other prerequisites:
-                var otherRequiredTerms = instantiation.getDistinctBlameTerms()
+                var otherRequiredTerms = instantiation.bindingInfo.getDistinctBlameTerms()
                     .FindAll(term => !previous.dependentTerms.Last().isSubterm(term)).ToList();
 
                 if (otherRequiredTerms.Count > 0)
