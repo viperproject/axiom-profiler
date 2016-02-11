@@ -226,17 +226,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             if (unusedBlameTerms.Count != 0 ||
                 bindings.Count != boundTerms.Count + blameTerms.Count) return false;
 
-            foreach (var binding in bindings.Where( kvPair => kvPair.Key.id == -1))
-            {
-                var freeVar = binding.Key;
-                var term = binding.Value;
-                if (boundTerms.Any(bndTerm => bndTerm.id == term.id)) continue;
-                
-                // term bound to free var is not actually a bound term
-                // do equality lookup to see whether there is an actually bound variable that is
-                if (!fixBindingWithEqLookUp(boundTerms, term, freeVar)) return false;
-            }
-            return true;
+            // decouple collections
+            var freeVarsToRebind = bindings.Where(kvPair => kvPair.Key.id == -1).Select(kvPair => kvPair.Key).ToList();
+            return !(from freeVar in freeVarsToRebind
+                     let term = bindings[freeVar]
+                     where boundTerms.All(bndTerm => bndTerm.id != term.id)
+                     where !fixBindingWithEqLookUp(boundTerms, term, freeVar)
+                     select freeVar)
+                     .Any();
         }
 
         private bool fixBindingWithEqLookUp(List<Term> boundTerms, Term term, Term freeVar)
@@ -249,8 +246,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 eqFound = true;
                 break;
             }
-            if (!eqFound) return false;
-            return true;
+            return eqFound;
         }
 
         private static bool recursiveEqualityLookUp(Term term1, Term term2)
