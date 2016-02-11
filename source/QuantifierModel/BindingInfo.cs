@@ -31,6 +31,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         // lower id is item1!
         public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
 
+        // number of equalities
+        public int numEq = 0;
+
 
         public BindingInfo(Term pattern, ICollection<Term> blameTerms)
         {
@@ -41,6 +44,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         private BindingInfo(BindingInfo other)
         {
             bindings = new Dictionary<Term, Term>(other.bindings);
+            unusedBlameTerms = new List<Term>(other.unusedBlameTerms);
+            fullPattern = other.fullPattern;
+            numEq = other.numEq;
 
             // 'deeper' copy
             matchContext = new Dictionary<Term, List<List<Term>>>();
@@ -55,9 +61,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 equalities[equality.Key] = new List<Term>(equality.Value);
             }
-
-            unusedBlameTerms = new List<Term>(other.unusedBlameTerms);
-            fullPattern = other.fullPattern;
 
             // 'deeper' copy
             outstandingMatches = new Dictionary<Term, List<Term>>();
@@ -152,9 +155,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 // already bound to something different!
                 var currBinding = bindings[pattern];
-
-                // eviction of the older bindings from outstanding candidates
-                outstandingCandidates.Remove(currBinding);
+                evictBinding(currBinding);
 
                 // add equality
                 addEquality(pattern, currBinding);
@@ -184,6 +185,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
         }
 
+        private void evictBinding(Term currBinding)
+        {
+            if (outstandingCandidates.ContainsKey(currBinding))
+            {
+                foreach (var childTerm in outstandingCandidates[currBinding].Select(tpl => tpl.Item2))
+                {
+                    // context of evicted childterms is irrelevant
+                    matchContext.Remove(childTerm);
+                }
+                outstandingCandidates.Remove(currBinding);
+            }
+        }
+
         private void addOutstandingCandidate(Term term, Term subPattern, Term subTerm)
         {
             if (!outstandingCandidates.ContainsKey(term)) outstandingCandidates[term] = new List<Tuple<Term, Term>>();
@@ -194,6 +208,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (!equalities.ContainsKey(pattern)) equalities[pattern] = new List<Term>();
             equalities[pattern].Add(currBinding);
+            numEq++;
         }
 
         private static bool matchCondition(Term pattern, Term term)
@@ -290,6 +305,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             return bindings
                 .Where(bnd => bnd.Key.id == -1)
                 .ToList();
+        }
+
+        public bool validate()
+        {
+            foreach (var equality in equalities)
+            {
+                var eqBaseTerm = bindings[equality.Key];
+                if (equality.Value.Any(otherTerm => !recursiveEqualityLookUp(eqBaseTerm, otherTerm)))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

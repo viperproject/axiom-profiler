@@ -137,6 +137,12 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
+            if (isAmbiguous)
+            {
+                content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+                content.Append( "Pattern match is ambiguos. Most likely match presented.\n");
+                content.switchToDefaultFormat();
+            }
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
@@ -206,25 +212,38 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (bindingInfo == null) return;
 
-            foreach (var context in bindingInfo.matchContext)
+            foreach (var binding in bindingInfo.bindings)
             {
-                var term = context.Key;
-                var pathConstraints = context.Value;
-                var color = Bindings.Any(bnd => bnd.id == term.id) ? Color.DeepSkyBlue : Color.Coral;
-                term.highlightTemporarily(format, color, pathConstraints);
+                var patternTerm = binding.Key;
+                var term = binding.Value;
+                var color = Color.Coral;
+                if (patternTerm.id == -1) color = Color.DeepSkyBlue;
+
+                term.highlightTemporarily(format, color, bindingInfo.matchContext[term]);
+                if (!bindingInfo.equalities.ContainsKey(patternTerm)) continue;
+
+                // highlight replaced, equal terms as well
+                foreach (var eqTerm in bindingInfo.equalities[patternTerm])
+                {
+                    eqTerm.highlightTemporarily(format, Color.Goldenrod, bindingInfo.matchContext[eqTerm]);
+                }
             }
         }
 
         private void processPattern()
         {
             if (didPatternMatch) return;
-            var bindingCandidates = findAllMatches();
-            if (bindingCandidates.Count == 1) _bindingInfo = bindingCandidates[0];
-            else if(bindingCandidates.Count > 1)
-            {
-                isAmbiguous = true;
-            }
             didPatternMatch = true;
+            var bindingCandidates = findAllMatches();
+            if(bindingCandidates.Count == 0) return;
+
+            if (bindingCandidates.Count > 1)
+            {
+                _bindingInfo = bindingCandidates.First(candidate => candidate.validate());
+            }
+            if (_bindingInfo != null) return;
+            isAmbiguous = true;
+            _bindingInfo = bindingCandidates[0];
         }
 
         private List<BindingInfo> findAllMatches()
@@ -238,7 +257,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                     if (match.finalize(Responsible.ToList(), Bindings.ToList())) plausibleMatches.Add(match);
                 }
             }
-            return plausibleMatches;
+            return plausibleMatches.OrderBy(match => match.numEq).ToList();
         }
 
         private List<BindingInfo> parallelDescent(Term pattern)
@@ -284,7 +303,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         // That's why the value type is Tuple<Term, List<List<Term>>>.
         private bool didPatternMatch;
         public bool isAmbiguous;
-      
+
         public override void SummaryInfo(InfoPanelContent content)
         {
             content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
