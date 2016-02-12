@@ -66,6 +66,7 @@ namespace Z3AxiomProfiler
             {
                 tree.addChar(c);
             }
+            tree.finalize();
             tree.printTree();
         }
 

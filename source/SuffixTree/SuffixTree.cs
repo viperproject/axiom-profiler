@@ -72,35 +72,69 @@ namespace Z3AxiomProfiler.SuffixTree
                 {
                     int leaf = newNode(position, oo);
                     nodes[active_node].next[getActiveEdgeText()] = leaf;
-                    addSuffixLink(active_node); //rule 2
+                    addSuffixLink(active_node);
                 }
                 else
                 {
                     int next = nodes[active_node].next[getActiveEdgeText()];
-                    if (walkDown(next)) continue;   //observation 2
+                    if (walkDown(next)) continue;
                     if (text[nodes[next].start + active_length] == c)
-                    { //observation 1
+                    {
                         active_length++;
-                        addSuffixLink(active_node); // observation 3
+                        addSuffixLink(active_node);
                         break;
                     }
                     int split = newNode(nodes[next].start, nodes[next].start + active_length);
+
                     nodes[active_node].next[getActiveEdgeText()] = split;
+
                     int leaf = newNode(position, oo);
                     nodes[split].next[c] = leaf;
                     nodes[next].start += active_length;
                     nodes[split].next[text[nodes[next].start]] = next;
-                    addSuffixLink(split); //rule 2
+                    addSuffixLink(split);
                 }
                 remainder--;
 
                 if (active_node == root && active_length > 0)
-                {  //rule 1
+                {
                     active_length--;
                     active_edge = position - remainder + 1;
                 }
                 else
                     active_node = nodes[active_node].link > 0 ? nodes[active_node].link : root; //rule 3
+            }
+        }
+
+        public void finalize()
+        {
+            var todo = new Stack<int>();
+            todo.Push(root);
+            var visited = new HashSet<int>();
+
+            while (todo.Count > 0)
+            {
+                var current = todo.Peek();
+
+                if (visited.Contains(current))
+                {
+                    foreach (var childNode in nodes[current].next.Values.Select(idx => nodes[idx]))
+                    {
+                        nodes[current].leafs.AddRange(childNode.leafs);
+                    }
+                    todo.Pop();
+                }
+
+                visited.Add(current);
+                if (nodes[current].next.Count == 0)
+                {
+                    nodes[current].leafs.Add(nodes[current]);
+                    continue;
+                }
+                foreach (var childIdx in nodes[current].next.Values)
+                {
+                    todo.Push(childIdx);
+                }
             }
         }
 
@@ -156,8 +190,7 @@ namespace Z3AxiomProfiler.SuffixTree
         {
             if (x != root && nodes[x].next.Count > 0)
             {
-                Console.WriteLine("\tnode" + x +
-                                  " [label=\"\",style=filled,fillcolor=lightgrey,shape=circle,width=.07,height=.07]");
+                Console.WriteLine($"\tnode{x} [label=\"{nodes[x].leafs.Count}\",style=filled,fillcolor=lightgrey,shape=circle,width=.07,height=.07]");
             }
 
             foreach (int child in nodes[x].next.Values)
@@ -201,6 +234,7 @@ namespace Z3AxiomProfiler.SuffixTree
         public int start;
         public readonly int end;
         public int link;
+        public readonly List<Node> leafs = new List<Node>(); 
         public readonly Dictionary<char, int> next = new Dictionary<char, int>();
 
         public Node(int start, int end)
