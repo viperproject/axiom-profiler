@@ -159,7 +159,6 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append(".\n\n");
 
-            bindingInfo.fullPattern.highlightTemporarily(format, Color.LimeGreen);
             tempHighlightBlameBindTerms(format);
 
             content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
@@ -216,7 +215,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
             if (bindingInfo == null) return;
-
+            bindingInfo.fullPattern.highlightTemporarily(format, Color.LimeGreen);
             foreach (var binding in bindingInfo.bindings)
             {
                 var patternTerm = binding.Key;

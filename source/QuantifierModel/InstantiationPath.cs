@@ -63,39 +63,59 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("\n\nLength: " + Length()).Append('\n');
             content.Append("Highlighted terms are ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
-            content.Append("blamed or matched");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
+            content.Append("matched");
             content.switchToDefaultFormat();
-            content.Append(" and ");
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.Append("blamed");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.Append("blamed using equality");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(", respectively.\n");
+            content.Append(".\n\n");
 
-            Instantiation previous = null;
-            Instantiation current = null;
-            foreach (var instantiation in pathInstantiations)
+            var pathEnumerator = pathInstantiations.GetEnumerator();
+            if (!pathEnumerator.MoveNext() || pathEnumerator.Current == null) return; // empty path
+            var current = pathEnumerator.Current;
+
+            // first thing
+            content.switchToDefaultFormat();
+            content.Append("\nStarting from the following term(s):\n\n");
+            current.tempHighlightBlameBindTerms(format);
+            foreach (var distinctBlameTerm in current.bindingInfo.getDistinctBlameTerms())
             {
-                current = instantiation;
-                instantiation.tempHighlightBlameBindTerms(format);
-                if (previous == null)
-                {
-                    content.Append("\nStarting from the following term(s):\n");
+                distinctBlameTerm.PrettyPrint(content, format);
+            }
 
-                    foreach (var distinctBlameTerm in instantiation.bindingInfo.getDistinctBlameTerms())
-                    {
-                        distinctBlameTerm.PrettyPrint(content, format);
-                    }
-                    previous = instantiation;
-                    format.restoreAllOriginalRules();
-                    continue;
-                }
+            content.switchToDefaultFormat();
+            content.Append("\n\nApplication of ");
+            content.Append(current.Quant.PrintName);
+            content.Append("\n\n");
 
+            current.Quant.BodyTerm.PrettyPrint(content, format);
+            format.restoreAllOriginalRules();
+
+            while (pathEnumerator.MoveNext() && pathEnumerator.Current != null)
+            {
+                // between stuff
+                var previous = current;
+                current = pathEnumerator.Current;
+
+                current.tempHighlightBlameBindTerms(format);
+
+                content.switchToDefaultFormat();
+                content.Append("\n\nThis instantiation yields:\n\n");
+                previous.dependentTerms.Last().PrettyPrint(content, format);
 
                 // Other prerequisites:
-                var otherRequiredTerms = instantiation.bindingInfo.getDistinctBlameTerms()
+                var otherRequiredTerms = current.bindingInfo.getDistinctBlameTerms()
                     .FindAll(term => !previous.dependentTerms.Last().isSubterm(term)).ToList();
-
                 if (otherRequiredTerms.Count > 0)
                 {
                     content.switchToDefaultFormat();
@@ -107,73 +127,53 @@ namespace Z3AxiomProfiler.QuantifierModel
                     }
                 }
 
-                // Quantifier info
                 content.switchToDefaultFormat();
-                content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
+                content.Append("\n\nApplication of ");
+                content.Append(current.Quant.PrintName);
                 content.Append("\n\n");
 
-                // Quantifier body with highlights (if applicable)
-                if (previous.bindingInfo != null)
-                {
-                    previous.bindingInfo.fullPattern.highlightTemporarily(format, Color.Coral);
-                }
-                else
-                {
-                    previous.printNoMatchdisclaimer(content);
-                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
-                    content.Append("\n\nBlamed terms:\n\n");
-                    content.switchToDefaultFormat();
-
-                    foreach (var t in previous.Responsible)
-                    {
-                        content.Append("\n");
-                        t.PrettyPrint(content, format);
-                        content.Append("\n\n");
-                    }
-
-                    content.Append('\n');
-                    content.switchToDefaultFormat();
-                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
-                    content.Append("Bound terms:\n\n");
-                    content.switchToDefaultFormat();
-                    foreach (var t in previous.Bindings)
-                    {
-                        content.Append("\n");
-                        t.PrettyPrint(content, format);
-                        content.Append("\n\n");
-                    }
-
-                    content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
-                    content.Append("Quantifier Body:\n\n");
-                }
-                
-                previous.Quant.BodyTerm.PrettyPrint(content, format);
-
-                content.switchToDefaultFormat();
-                content.Append("\n\nThis instantiation yields:\n\n");
-                previous.dependentTerms.Last().PrettyPrint(content, format);
-
+                current.Quant.BodyTerm.PrettyPrint(content, format);
                 format.restoreAllOriginalRules();
-
-                previous = instantiation;
             }
-
-            if (current == null) return;
 
             // Quantifier info for last in chain
             content.switchToDefaultFormat();
-            content.Append("\n\nApplication of ").Append(previous.Quant.PrintName);
-            content.Append("\n\n");
-            current.bindingInfo?.fullPattern.highlightTemporarily(format, Color.Coral);
-            current.Quant.BodyTerm.PrettyPrint(content, format);
-
-            format.restoreAllOriginalRules();
-            content.switchToDefaultFormat();
             content.Append("\n\nThis instantiation yields:\n\n");
-            if (previous.dependentTerms.Last() != null)
+
+            if (current.dependentTerms.Last() != null)
             {
-                previous.dependentTerms.Last().PrettyPrint(content, format);
+                current.dependentTerms.Last().PrettyPrint(content, format);
             }
+        }
+
+        private static void legacyInstantiationInfo(InfoPanelContent content, PrettyPrintFormat format, Instantiation previous)
+        {
+            previous.printNoMatchdisclaimer(content);
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.Append("\n\nBlamed terms:\n\n");
+            content.switchToDefaultFormat();
+
+            foreach (var t in previous.Responsible)
+            {
+                content.Append("\n");
+                t.PrettyPrint(content, format);
+                content.Append("\n\n");
+            }
+
+            content.Append('\n');
+            content.switchToDefaultFormat();
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.Append("Bound terms:\n\n");
+            content.switchToDefaultFormat();
+            foreach (var t in previous.Bindings)
+            {
+                content.Append("\n");
+                t.PrettyPrint(content, format);
+                content.Append("\n\n");
+            }
+
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.Append("Quantifier Body:\n\n");
         }
 
         public IEnumerable<Instantiation> getInstantiations()
