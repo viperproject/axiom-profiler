@@ -189,6 +189,7 @@
     <Compile Include="SearchTree.Designer.cs">
       <DependentUpon>SearchTree.cs</DependentUpon>
     </Compile>
+    <Compile Include="SuffixTree\SuffixTree.cs" />
     <Compile Include="Z3AxiomProfiler.cs">
       <SubType>Form</SubType>
     </Compile>
