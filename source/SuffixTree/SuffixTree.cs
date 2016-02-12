@@ -123,6 +123,7 @@ namespace Z3AxiomProfiler.SuffixTree
                         nodes[current].leafs.AddRange(childNode.leafs);
                     }
                     todo.Pop();
+                    continue;
                 }
 
                 visited.Add(current);
