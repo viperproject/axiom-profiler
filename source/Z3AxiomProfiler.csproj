@@ -98,6 +98,7 @@
     <Compile Include="AboutBox.Designer.cs">
       <DependentUpon>AboutBox.cs</DependentUpon>
     </Compile>
+    <Compile Include="CycleDetection\CycleDetection.cs" />
     <Compile Include="EditPrintRuleDialog.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -76,7 +76,7 @@ namespace Z3AxiomProfiler.SuffixTree
                 }
                 else
                 {
-                    int next = nodes[active_node].next[getActiveEdgeText()];
+                    var next = nodes[active_node].next[getActiveEdgeText()];
                     if (walkDown(next)) continue;
                     if (text[nodes[next].start + active_length] == c)
                     {
@@ -88,7 +88,7 @@ namespace Z3AxiomProfiler.SuffixTree
 
                     nodes[active_node].next[getActiveEdgeText()] = split;
 
-                    int leaf = newNode(position, oo);
+                    var leaf = newNode(position, oo);
                     nodes[split].next[c] = leaf;
                     nodes[next].start += active_length;
                     nodes[split].next[text[nodes[next].start]] = next;
@@ -115,28 +115,106 @@ namespace Z3AxiomProfiler.SuffixTree
             while (todo.Count > 0)
             {
                 var current = todo.Peek();
+                var curNode = nodes[current];
 
                 if (visited.Contains(current))
                 {
-                    foreach (var childNode in nodes[current].next.Values.Select(idx => nodes[idx]))
+                    foreach (var childNode in curNode.next.Values.Select(idx => nodes[idx]))
                     {
-                        nodes[current].leafs.AddRange(childNode.leafs);
+                        curNode.leafs.AddRange(childNode.leafs);
                     }
+
+                    // sort by start in ascending order
+                    curNode.leafs.Sort((l1, l2) => l1.suffixStart.CompareTo(l2.suffixStart));
+                    curNode.suffixStart = text.Length - curNode.nodeString.Length;
                     todo.Pop();
                     continue;
                 }
 
                 visited.Add(current);
-                if (nodes[current].next.Count == 0)
+
+                curNode.nodeString += edgeString(current);
+                if (curNode.next.Count == 0)
                 {
-                    nodes[current].leafs.Add(nodes[current]);
+                    curNode.leafs.Add(curNode);
                     continue;
                 }
-                foreach (var childIdx in nodes[current].next.Values)
+                foreach (var childIdx in curNode.next.Values)
+                {
+                    nodes[childIdx].nodeString += curNode.nodeString;
+                    todo.Push(childIdx);
+                }
+            }
+        }
+
+        public string getLongestCycle(int minRepetitions)
+        {
+            var todo = new Stack<int>();
+            todo.Push(root);
+            var visited = new HashSet<int>();
+
+            string currentCandidate = "";
+
+
+            while (todo.Count > 0)
+            {
+                var current = todo.Peek();
+                var curNode = nodes[current];
+
+                if (visited.Contains(current))
+                {
+                    todo.Pop();
+                    continue;
+                }
+                visited.Add(current);
+
+                
+                // check whether the candidate does fit the criteria.
+                if (curNode.nodeString.Length > 0 && curNode.leafs.Count >= minRepetitions)
+                {
+                    var nRepetitions = checkImmediateRepetitions(curNode.leafs, curNode.nodeString.Length);
+                    if (nRepetitions >= minRepetitions && curNode.nodeString.Length > currentCandidate.Length)
+                    {
+                        currentCandidate = curNode.nodeString;
+                    }
+                }
+
+                // no hope to find 3 repetitions down this path
+                if(curNode.leafs.Count <= 3) continue;
+
+                // enqueue children
+                foreach (var childIdx in curNode.next.Values)
                 {
                     todo.Push(childIdx);
                 }
             }
+
+            return currentCandidate;
+        }
+
+        private int checkImmediateRepetitions(IEnumerable<Node> suffixes, int suffixLength)
+        {
+            var curCount = 0;
+            var max = 0;
+            var prevStart = int.MinValue;
+            var enumerator = suffixes.GetEnumerator();
+
+            while (enumerator.MoveNext() && enumerator.Current != null)
+            {
+                var current = enumerator.Current;
+                if (current.suffixStart - prevStart == suffixLength)
+                {
+                    curCount++;
+                }
+                else
+                {
+                    if (curCount > max) max = curCount;
+                    curCount = 1;
+                }
+                prevStart = current.suffixStart;
+            }
+            if (curCount > max) max = curCount;
+            return max;
         }
 
         /*
@@ -149,6 +227,7 @@ namespace Z3AxiomProfiler.SuffixTree
         {
             var startIdx = nodes[node].start;
             var endIdx = Math.Min(position + 1, nodes[node].end);
+            if (startIdx < 0 || endIdx < 0) return "";
             var length = endIdx - startIdx;
             var substring = new char[length];
             Array.Copy(text, startIdx, substring, 0, length);
@@ -176,7 +255,7 @@ namespace Z3AxiomProfiler.SuffixTree
         {
             if (nodes[x].next.Count == 0)
             {
-                Console.WriteLine("\tnode" + x + " [label=\"\",shape=point]");
+                Console.WriteLine($"\tnode{x} [label=\"{nodes[x].nodeString}, {nodes[x].suffixStart}\",style=filled,fillcolor=lightblue,shape=circle,width=.07,height=.07]");
             }
             else
             {
@@ -191,7 +270,7 @@ namespace Z3AxiomProfiler.SuffixTree
         {
             if (x != root && nodes[x].next.Count > 0)
             {
-                Console.WriteLine($"\tnode{x} [label=\"{nodes[x].leafs.Count}\",style=filled,fillcolor=lightgrey,shape=circle,width=.07,height=.07]");
+                Console.WriteLine($"\tnode{x} [label=\"{nodes[x].nodeString}, {nodes[x].leafs.Count}\",style=filled,fillcolor=lightgrey,shape=circle,width=.07,height=.07]");
             }
 
             foreach (int child in nodes[x].next.Values)
@@ -232,6 +311,8 @@ namespace Z3AxiomProfiler.SuffixTree
            by which the node is connected to its parent node.
         */
 
+        public string nodeString;
+        public int suffixStart;
         public int start;
         public readonly int end;
         public int link;

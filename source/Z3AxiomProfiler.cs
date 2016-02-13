@@ -59,15 +59,6 @@ namespace Z3AxiomProfiler
             uiUpdateTimer.Interval = 5;
             uiUpdateTimer.Tick += treeUiUpdateTimerTick;
             uiUpdateTimer.Tick += InfoPanelUpdateTick;
-
-            var testString = "BBBBBB$";
-            var tree = new SuffixTree.SuffixTree(testString.Length);
-            foreach (var c in testString)
-            {
-                tree.addChar(c);
-            }
-            tree.finalize();
-            tree.printTree();
         }
 
 
@@ -310,7 +301,7 @@ namespace Z3AxiomProfiler
         private void resetProfiler()
         {
             // Close printRuleViewer if it is still open
-            printRuleViewer.Close();
+            printRuleViewer?.Close();
 
             // reset everything
             model = null;

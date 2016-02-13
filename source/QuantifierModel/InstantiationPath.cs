@@ -80,6 +80,19 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append(".\n\n");
 
+            // cycle detection
+            var cycleDetector = new CycleDetection.CycleDetection(pathInstantiations, 3);
+            if (cycleDetector.hasCycle())
+            {
+                var cycle = cycleDetector.getCycleQuantifiers();
+                content.switchFormat(InfoPanelContent.BoldFont, Color.Red);
+                content.Append("\nMatching loop found!\n");
+                content.switchToDefaultFormat();
+                content.Append("Length: ").Append(cycle.Count + "\n");
+                content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
+                content.Append("\n\n");
+            }
+
             var pathEnumerator = pathInstantiations.GetEnumerator();
             if (!pathEnumerator.MoveNext() || pathEnumerator.Current == null) return; // empty path
             var current = pathEnumerator.Current;
