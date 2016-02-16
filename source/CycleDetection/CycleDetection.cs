@@ -6,14 +6,14 @@ namespace Z3AxiomProfiler.CycleDetection
 {
     public class CycleDetection
     {
-        private IEnumerable<Instantiation> path;
+        private readonly IEnumerable<Instantiation> path;
         private bool processed;
-        private string cycle;
         private readonly int minRepetitions;
         private const char endChar = char.MaxValue;
         private char currMap = char.MinValue;
         private readonly Dictionary<string, char> mapping = new Dictionary<string, char>();
         private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>();
+        private SuffixTree.SuffixTree suffixTree;
 
         public CycleDetection(IEnumerable<Instantiation> pathToCheck, int minRep)
         {
@@ -24,14 +24,17 @@ namespace Z3AxiomProfiler.CycleDetection
         public bool hasCycle()
         {
             if (!processed) findCycle();
-            return !string.IsNullOrEmpty(cycle);
+            return !string.IsNullOrEmpty(suffixTree.getLongestCycle());
         }
 
         public List<Quantifier> getCycleQuantifiers()
         {
+            if (!processed) findCycle();
             var result = new List<Quantifier>();
             if (!hasCycle()) return result;
-            result.AddRange(cycle.Where(c => c != endChar).Select(c => reverseMapping[c].First().Quant));
+            result.AddRange(suffixTree.getLongestCycle()
+                .Where(c => c != endChar)
+                .Select(c => reverseMapping[c].First().Quant));
             return result;
         }
 
@@ -61,15 +64,20 @@ namespace Z3AxiomProfiler.CycleDetection
             chars.Add(endChar);
 
             // search for cycles
-            var suffixTree = new SuffixTree.SuffixTree(chars.Count);
+            suffixTree = new SuffixTree.SuffixTree(chars.Count, minRepetitions);
             foreach (var c in chars)
             {
                 suffixTree.addChar(c);
             }
-            suffixTree.finalize();
-
-            cycle = suffixTree.getLongestCycle(minRepetitions);
             processed = true;
+        }
+
+        public IEnumerable<Instantiation> getCycleInstantiations()
+        {
+            if (!processed) findCycle();
+            // return empty list if there is no cycle
+            return !hasCycle() ? new List<Instantiation>() :
+                path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getLongestCycle().Length);
         }
     }
 }

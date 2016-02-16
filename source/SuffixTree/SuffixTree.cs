@@ -22,12 +22,30 @@ namespace Z3AxiomProfiler.SuffixTree
         private int active_length;
         private int active_edge;
 
-        public SuffixTree(int length)
+        private bool finalized;
+        private string longestCycle;
+        private int startIdx;
+        private int minRepetitions;
+
+        public int getStartIdx()
+        {
+            if (!finalized) finalize();
+            return startIdx;
+        }
+
+        public string getLongestCycle()
+        {
+            if (!finalized) finalize();
+            return longestCycle ?? "";
+        }
+
+        public SuffixTree(int length, int nRepetitions)
         {
             nodes = new Node[2 * length + 2];
             text = new char[length];
             root = newNode(-1, -1);
             active_node = root;
+            minRepetitions = nRepetitions;
         }
 
         private void addSuffixLink(int node)
@@ -108,6 +126,8 @@ namespace Z3AxiomProfiler.SuffixTree
 
         public void finalize()
         {
+            if (finalized) return;
+            finalized = true;
             var todo = new Stack<int>();
             todo.Push(root);
             var visited = new HashSet<int>();
@@ -145,16 +165,15 @@ namespace Z3AxiomProfiler.SuffixTree
                     todo.Push(childIdx);
                 }
             }
+            findLongestCycle();
         }
 
-        public string getLongestCycle(int minRepetitions)
+        public void findLongestCycle()
         {
             var todo = new Stack<int>();
             todo.Push(root);
             var visited = new HashSet<int>();
-
             string currentCandidate = "";
-
 
             while (todo.Count > 0)
             {
@@ -168,7 +187,7 @@ namespace Z3AxiomProfiler.SuffixTree
                 }
                 visited.Add(current);
 
-                
+
                 // check whether the candidate does fit the criteria.
                 if (curNode.nodeString.Length > 0 && curNode.leafs.Count >= minRepetitions)
                 {
@@ -176,11 +195,12 @@ namespace Z3AxiomProfiler.SuffixTree
                     if (nRepetitions >= minRepetitions && curNode.nodeString.Length > currentCandidate.Length)
                     {
                         currentCandidate = curNode.nodeString;
+                        startIdx = curNode.suffixStart;
                     }
                 }
 
                 // no hope to find 3 repetitions down this path
-                if(curNode.leafs.Count <= 3) continue;
+                if (curNode.leafs.Count <= 3) continue;
 
                 // enqueue children
                 foreach (var childIdx in curNode.next.Values)
@@ -188,8 +208,7 @@ namespace Z3AxiomProfiler.SuffixTree
                     todo.Push(childIdx);
                 }
             }
-
-            return currentCandidate;
+            longestCycle = currentCandidate;
         }
 
         private int checkImmediateRepetitions(IEnumerable<Node> suffixes, int suffixLength)
@@ -225,12 +244,12 @@ namespace Z3AxiomProfiler.SuffixTree
 
         string edgeString(int node)
         {
-            var startIdx = nodes[node].start;
+            var start = nodes[node].start;
             var endIdx = Math.Min(position + 1, nodes[node].end);
-            if (startIdx < 0 || endIdx < 0) return "";
-            var length = endIdx - startIdx;
+            if (start < 0 || endIdx < 0) return "";
+            var length = endIdx - start;
             var substring = new char[length];
-            Array.Copy(text, startIdx, substring, 0, length);
+            Array.Copy(text, start, substring, 0, length);
             return new string(substring);
         }
 
@@ -316,7 +335,7 @@ namespace Z3AxiomProfiler.SuffixTree
         public int start;
         public readonly int end;
         public int link;
-        public readonly List<Node> leafs = new List<Node>(); 
+        public readonly List<Node> leafs = new List<Node>();
         public readonly Dictionary<char, int> next = new Dictionary<char, int>();
 
         public Node(int start, int end)

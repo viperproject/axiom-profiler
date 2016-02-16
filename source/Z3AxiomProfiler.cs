@@ -651,7 +651,7 @@ namespace Z3AxiomProfiler
                 toolTipBox.Clear();
             }
 
-            content.writeToTextBox(toolTipBox, 1000);
+            content.writeToTextBox(toolTipBox, 1500);
 
             // check if finished
             if (content.finished)
