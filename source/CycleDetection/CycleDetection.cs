@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler.CycleDetection
@@ -16,7 +13,7 @@ namespace Z3AxiomProfiler.CycleDetection
         private const char endChar = char.MaxValue;
         private char currMap = char.MinValue;
         private readonly Dictionary<string, char> mapping = new Dictionary<string, char>();
-        private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>(); 
+        private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>();
 
         public CycleDetection(IEnumerable<Instantiation> pathToCheck, int minRep)
         {
@@ -26,29 +23,28 @@ namespace Z3AxiomProfiler.CycleDetection
 
         public bool hasCycle()
         {
-            if(!processed) findCycle();
+            if (!processed) findCycle();
             return !string.IsNullOrEmpty(cycle);
         }
 
         public List<Quantifier> getCycleQuantifiers()
         {
             var result = new List<Quantifier>();
-            if(!hasCycle()) return result;
-            foreach (var c in cycle.Where(c => c != endChar))
-            {
-                result.Add(reverseMapping[c].First().Quant);
-            }
+            if (!hasCycle()) return result;
+            result.AddRange(cycle.Where(c => c != endChar).Select(c => reverseMapping[c].First().Quant));
             return result;
-        } 
+        }
 
         private void findCycle()
         {
             var chars = new List<char>();
-            
+
             // map the instantiations
             foreach (var instantiation in path)
             {
-                var key = instantiation.Quant.PrintName + instantiation.bindingInfo.fullPattern.Name;
+                var key = instantiation.Quant.BodyTerm.id + "" +
+                    instantiation.bindingInfo.fullPattern.id + "" +
+                    instantiation.bindingInfo.numEq;
                 if (!mapping.ContainsKey(key))
                 {
                     mapping[key] = currMap;
