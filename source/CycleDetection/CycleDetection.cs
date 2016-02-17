@@ -147,6 +147,7 @@ namespace Z3AxiomProfiler.CycleDetection
 
             while (true)
             {
+                // check for backtrack condition
                 if (generalizedHistory.Count > 0)
                 {
                     var mostRecent = generalizedHistory.Peek();
@@ -171,51 +172,53 @@ namespace Z3AxiomProfiler.CycleDetection
                 }
 
                 // find candidates for the next term.
-                foreach (var currentTerm in todoStacks.Select(queue => queue.Peek()))
+                foreach (var currentTerm in todoStacks.Select(stack => stack.Peek()))
                 {
                     collectCandidateTerm(currentTerm, candidates);
                 }
 
-                Term currTerm;
-                if (candidates.Count == 1)
-                {
-                    // consensus -> decend further
-
-                    var value = candidates.Values.First();
-                    currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
-                    idCounter--;
-
-                    addToGeneralizedTerm(generalizedHistory, currTerm);
-
-                    // check only for efficiency
-                    if (currTerm.Args.Length > 0)
-                    {
-                        pushSubterms(todoStacks);
-                    }
-                }
-                else
-                {
-                    // no consensus --> generalize
-                    // todo: if necessary, detect outlier
-
-                    currTerm = getGeneralizedTerm(todoStacks);
-                    addToGeneralizedTerm(generalizedHistory, currTerm);
-                }
-
-                // reset candidates for next round
-                candidates.Clear();
+                var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory);
 
                 // check for blame / binding info
+                // todo: path condition check, otherwise highlighting gets completely botched!!!
                 if (childInsts[0].Responsible.Any(t => t.id == todoStacks[0].Peek().id))
                 {
                     blameHighlightTerms.Add(currTerm);
-                    continue; // cannot be blamed & bound
                 }
                 if (childInsts[0].Bindings.Any(t => t.id == todoStacks[0].Peek().id))
                 {
                     bindHighlightTerms.Add(currTerm);
                 }
+
+                // push children if applicable
+                if (currTerm.Args.Length > 0)
+                {
+                    pushSubterms(todoStacks);
+                }
+
+                // reset candidates for next round
+                candidates.Clear();
             }
+        }
+
+        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory)
+        {
+            Term currTerm;
+            if (candidates.Count == 1)
+            {
+                // consensus -> decend further
+                var value = candidates.Values.First();
+                currTerm = new Term(value.Item2, new Term[value.Item3]) {id = idCounter};
+                idCounter--;
+            }
+            else
+            {
+                // no consensus --> generalize
+                // todo: if necessary, detect outlier
+                currTerm = getGeneralizedTerm(todoStacks);
+            }
+            addToGeneralizedTerm(generalizedHistory, currTerm);
+            return currTerm;
         }
 
         private static void addToGeneralizedTerm(Stack<Term> generalizedHistory, Term currTerm)
