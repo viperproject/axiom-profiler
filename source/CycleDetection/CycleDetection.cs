@@ -79,5 +79,11 @@ namespace Z3AxiomProfiler.CycleDetection
             return !hasCycle() ? new List<Instantiation>() :
                 path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getLongestCycle().Length);
         }
+
+    }
+
+    public class GeneralizationState
+    {
+        
     }
 }
