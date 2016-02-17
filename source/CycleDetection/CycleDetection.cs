@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Management.Instrumentation;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler.CycleDetection
@@ -16,6 +17,7 @@ namespace Z3AxiomProfiler.CycleDetection
         private readonly Dictionary<string, char> mapping = new Dictionary<string, char>();
         private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>();
         private SuffixTree.SuffixTree suffixTree;
+        private GeneralizationState gen;
 
         public CycleDetection(IEnumerable<Instantiation> pathToCheck, int minRep)
         {
@@ -27,6 +29,12 @@ namespace Z3AxiomProfiler.CycleDetection
         {
             if (!processed) findCycle();
             return suffixTree.hasCycle();
+        }
+
+        public GeneralizationState getGeneralization()
+        {
+            if (!processed) findCycle();
+            return gen;
         }
 
         public List<Quantifier> getCycleQuantifiers()
@@ -72,7 +80,7 @@ namespace Z3AxiomProfiler.CycleDetection
                 suffixTree.addChar(c);
             }
             processed = true;
-            var gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
+            gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
             gen.generalize();
         }
 
@@ -89,11 +97,12 @@ namespace Z3AxiomProfiler.CycleDetection
     public class GeneralizationState
     {
         private int idCounter = -2;
+        private int genCounter = 1;
         private readonly List<Instantiation>[] loopInstantiations;
-        private List<Term> generalizedTerms = new List<Term>();
+        public readonly List<Term> generalizedTerms = new List<Term>();
         private List<Term> blameHighlightTerms = new List<Term>();
         private List<Term> bindHighlightTerms = new List<Term>();
-        private Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
+        private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
 
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
         {
@@ -115,12 +124,12 @@ namespace Z3AxiomProfiler.CycleDetection
         {
             for (var i = 0; i < loopInstantiations.Length; i++)
             {
-                var j = ++i % loopInstantiations.Length;
-                generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j]);
+                var j = (i + 1) % loopInstantiations.Length;
+                generalizedTerms.Add(generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j]));
             }
         }
 
-        private void generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts)
+        private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts)
         {
             // queues for breath first traversal of all terms in parallel
             var todoStacks = parentInsts
@@ -133,55 +142,120 @@ namespace Z3AxiomProfiler.CycleDetection
             // also exposes outliers
             // term name + type + #Args -> #votes
             var candidates = new Dictionary<string, Tuple<int, string, int>>();
-
-            
-            var generalizedStack = new Stack<Term>();
-            generalizedStack.Push(new Term("generalization root", new Term[1]));
+            var visited = new HashSet<string>();
 
             var generalizedHistory = new Stack<Term>();
 
-            while (todoStacks[0].Count > 0)
+            while (true)
             {
+                if (generalizedHistory.Count > 0)
+                {
+                    var mostRecent = generalizedHistory.Peek();
+                    if (mostRecent.Args.Length == 0 || mostRecent.Args[0] != null)
+                    {
+                        // this term is full --> backtrack
+
+                        if (generalizedHistory.Count == 1)
+                        {
+                            // were about to pop the generalized root --> finished
+                            return mostRecent;
+                        }
+
+                        // all subterms connected -> pop parent
+                        generalizedHistory.Pop();
+                        foreach (var stack in todoStacks)
+                        {
+                            stack.Pop();
+                        }
+                        continue;
+                    }
+                }
+
                 // find candidates for the next term.
                 foreach (var currentTerm in todoStacks.Select(queue => queue.Peek()))
                 {
                     collectCandidateTerm(currentTerm, candidates);
                 }
 
+
                 if (candidates.Count == 1)
                 {
                     // consensus -> decend further
 
                     var value = candidates.Values.First();
-                    var currTerm = new Term(value.Item2, new Term[value.Item3]) {id = idCounter};
+                    var currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
                     idCounter--;
-                    var parent = generalizedHistory.Count > 0 ? generalizedHistory.Peek() : null;
 
-                    // connect to parent
-                    if (parent != null)
-                    {
-                        var idx = Array.FindIndex(parent.Args, t => t == null);
-                        parent.Args[idx] = currTerm;
-                    }
+                    addToGeneralizedTerm(generalizedHistory, currTerm);
 
+                    // check only for efficiency
                     if (currTerm.Args.Length > 0)
                     {
-                        foreach (var stack in todoStacks)
-                        {
-                            var curr = stack.Peek();
-                            foreach (var subterm in curr.Args)
-                            {
-                                stack.Push(subterm);
-                            }
-                        }
-                        
+                        pushSubterms(todoStacks);
                     }
-                    generalizedHistory.Push(currTerm);
-                    generalizedStack.Push(currTerm);
                 }
                 else
                 {
-                    // no consensus --> abstract
+                    // no consensus --> generalize
+                    // todo: if necessary, detect outlier
+
+                    var currTerm = getGeneralizedTerm(todoStacks);
+                    addToGeneralizedTerm(generalizedHistory, currTerm);
+                }
+
+                // reset candidates for next round
+                candidates.Clear();
+            }
+        }
+
+        private static void addToGeneralizedTerm(Stack<Term> generalizedHistory, Term currTerm)
+        {
+            var genParent = generalizedHistory.Count > 0 ? generalizedHistory.Peek() : null;
+            // connect to parent
+            if (genParent != null)
+            {
+                var idx = Array.FindLastIndex(genParent.Args, t => t == null);
+                genParent.Args[idx] = currTerm;
+            }
+
+            // always push the generalized term, because it is one term 'behind' the others
+            generalizedHistory.Push(currTerm);
+        }
+
+        private Term getGeneralizedTerm(Stack<Term>[] todoStacks)
+        {
+            var guardTerm = todoStacks[0].Peek();
+            var newTerm = true;
+
+            if (replacementDict.ContainsKey(guardTerm.id))
+            {
+                // can only reuse existing term if ALL replaced terms agree on the same generalization.
+                var existingGenTerm = replacementDict[guardTerm.id];
+                for (var i = 1; i < todoStacks.Length; i++)
+                {
+                    newTerm = newTerm && existingGenTerm == replacementDict[todoStacks[i].Peek().id];
+                }
+                if (newTerm) return existingGenTerm;
+            }
+            var t = new Term("generalized_replacement_" + genCounter, new Term[0]) { id = idCounter };
+            idCounter--;
+            genCounter++;
+
+            foreach (var stack in todoStacks)
+            {
+                replacementDict[stack.Peek().id] = t;
+            }
+            return t;
+        }
+
+        private static void pushSubterms(IEnumerable<Stack<Term>> todoStacks)
+        {
+            foreach (var stack in todoStacks)
+            {
+                var curr = stack.Peek();
+                foreach (var subterm in curr.Args)
+                {
+                    stack.Push(subterm);
                 }
             }
         }

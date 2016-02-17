@@ -70,7 +70,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             printPreamble(content);
 
             // cycle detection
-            printCycleInfo(content);
+            printCycleInfo(content, format);
 
             var pathEnumerator = pathInstantiations.GetEnumerator();
             if (!pathEnumerator.MoveNext() || pathEnumerator.Current == null) return; // empty path
@@ -161,7 +161,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             format.restoreAllOriginalRules();
         }
 
-        private void printCycleInfo(InfoPanelContent content)
+        private void printCycleInfo(InfoPanelContent content, PrettyPrintFormat format)
         {
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
@@ -171,6 +171,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Length: ").Append(cycle.Count + "\n");
             content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
             content.Append("\n\n");
+
+            foreach (var term in cycleDetector.getGeneralization().generalizedTerms)
+            {
+                term.PrettyPrint(content, format);
+                content.Append("\n\n");
+            }
         }
 
         private void printPreamble(InfoPanelContent content)

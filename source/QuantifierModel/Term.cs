@@ -35,7 +35,12 @@ namespace Z3AxiomProfiler.QuantifierModel
                 GenericType = "";
             }
             Args = args;
-            foreach (Term t in Args)
+
+            // Note: the null check was added to have it easier to construct the
+            // generalized terms top down.
+            // During parsing, args should never contain 'null' as Z3 only builds terms
+            // bottom up.
+            foreach (var t in Args.Where(t => t != null))
             {
                 size += t.size;
                 t.dependentTerms.Add(this);
