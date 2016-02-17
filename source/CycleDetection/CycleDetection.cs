@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using Z3AxiomProfiler.QuantifierModel;
 
@@ -71,7 +73,7 @@ namespace Z3AxiomProfiler.CycleDetection
             }
             processed = true;
             var gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
-            //gen.generalize();
+            gen.generalize();
         }
 
         public List<Instantiation> getCycleInstantiations()
@@ -121,27 +123,82 @@ namespace Z3AxiomProfiler.CycleDetection
         private void generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts)
         {
             // queues for breath first traversal of all terms in parallel
-            var todoQueues = parentInsts
+            var todoStacks = parentInsts
                 .Select(inst => inst.dependentTerms.Last())
                 .Where(t => t != null)
-                .Select(t => new Queue<Term>(new[] { t }))
+                .Select(t => new Stack<Term>(new[] { t }))
                 .ToArray();
 
             // map to 'vote' on generalization
             // also exposes outliers
             // term name + type + #Args -> #votes
-            var candidates = new Dictionary<string, int>();
+            var candidates = new Dictionary<string, Tuple<int, string, int>>();
 
-            while (true)
+            
+            var generalizedStack = new Stack<Term>();
+            generalizedStack.Push(new Term("generalization root", new Term[1]));
+
+            var generalizedHistory = new Stack<Term>();
+
+            while (todoStacks[0].Count > 0)
             {
                 // find candidates for the next term.
-                foreach (var queue in todoQueues)
+                foreach (var currentTerm in todoStacks.Select(queue => queue.Peek()))
                 {
-                    var currentTerm = queue.Peek();
-                    var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length;
-                    if (!candidates.ContainsKey(key)) candidates[key] = 0;
-                    candidates[key]++;
+                    collectCandidateTerm(currentTerm, candidates);
                 }
+
+                if (candidates.Count == 1)
+                {
+                    // consensus -> decend further
+
+                    var value = candidates.Values.First();
+                    var currTerm = new Term(value.Item2, new Term[value.Item3]) {id = idCounter};
+                    idCounter--;
+                    var parent = generalizedHistory.Count > 0 ? generalizedHistory.Peek() : null;
+
+                    // connect to parent
+                    if (parent != null)
+                    {
+                        var idx = Array.FindIndex(parent.Args, t => t == null);
+                        parent.Args[idx] = currTerm;
+                    }
+
+                    if (currTerm.Args.Length > 0)
+                    {
+                        foreach (var stack in todoStacks)
+                        {
+                            var curr = stack.Peek();
+                            foreach (var subterm in curr.Args)
+                            {
+                                stack.Push(subterm);
+                            }
+                        }
+                        
+                    }
+                    generalizedHistory.Push(currTerm);
+                    generalizedStack.Push(currTerm);
+                }
+                else
+                {
+                    // no consensus --> abstract
+                }
+            }
+        }
+
+        private static void collectCandidateTerm(Term currentTerm, Dictionary<string, Tuple<int, string, int>> candidates)
+        {
+            var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length;
+            if (!candidates.ContainsKey(key))
+            {
+                candidates[key] = new Tuple<int, string, int>
+                    (0, currentTerm.Name + currentTerm.GenericType, currentTerm.Args.Length);
+            }
+            else
+            {
+                var oldTuple = candidates[key];
+                candidates[key] = new Tuple<int, string, int>
+                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3);
             }
         }
     }
