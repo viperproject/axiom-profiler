@@ -24,7 +24,7 @@ namespace Z3AxiomProfiler.CycleDetection
         public bool hasCycle()
         {
             if (!processed) findCycle();
-            return !string.IsNullOrEmpty(suffixTree.getLongestCycle());
+            return suffixTree.hasCycle();
         }
 
         public List<Quantifier> getCycleQuantifiers()
@@ -32,7 +32,7 @@ namespace Z3AxiomProfiler.CycleDetection
             if (!processed) findCycle();
             var result = new List<Quantifier>();
             if (!hasCycle()) return result;
-            result.AddRange(suffixTree.getLongestCycle()
+            result.AddRange(suffixTree.getCycle()
                 .Where(c => c != endChar)
                 .Select(c => reverseMapping[c].First().Quant));
             return result;
@@ -70,20 +70,79 @@ namespace Z3AxiomProfiler.CycleDetection
                 suffixTree.addChar(c);
             }
             processed = true;
+            var gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
+            //gen.generalize();
         }
 
-        public IEnumerable<Instantiation> getCycleInstantiations()
+        public List<Instantiation> getCycleInstantiations()
         {
             if (!processed) findCycle();
             // return empty list if there is no cycle
             return !hasCycle() ? new List<Instantiation>() :
-                path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getLongestCycle().Length);
+                path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
         }
 
     }
 
     public class GeneralizationState
     {
-        
+        private int idCounter = -2;
+        private readonly List<Instantiation>[] loopInstantiations;
+        private List<Term> generalizedTerms = new List<Term>();
+        private List<Term> blameHighlightTerms = new List<Term>();
+        private List<Term> bindHighlightTerms = new List<Term>();
+        private Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
+
+        public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
+        {
+            loopInstantiations = new List<Instantiation>[cycleLength];
+            for (var i = 0; i < loopInstantiations.Length; i++)
+            {
+                loopInstantiations[i] = new List<Instantiation>();
+            }
+
+            var index = 0;
+            foreach (var instantiation in instantiations)
+            {
+                loopInstantiations[index].Add(instantiation);
+                index = ++index % loopInstantiations.Length;
+            }
+        }
+
+        public void generalize()
+        {
+            for (var i = 0; i < loopInstantiations.Length; i++)
+            {
+                var j = ++i % loopInstantiations.Length;
+                generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j]);
+            }
+        }
+
+        private void generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts)
+        {
+            // queues for breath first traversal of all terms in parallel
+            var todoQueues = parentInsts
+                .Select(inst => inst.dependentTerms.Last())
+                .Where(t => t != null)
+                .Select(t => new Queue<Term>(new[] { t }))
+                .ToArray();
+
+            // map to 'vote' on generalization
+            // also exposes outliers
+            // term name + type + #Args -> #votes
+            var candidates = new Dictionary<string, int>();
+
+            while (true)
+            {
+                // find candidates for the next term.
+                foreach (var queue in todoQueues)
+                {
+                    var currentTerm = queue.Peek();
+                    var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length;
+                    if (!candidates.ContainsKey(key)) candidates[key] = 0;
+                    candidates[key]++;
+                }
+            }
+        }
     }
 }

@@ -163,16 +163,14 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void printCycleInfo(InfoPanelContent content)
         {
-            if (hasCycle())
-            {
-                var cycle = cycleDetector.getCycleQuantifiers();
-                content.switchFormat(InfoPanelContent.BoldFont, Color.Red);
-                content.Append("\nMatching loop found!\n");
-                content.switchToDefaultFormat();
-                content.Append("Length: ").Append(cycle.Count + "\n");
-                content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
-                content.Append("\n\n");
-            }
+            if (!hasCycle()) return;
+            var cycle = cycleDetector.getCycleQuantifiers();
+            content.switchFormat(InfoPanelContent.BoldFont, Color.Red);
+            content.Append("\nMatching loop found!\n");
+            content.switchToDefaultFormat();
+            content.Append("Length: ").Append(cycle.Count + "\n");
+            content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
+            content.Append("\n\n");
         }
 
         private void printPreamble(InfoPanelContent content)

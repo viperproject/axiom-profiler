@@ -96,7 +96,7 @@
             this.showChainButton.Name = "showChainButton";
             this.showChainButton.Size = new System.Drawing.Size(125, 23);
             this.showChainButton.TabIndex = 5;
-            this.showChainButton.Text = "Show a Longest Chain";
+            this.showChainButton.Text = "Show a Longest Path";
             this.showChainButton.UseVisualStyleBackColor = true;
             this.showChainButton.Click += new System.EventHandler(this.showChainButton_Click);
             // 

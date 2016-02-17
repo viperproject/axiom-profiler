@@ -25,7 +25,8 @@ namespace Z3AxiomProfiler.SuffixTree
         private bool finalized;
         private string longestCycle;
         private int startIdx;
-        private int minRepetitions;
+        private readonly int minRepetitions;
+        public int nRep;
 
         public int getStartIdx()
         {
@@ -33,12 +34,23 @@ namespace Z3AxiomProfiler.SuffixTree
             return startIdx;
         }
 
-        public string getLongestCycle()
+        public string getCycle()
         {
             if (!finalized) finalize();
-            return longestCycle ?? "";
+            return longestCycle;
         }
 
+        public int getCycleLength()
+        {
+            if (!finalized) finalize();
+            return longestCycle.Length;
+        }
+
+        public bool hasCycle()
+        {
+            if (!finalized) finalize();
+            return longestCycle.Length > 0;
+        }
         public SuffixTree(int length, int nRepetitions)
         {
             nodes = new Node[2 * length + 2];
@@ -146,7 +158,8 @@ namespace Z3AxiomProfiler.SuffixTree
 
                     // sort by start in ascending order
                     curNode.leafs.Sort((l1, l2) => l1.suffixStart.CompareTo(l2.suffixStart));
-                    curNode.suffixStart = text.Length - curNode.nodeString.Length;
+                    curNode.suffixStart = curNode.leafs.Count > 1 ? 
+                        curNode.leafs.First().suffixStart : text.Length - curNode.nodeString.Length;
                     todo.Pop();
                     continue;
                 }
@@ -168,12 +181,12 @@ namespace Z3AxiomProfiler.SuffixTree
             findLongestCycle();
         }
 
-        public void findLongestCycle()
+        private void findLongestCycle()
         {
             var todo = new Stack<int>();
             todo.Push(root);
             var visited = new HashSet<int>();
-            string currentCandidate = "";
+            var currentCandidate = "";
 
             while (todo.Count > 0)
             {
@@ -192,10 +205,11 @@ namespace Z3AxiomProfiler.SuffixTree
                 if (curNode.nodeString.Length > 0 && curNode.leafs.Count >= minRepetitions)
                 {
                     var nRepetitions = checkImmediateRepetitions(curNode.leafs, curNode.nodeString.Length);
-                    if (nRepetitions >= minRepetitions && curNode.nodeString.Length > currentCandidate.Length)
+                    if (nRepetitions >= minRepetitions && nRepetitions > nRep)
                     {
                         currentCandidate = curNode.nodeString;
                         startIdx = curNode.suffixStart;
+                        nRep = nRepetitions;
                     }
                 }
 
