@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
+using System.Drawing;
 using System.Linq;
-using System.Management.Instrumentation;
+using Z3AxiomProfiler.PrettyPrinting;
 using Z3AxiomProfiler.QuantifierModel;
 
 namespace Z3AxiomProfiler.CycleDetection
@@ -142,7 +142,6 @@ namespace Z3AxiomProfiler.CycleDetection
             // also exposes outliers
             // term name + type + #Args -> #votes
             var candidates = new Dictionary<string, Tuple<int, string, int>>();
-            var visited = new HashSet<string>();
 
             var generalizedHistory = new Stack<Term>();
 
@@ -177,13 +176,13 @@ namespace Z3AxiomProfiler.CycleDetection
                     collectCandidateTerm(currentTerm, candidates);
                 }
 
-
+                Term currTerm;
                 if (candidates.Count == 1)
                 {
                     // consensus -> decend further
 
                     var value = candidates.Values.First();
-                    var currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
+                    currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
                     idCounter--;
 
                     addToGeneralizedTerm(generalizedHistory, currTerm);
@@ -199,12 +198,23 @@ namespace Z3AxiomProfiler.CycleDetection
                     // no consensus --> generalize
                     // todo: if necessary, detect outlier
 
-                    var currTerm = getGeneralizedTerm(todoStacks);
+                    currTerm = getGeneralizedTerm(todoStacks);
                     addToGeneralizedTerm(generalizedHistory, currTerm);
                 }
 
                 // reset candidates for next round
                 candidates.Clear();
+
+                // check for blame / binding info
+                if (childInsts[0].Responsible.Any(t => t.id == todoStacks[0].Peek().id))
+                {
+                    blameHighlightTerms.Add(currTerm);
+                    continue; // cannot be blamed & bound
+                }
+                if (childInsts[0].Bindings.Any(t => t.id == todoStacks[0].Peek().id))
+                {
+                    bindHighlightTerms.Add(currTerm);
+                }
             }
         }
 
@@ -273,6 +283,18 @@ namespace Z3AxiomProfiler.CycleDetection
                 var oldTuple = candidates[key];
                 candidates[key] = new Tuple<int, string, int>
                     (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3);
+            }
+        }
+
+        public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
+        {
+            foreach (var term in blameHighlightTerms)
+            {
+                term.highlightTemporarily(format, Color.Coral);
+            }
+            foreach (var term in bindHighlightTerms)
+            {
+                term.highlightTemporarily(format, Color.DeepSkyBlue);
             }
         }
     }

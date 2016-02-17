@@ -172,11 +172,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
             content.Append("\n\n");
 
+            cycleDetector.getGeneralization().tempHighlightBlameBindTerms(format);
             foreach (var term in cycleDetector.getGeneralization().generalizedTerms)
             {
                 term.PrettyPrint(content, format);
                 content.Append("\n\n");
             }
+            format.restoreAllOriginalRules();
         }
 
         private void printPreamble(InfoPanelContent content)
