@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using Z3AxiomProfiler.CycleDetection;
 using Z3AxiomProfiler.PrettyPrinting;
 
 namespace Z3AxiomProfiler.QuantifierModel
@@ -66,11 +67,13 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
-        {
-            printPreamble(content);
-
-            // cycle detection
+        {            
             printCycleInfo(content, format);
+            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
+            content.Append("Path explanation:");
+            content.switchToDefaultFormat();
+            content.Append("\n\nLength: " + Length()).Append('\n');
+            printPreamble(content);
 
             var pathEnumerator = pathInstantiations.GetEnumerator();
             if (!pathEnumerator.MoveNext() || pathEnumerator.Current == null) return; // empty path
@@ -87,7 +90,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             {
                 printPathHead(content, format, current);
             }
-            
+
             while (pathEnumerator.MoveNext() && pathEnumerator.Current != null)
             {
                 // between stuff
@@ -153,7 +156,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             }
 
             content.switchToDefaultFormat();
-            content.Append("\n\nApplication of ");
+            content.Append("\nApplication of ");
             content.Append(current.Quant.PrintName);
             content.Append("\n\n");
 
@@ -165,45 +168,88 @@ namespace Z3AxiomProfiler.QuantifierModel
         {
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
-            content.switchFormat(InfoPanelContent.BoldFont, Color.Red);
-            content.Append("\nMatching loop found!\n");
+            content.switchFormat(InfoPanelContent.TitleFont, Color.Red);
+            content.Append("Possible matching loop found!\n");
             content.switchToDefaultFormat();
+            content.Append("Number of repetitions: ").Append(cycleDetector.getRepetiontions() + "\n");
             content.Append("Length: ").Append(cycle.Count + "\n");
+            content.Append("Loop: ");
             content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
-            content.Append("\n\n");
+            content.Append("\n");
 
-            cycleDetector.getGeneralization().tempHighlightBlameBindTerms(format);
-            foreach (var term in cycleDetector.getGeneralization().generalizedTerms)
+            printPreamble(content);
+
+            var generalizationState = cycleDetector.getGeneralization();
+            var generalizedTerms = generalizationState.generalizedTerms;
+
+            // print last yield term before printing the complete loop
+            // to give the user a term to match the highlighted pattern to
+            content.Append("\nStarting anywhere with the following term(s):\n\n");
+            printGeneralizedTermWithPrerequisites(content, format, generalizationState, generalizedTerms.Last());
+
+            var insts = cycleDetector.getCycleInstantiations().GetEnumerator();
+            insts.MoveNext();
+            foreach (var term in generalizedTerms)
             {
-                term.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
+                content.Append("\nApplication of ");
+                content.Append(insts.Current?.Quant.PrintName);
                 content.Append("\n\n");
+
+                // print quantifier body with pattern
+                insts.Current?.tempHighlightBlameBindTerms(format);
+                insts.Current?.Quant.BodyTerm.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
+                content.Append("\n\nThis yields:\n\n");
+
+                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term);
+
+                insts.MoveNext();
             }
             format.restoreAllOriginalRules();
         }
 
+        private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
+            GeneralizationState generalizationState, Term term)
+        {
+            generalizationState.tmpHighlightGeneralizedTerm(format, term);
+            term.PrettyPrint(content, format);
+            content.Append("\n");
+
+            if (generalizationState.assocGenBlameTerm.ContainsKey(term) &&
+                generalizationState.assocGenBlameTerm[term].Count > 0)
+            {
+                content.switchToDefaultFormat();
+                content.Append("\nTogether with the following term(s):\n\n");
+                var otherRequirements = generalizationState.assocGenBlameTerm[term];
+                foreach (var req in otherRequirements)
+                {
+                    generalizationState.tmpHighlightGeneralizedTerm(format, req);
+                    req.PrettyPrint(content, format);
+                    content.Append("\n");
+                }
+            }
+        }
+
         private void printPreamble(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
-            content.Append("Path explanation:");
-            content.switchToDefaultFormat();
-            content.Append("\n\nLength: " + Length()).Append('\n');
-            content.Append("Highlighted terms are ");
+            content.Append("\nHighlighted terms are ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
             content.Append("matched");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.Append("matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
             content.Append("blamed");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
-            content.Append("blamed using equality");
-            content.switchToDefaultFormat();
-            content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(".\n\n");
+            content.Append(".\n");
         }
 
         private static void legacyInstantiationInfo(InfoPanelContent content, PrettyPrintFormat format, Instantiation instantiation)

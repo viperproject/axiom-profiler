@@ -146,12 +146,12 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("matched");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
-            content.Append("blamed");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.Append("matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
-            content.Append("blamed using equality");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.Append("blamed");
             content.switchToDefaultFormat();
             content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);

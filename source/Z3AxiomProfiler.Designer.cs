@@ -352,7 +352,7 @@
             this.maxTermDepthUD.Size = new System.Drawing.Size(50, 20);
             this.maxTermDepthUD.TabIndex = 3;
             this.maxTermDepthUD.Value = new decimal(new int[] {
-            10,
+            6,
             0,
             0,
             0});

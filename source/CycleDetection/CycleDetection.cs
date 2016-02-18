@@ -92,6 +92,11 @@ namespace Z3AxiomProfiler.CycleDetection
                 path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
         }
 
+        public int getRepetiontions()
+        {
+            if (!processed) findCycle();
+            return suffixTree.nRep;
+        }
     }
 
     public class GeneralizationState
@@ -100,10 +105,14 @@ namespace Z3AxiomProfiler.CycleDetection
         private int genCounter = 1;
         private readonly List<Instantiation>[] loopInstantiations;
         public readonly List<Term> generalizedTerms = new List<Term>();
-        private readonly List<Term> blameHighlightTerms = new List<Term>();
-        private readonly List<Term> bindHighlightTerms = new List<Term>();
-        private readonly List<Term> eqHighlightTerms = new List<Term>();
+        private readonly Dictionary<Term, List<Term>> blameHighlightsYield = new Dictionary<Term, List<Term>>();
+        private readonly Dictionary<Term, List<Term>> bindHighlightsYields = new Dictionary<Term, List<Term>>();
+        private readonly Dictionary<Term, List<Term>> eqHighlightsYield = new Dictionary<Term, List<Term>>();
         private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
+
+        // associated info to generalized blame term 
+        // (meaning other generalized blame terms that are not yield terms in the loop)
+        public readonly Dictionary<Term, List<Term>> assocGenBlameTerm = new Dictionary<Term, List<Term>>();
 
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
         {
@@ -126,18 +135,46 @@ namespace Z3AxiomProfiler.CycleDetection
             for (var i = 0; i < loopInstantiations.Length; i++)
             {
                 var j = (i + 1) % loopInstantiations.Length;
-                generalizedTerms.Add(generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j < i));
+                var generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i);
+                generalizedTerms.Add(generalizedYield);
+
+                // Other prerequisites:
+                var robustIdx = loopInstantiations[i].Count / 2;
+                var child = loopInstantiations[j][robustIdx];
+                var parent = loopInstantiations[j <= i ? 0 : i][robustIdx];
+                var idxList = Enumerable.Range(0, child.bindingInfo.getDistinctBlameTerms().Count)
+                                        .Where(y => !parent.dependentTerms.Last()
+                                                    .isSubterm(child.bindingInfo.getDistinctBlameTerms()[y]))
+                                        .ToList();
+
+                foreach (var index in idxList)
+                {
+                    var terms = loopInstantiations[j].Select(inst => inst.bindingInfo.getDistinctBlameTerms()[index]);
+                    var otherGenTerm = generalizeTerms(terms, loopInstantiations[j], true);
+
+                    if (!assocGenBlameTerm.ContainsKey(generalizedYield))
+                    {
+                        assocGenBlameTerm[generalizedYield] = new List<Term>();
+                    }
+                    assocGenBlameTerm[generalizedYield].Add(otherGenTerm);
+                }
+
             }
         }
 
-        private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool flipped)
+        private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool wrapAround)
         {
-            // queues for breath first traversal of all terms in parallel
-            var todoStacks = parentInsts
+            var yieldTerms = parentInsts
                 .Select(inst => inst.dependentTerms.Last())
-                .Where(t => t != null)
-                .Select(t => new Stack<Term>(new[] { t }))
-                .ToArray();
+                .Where(t => t != null);
+
+            return generalizeTerms(yieldTerms, childInsts, wrapAround);
+        }
+
+        private Term generalizeTerms(IEnumerable<Term> terms, List<Instantiation> highlightInfoInsts, bool wrapAround)
+        {
+            // stacks for breath first traversal of all terms in parallel
+            var todoStacks = terms.Select(t => new Stack<Term>(new[] { t })).ToArray();
 
             // map to 'vote' on generalization
             // also exposes outliers
@@ -145,7 +182,14 @@ namespace Z3AxiomProfiler.CycleDetection
             var candidates = new Dictionary<string, Tuple<int, string, int>>();
             var concreteHistory = new Stack<Term>();
             var generalizedHistory = new Stack<Term>();
-            var idx = flipped ? Math.Max(childInsts.Count / 2 - 1, 0) : childInsts.Count / 2;
+
+
+            // prepare highlight lists
+            var localBlameHighlight = new List<Term>();
+            var localBindHighlight = new List<Term>();
+            var localEqHighlight = new List<Term>();
+
+            var idx = wrapAround ? Math.Max(highlightInfoInsts.Count / 2 - 1, 0) : highlightInfoInsts.Count / 2;
 
             while (true)
             {
@@ -160,6 +204,12 @@ namespace Z3AxiomProfiler.CycleDetection
                         if (generalizedHistory.Count == 1)
                         {
                             // were about to pop the generalized root --> finished
+
+                            // store highlighting info
+                            blameHighlightsYield[mostRecent] = localBlameHighlight;
+                            bindHighlightsYields[mostRecent] = localBindHighlight;
+                            eqHighlightsYield[mostRecent] = localEqHighlight;
+
                             return mostRecent;
                         }
 
@@ -183,17 +233,17 @@ namespace Z3AxiomProfiler.CycleDetection
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory);
 
                 // check for blame / binding info
-                if (isBlameTerm(childInsts, todoStacks, concreteHistory, flipped))
+                if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistory, wrapAround))
                 {
-                    blameHighlightTerms.Add(currTerm);
+                    localBlameHighlight.Add(currTerm);
                 }
-                else if (isBindTerm(childInsts, todoStacks, concreteHistory, flipped))
+                else if (isBindTerm(highlightInfoInsts, todoStacks, concreteHistory, wrapAround))
                 {
-                    bindHighlightTerms.Add(currTerm);
+                    localBindHighlight.Add(currTerm);
                 }
-                else if (isEqTerm(childInsts, todoStacks, concreteHistory, flipped))
+                else if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistory, wrapAround))
                 {
-                    eqHighlightTerms.Add(currTerm);
+                    localEqHighlight.Add(currTerm);
                 }
 
                 // always push the generalized term, because it is one term 'behind' the others
@@ -272,15 +322,16 @@ namespace Z3AxiomProfiler.CycleDetection
                 // consensus -> decend further
                 var value = candidates.Values.First();
                 currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
-                idCounter--;
+
             }
             else
             {
                 // no consensus --> generalize
                 // todo: if necessary, detect outlier
-                currTerm = getGeneralizedTerm(todoStacks);
+                currTerm = new Term(getGeneralizedTerm(todoStacks)) { id = idCounter };
             }
             addToGeneralizedTerm(generalizedHistory, currTerm);
+            idCounter--;
             return currTerm;
         }
 
@@ -349,17 +400,17 @@ namespace Z3AxiomProfiler.CycleDetection
             }
         }
 
-        public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
+        public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm)
         {
-            foreach (var term in blameHighlightTerms)
+            foreach (var term in blameHighlightsYield[generalizedTerm])
             {
                 term.highlightTemporarily(format, Color.Coral);
             }
-            foreach (var term in bindHighlightTerms)
+            foreach (var term in bindHighlightsYields[generalizedTerm])
             {
                 term.highlightTemporarily(format, Color.DeepSkyBlue);
             }
-            foreach (var term in eqHighlightTerms)
+            foreach (var term in eqHighlightsYield[generalizedTerm])
             {
                 term.highlightTemporarily(format, Color.Goldenrod);
             }

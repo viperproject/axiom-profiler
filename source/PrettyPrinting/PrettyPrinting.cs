@@ -135,7 +135,7 @@ namespace Z3AxiomProfiler.PrettyPrinting
         {
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
-                (format.showTermId ? "[" + t.id + "]" : "") +
+                (format.showTermId && t.id >= 0 ? "[" + t.id + "]" : "") +
                 "(";
             return new PrintRule
             {
