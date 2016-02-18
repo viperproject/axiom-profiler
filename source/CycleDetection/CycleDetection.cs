@@ -126,11 +126,11 @@ namespace Z3AxiomProfiler.CycleDetection
             for (var i = 0; i < loopInstantiations.Length; i++)
             {
                 var j = (i + 1) % loopInstantiations.Length;
-                generalizedTerms.Add(generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j]));
+                generalizedTerms.Add(generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j < i));
             }
         }
 
-        private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts)
+        private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool flipped)
         {
             // queues for breath first traversal of all terms in parallel
             var todoStacks = parentInsts
@@ -143,9 +143,9 @@ namespace Z3AxiomProfiler.CycleDetection
             // also exposes outliers
             // term name + type + #Args -> #votes
             var candidates = new Dictionary<string, Tuple<int, string, int>>();
-            
             var concreteHistory = new Stack<Term>();
             var generalizedHistory = new Stack<Term>();
+            var idx = flipped ? Math.Max(childInsts.Count / 2 - 1, 0) : childInsts.Count / 2;
 
             while (true)
             {
@@ -183,22 +183,22 @@ namespace Z3AxiomProfiler.CycleDetection
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory);
 
                 // check for blame / binding info
-                if (isBlameTerm(childInsts, todoStacks, concreteHistory))
+                if (isBlameTerm(childInsts, todoStacks, concreteHistory, flipped))
                 {
                     blameHighlightTerms.Add(currTerm);
                 }
-                else if (isBindTerm(childInsts, todoStacks, concreteHistory))
+                else if (isBindTerm(childInsts, todoStacks, concreteHistory, flipped))
                 {
                     bindHighlightTerms.Add(currTerm);
                 }
-                else if (isEqTerm(childInsts, todoStacks, concreteHistory))
+                else if (isEqTerm(childInsts, todoStacks, concreteHistory, flipped))
                 {
                     eqHighlightTerms.Add(currTerm);
                 }
 
                 // always push the generalized term, because it is one term 'behind' the others
                 generalizedHistory.Push(currTerm);
-                concreteHistory.Push(todoStacks[childInsts.Count / 2].Peek());
+                concreteHistory.Push(todoStacks[idx].Peek());
                 // push children if applicable
                 if (currTerm.Args.Length > 0)
                 {
@@ -210,10 +210,11 @@ namespace Z3AxiomProfiler.CycleDetection
             }
         }
 
-        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped)
         {
-            var robustIdx = childInsts.Count / 2;
-            var checkInst = childInsts[robustIdx];
+            var childIdx = childInsts.Count / 2;
+            var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
+            var checkInst = childInsts[childIdx];
             var term = checkInst.Responsible.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
 
             if (term == null) return false;
@@ -222,10 +223,11 @@ namespace Z3AxiomProfiler.CycleDetection
             return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
         }
 
-        private bool isBindTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        private bool isBindTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped)
         {
-            var robustIdx = childInsts.Count / 2;
-            var checkInst = childInsts[robustIdx];
+            var childIdx = childInsts.Count / 2;
+            var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
+            var checkInst = childInsts[childIdx];
             var term = checkInst.Bindings.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
 
             if (term == null) return false;
@@ -234,10 +236,11 @@ namespace Z3AxiomProfiler.CycleDetection
             return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
         }
 
-        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped)
         {
-            var robustIdx = childInsts.Count / 2;
-            var checkInst = childInsts[robustIdx];
+            var childIdx = childInsts.Count / 2;
+            var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
+            var checkInst = childInsts[childIdx];
             Term term = null;
             foreach (var equality in checkInst.bindingInfo.equalities)
             {
@@ -251,7 +254,7 @@ namespace Z3AxiomProfiler.CycleDetection
             return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
         }
 
-        private bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints )
+        private bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints)
         {
             if (constraints.Count == 0) return true;
             return (from constraint in constraints
@@ -268,7 +271,7 @@ namespace Z3AxiomProfiler.CycleDetection
             {
                 // consensus -> decend further
                 var value = candidates.Values.First();
-                currTerm = new Term(value.Item2, new Term[value.Item3]) {id = idCounter};
+                currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
                 idCounter--;
             }
             else
