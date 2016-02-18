@@ -100,8 +100,9 @@ namespace Z3AxiomProfiler.CycleDetection
         private int genCounter = 1;
         private readonly List<Instantiation>[] loopInstantiations;
         public readonly List<Term> generalizedTerms = new List<Term>();
-        private List<Term> blameHighlightTerms = new List<Term>();
-        private List<Term> bindHighlightTerms = new List<Term>();
+        private readonly List<Term> blameHighlightTerms = new List<Term>();
+        private readonly List<Term> bindHighlightTerms = new List<Term>();
+        private readonly List<Term> eqHighlightTerms = new List<Term>();
         private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
 
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
@@ -142,7 +143,8 @@ namespace Z3AxiomProfiler.CycleDetection
             // also exposes outliers
             // term name + type + #Args -> #votes
             var candidates = new Dictionary<string, Tuple<int, string, int>>();
-
+            
+            var concreteHistory = new Stack<Term>();
             var generalizedHistory = new Stack<Term>();
 
             while (true)
@@ -163,6 +165,7 @@ namespace Z3AxiomProfiler.CycleDetection
 
                         // all subterms connected -> pop parent
                         generalizedHistory.Pop();
+                        concreteHistory.Pop();
                         foreach (var stack in todoStacks)
                         {
                             stack.Pop();
@@ -180,16 +183,22 @@ namespace Z3AxiomProfiler.CycleDetection
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory);
 
                 // check for blame / binding info
-                // todo: path condition check, otherwise highlighting gets completely botched!!!
-                if (childInsts[0].Responsible.Any(t => t.id == todoStacks[0].Peek().id))
+                if (isBlameTerm(childInsts, todoStacks, concreteHistory))
                 {
                     blameHighlightTerms.Add(currTerm);
                 }
-                if (childInsts[0].Bindings.Any(t => t.id == todoStacks[0].Peek().id))
+                else if (isBindTerm(childInsts, todoStacks, concreteHistory))
                 {
                     bindHighlightTerms.Add(currTerm);
                 }
+                else if (isEqTerm(childInsts, todoStacks, concreteHistory))
+                {
+                    eqHighlightTerms.Add(currTerm);
+                }
 
+                // always push the generalized term, because it is one term 'behind' the others
+                generalizedHistory.Push(currTerm);
+                concreteHistory.Push(todoStacks[childInsts.Count / 2].Peek());
                 // push children if applicable
                 if (currTerm.Args.Length > 0)
                 {
@@ -199,6 +208,57 @@ namespace Z3AxiomProfiler.CycleDetection
                 // reset candidates for next round
                 candidates.Clear();
             }
+        }
+
+        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        {
+            var robustIdx = childInsts.Count / 2;
+            var checkInst = childInsts[robustIdx];
+            var term = checkInst.Responsible.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
+
+            if (term == null) return false;
+
+            var constraints = checkInst.bindingInfo.matchContext[term.id];
+            return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+        }
+
+        private bool isBindTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        {
+            var robustIdx = childInsts.Count / 2;
+            var checkInst = childInsts[robustIdx];
+            var term = checkInst.Bindings.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
+
+            if (term == null) return false;
+
+            var constraints = checkInst.bindingInfo.matchContext[term.id];
+            return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+        }
+
+        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory)
+        {
+            var robustIdx = childInsts.Count / 2;
+            var checkInst = childInsts[robustIdx];
+            Term term = null;
+            foreach (var equality in checkInst.bindingInfo.equalities)
+            {
+                term = equality.Value.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
+                if (term != null) break;
+            }
+
+            if (term == null) return false;
+
+            var constraints = checkInst.bindingInfo.matchContext[term.id];
+            return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+        }
+
+        private bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints )
+        {
+            if (constraints.Count == 0) return true;
+            return (from constraint in constraints
+                    where constraint.Count <= gerneralizeHistory.Count
+                    let slice = gerneralizeHistory.GetRange(gerneralizeHistory.Count - constraint.Count, constraint.Count)
+                    select slice.Zip(constraint, (term1, term2) => term1.id == term2.id))
+                                .Any(intermediate => intermediate.All(val => val));
         }
 
         private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory)
@@ -230,9 +290,6 @@ namespace Z3AxiomProfiler.CycleDetection
                 var idx = Array.FindLastIndex(genParent.Args, t => t == null);
                 genParent.Args[idx] = currTerm;
             }
-
-            // always push the generalized term, because it is one term 'behind' the others
-            generalizedHistory.Push(currTerm);
         }
 
         private Term getGeneralizedTerm(Stack<Term>[] todoStacks)
@@ -298,6 +355,10 @@ namespace Z3AxiomProfiler.CycleDetection
             foreach (var term in bindHighlightTerms)
             {
                 term.highlightTemporarily(format, Color.DeepSkyBlue);
+            }
+            foreach (var term in eqHighlightTerms)
+            {
+                term.highlightTemporarily(format, Color.Goldenrod);
             }
         }
     }

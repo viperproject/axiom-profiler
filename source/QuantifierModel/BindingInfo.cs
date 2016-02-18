@@ -24,10 +24,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         public readonly Dictionary<Term, Term> bindings = new Dictionary<Term, Term>();
 
         // highlighting info: Term --> List of path constraints
-        public readonly Dictionary<Term, List<List<Term>>> matchContext = new Dictionary<Term, List<List<Term>>>();
+        public readonly Dictionary<int, List<List<Term>>> matchContext = new Dictionary<int, List<List<Term>>>();
 
         // equalities inferred from pattern matching
-        // lower id is item1!
         public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
 
         // number of equalities
@@ -48,7 +47,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             numEq = other.numEq;
 
             // 'deeper' copy
-            matchContext = new Dictionary<Term, List<List<Term>>>();
+            matchContext = new Dictionary<int, List<List<Term>>>();
             foreach (var context in other.matchContext)
             {
                 matchContext[context.Key] = new List<List<Term>>(context.Value);
@@ -136,14 +135,14 @@ namespace Z3AxiomProfiler.QuantifierModel
 
         private void addMatchContext(Term term, List<List<Term>> context)
         {
-            if (!matchContext.ContainsKey(term)) matchContext[term] = new List<List<Term>>();
-            matchContext[term].AddRange(context);
+            if (!matchContext.ContainsKey(term.id)) matchContext[term.id] = new List<List<Term>>();
+            matchContext[term.id].AddRange(context);
         }
 
         private List<List<Term>> getContext(Term term)
         {
-            if (!matchContext.ContainsKey(term)) matchContext[term] = new List<List<Term>>();
-            return matchContext[term];
+            if (!matchContext.ContainsKey(term.id)) matchContext[term.id] = new List<List<Term>>();
+            return matchContext[term.id];
         }
 
         private void handleMatch(Term pattern, Term term)
@@ -186,7 +185,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 foreach (var childTerm in outstandingCandidates[currBinding].Select(tpl => tpl.Item2))
                 {
                     // context of evicted childterms is irrelevant
-                    matchContext.Remove(childTerm);
+                    matchContext.Remove(childTerm.id);
                 }
                 outstandingCandidates.Remove(currBinding);
             }

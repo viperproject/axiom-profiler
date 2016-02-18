@@ -223,14 +223,14 @@ namespace Z3AxiomProfiler.QuantifierModel
                 var color = Color.Coral;
                 if (patternTerm.id == -1) color = Color.DeepSkyBlue;
 
-                patternTerm.highlightTemporarily(format, color, bindingInfo.matchContext[patternTerm]);
-                term.highlightTemporarily(format, color, bindingInfo.matchContext[term]);
+                patternTerm.highlightTemporarily(format, color, bindingInfo.matchContext[patternTerm.id]);
+                term.highlightTemporarily(format, color, bindingInfo.matchContext[term.id]);
                 if (!bindingInfo.equalities.ContainsKey(patternTerm)) continue;
 
                 // highlight replaced, equal terms as well
                 foreach (var eqTerm in bindingInfo.equalities[patternTerm])
                 {
-                    eqTerm.highlightTemporarily(format, Color.Goldenrod, bindingInfo.matchContext[eqTerm]);
+                    eqTerm.highlightTemporarily(format, Color.Goldenrod, bindingInfo.matchContext[eqTerm.id]);
                 }
             }
         }

@@ -536,7 +536,7 @@ namespace Z3AxiomProfiler
 
         private void allConflictsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (model.conflicts == null) return;
+            if (model?.conflicts == null) return;
             ConflictsToCsv(model.conflicts);
         }
 
