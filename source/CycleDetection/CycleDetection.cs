@@ -140,8 +140,8 @@ namespace Z3AxiomProfiler.CycleDetection
 
                 // Other prerequisites:
                 var robustIdx = loopInstantiations[i].Count / 2;
+                var parent = loopInstantiations[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
                 var child = loopInstantiations[j][robustIdx];
-                var parent = loopInstantiations[j <= i ? 0 : i][robustIdx];
                 var idxList = Enumerable.Range(0, child.bindingInfo.getDistinctBlameTerms().Count)
                                         .Where(y => !parent.dependentTerms.Last()
                                                     .isSubterm(child.bindingInfo.getDistinctBlameTerms()[y]))
@@ -348,7 +348,7 @@ namespace Z3AxiomProfiler.CycleDetection
 
         private Term getGeneralizedTerm(Stack<Term>[] todoStacks)
         {
-            var guardTerm = todoStacks[0].Peek();
+            var guardTerm = todoStacks[todoStacks.Length / 2].Peek();
             var newTerm = true;
 
             if (replacementDict.ContainsKey(guardTerm.id))
@@ -357,6 +357,12 @@ namespace Z3AxiomProfiler.CycleDetection
                 var existingGenTerm = replacementDict[guardTerm.id];
                 for (var i = 1; i < todoStacks.Length; i++)
                 {
+                    if (!replacementDict.ContainsKey(todoStacks[i].Peek().id))
+                    {
+                        // this generalization is incomplete
+                        newTerm = false;
+                        break;
+                    }
                     newTerm = newTerm && existingGenTerm == replacementDict[todoStacks[i].Peek().id];
                 }
                 if (newTerm) return existingGenTerm;
