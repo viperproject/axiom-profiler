@@ -14,14 +14,14 @@ namespace Z3AxiomProfiler
     public AboutBox()
     {
       InitializeComponent();
-      this.Text = String.Format("About {0}", AssemblyTitle);
+      this.Text = string.Format("About {0}", AssemblyTitle);
       this.labelProductName.Text = AssemblyProduct;
-      this.labelVersion.Text = String.Format("Version {0}", AssemblyVersion);
+      this.labelVersion.Text = string.Format("Version {0}", AssemblyVersion);
       this.labelCopyright.Text = AssemblyCopyright;
       this.labelCompanyName.Text = AssemblyCompany;
       this.textBoxDescription.Text = AssemblyDescription;
 
-      this.textBoxDescription.Text += "\r\n\r\nAuthors: \r\n- Markus Dahlweid\r\n- Lieven Desmet \r\n- Michał Moskal";
+      this.textBoxDescription.Text += "\r\n\r\nAuthors: \r\n- Markus Dahlweid\r\n- Lieven Desmet \r\n- Michał Moskal\r\n- Frederik Rothenberger";
     }
 
     #region Assembly Attribute Accessors

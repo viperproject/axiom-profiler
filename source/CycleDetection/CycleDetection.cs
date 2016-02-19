@@ -105,6 +105,7 @@ namespace Z3AxiomProfiler.CycleDetection
         private int genCounter = 1;
         private readonly List<Instantiation>[] loopInstantiations;
         public readonly List<Term> generalizedTerms = new List<Term>();
+        private readonly List<Term> genReplacements = new List<Term>(); 
         private readonly Dictionary<Term, List<Term>> blameHighlightsYield = new Dictionary<Term, List<Term>>();
         private readonly Dictionary<Term, List<Term>> bindHighlightsYields = new Dictionary<Term, List<Term>>();
         private readonly Dictionary<Term, List<Term>> eqHighlightsYield = new Dictionary<Term, List<Term>>();
@@ -322,16 +323,15 @@ namespace Z3AxiomProfiler.CycleDetection
                 // consensus -> decend further
                 var value = candidates.Values.First();
                 currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
-
+                idCounter--;
             }
             else
             {
                 // no consensus --> generalize
                 // todo: if necessary, detect outlier
-                currTerm = new Term(getGeneralizedTerm(todoStacks)) { id = idCounter };
+                currTerm = getGeneralizedTerm(todoStacks);
             }
             addToGeneralizedTerm(generalizedHistory, currTerm);
-            idCounter--;
             return currTerm;
         }
 
@@ -365,9 +365,16 @@ namespace Z3AxiomProfiler.CycleDetection
                     }
                     newTerm = newTerm && existingGenTerm == replacementDict[todoStacks[i].Peek().id];
                 }
-                if (newTerm) return existingGenTerm;
+                if (newTerm)
+                {
+                    var copy = new Term(existingGenTerm) {id = idCounter};
+                    genReplacements.Add(copy);
+                    idCounter--;
+                    return copy;
+                }
             }
-            var t = new Term("generalized_replacement_" + genCounter, new Term[0]) { id = idCounter };
+            var t = new Term("generalization_" + genCounter, new Term[0]) { id = idCounter };
+            genReplacements.Add(t);
             idCounter--;
             genCounter++;
 
@@ -419,6 +426,10 @@ namespace Z3AxiomProfiler.CycleDetection
             foreach (var term in eqHighlightsYield[generalizedTerm])
             {
                 term.highlightTemporarily(format, Color.Goldenrod);
+            }
+            foreach (var term in genReplacements)
+            {
+                term.highlightTemporarily(format, Color.BlueViolet);
             }
         }
     }

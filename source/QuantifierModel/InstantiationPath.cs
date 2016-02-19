@@ -67,7 +67,7 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
-        {            
+        {
             printCycleInfo(content, format);
             content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
             content.Append("Path explanation:");
@@ -185,12 +185,14 @@ namespace Z3AxiomProfiler.QuantifierModel
             // print last yield term before printing the complete loop
             // to give the user a term to match the highlighted pattern to
             content.Append("\nStarting anywhere with the following term(s):\n\n");
-            printGeneralizedTermWithPrerequisites(content, format, generalizationState, generalizedTerms.Last());
+            printGeneralizedTermWithPrerequisites(content, format, generalizationState, generalizedTerms.Last(), false);
 
             var insts = cycleDetector.getCycleInstantiations().GetEnumerator();
             insts.MoveNext();
+            var count = 1;
             foreach (var term in generalizedTerms)
             {
+                format.restoreAllOriginalRules();
                 content.switchToDefaultFormat();
                 content.Append("\nApplication of ");
                 content.Append(insts.Current?.Quant.PrintName);
@@ -202,32 +204,34 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
                 content.Append("\n\nThis yields:\n\n");
 
-                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term);
-
-                insts.MoveNext();
+                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, count == cycle.Count);
+                count++;
             }
             format.restoreAllOriginalRules();
+            content.Append("\n\n");
         }
 
         private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
-            GeneralizationState generalizationState, Term term)
+            GeneralizationState generalizationState, Term term, bool last)
         {
             generalizationState.tmpHighlightGeneralizedTerm(format, term);
             term.PrettyPrint(content, format);
             content.Append("\n");
 
-            if (generalizationState.assocGenBlameTerm.ContainsKey(term) &&
-                generalizationState.assocGenBlameTerm[term].Count > 0)
+            if (last ||
+                !generalizationState.assocGenBlameTerm.ContainsKey(term) ||
+                generalizationState.assocGenBlameTerm[term].Count <= 0)
+                return;
+
+            content.switchToDefaultFormat();
+            content.Append("\nTogether with the following term(s):\n\n");
+            var otherRequirements = generalizationState.assocGenBlameTerm[term];
+
+            foreach (var req in otherRequirements)
             {
-                content.switchToDefaultFormat();
-                content.Append("\nTogether with the following term(s):\n\n");
-                var otherRequirements = generalizationState.assocGenBlameTerm[term];
-                foreach (var req in otherRequirements)
-                {
-                    generalizationState.tmpHighlightGeneralizedTerm(format, req);
-                    req.PrettyPrint(content, format);
-                    content.Append("\n");
-                }
+                generalizationState.tmpHighlightGeneralizedTerm(format, req);
+                req.PrettyPrint(content, format);
+                content.Append("\n\n");
             }
         }
 
@@ -248,6 +252,10 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append(" or ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
+            content.switchFormat(InfoPanelContent.DefaultFont, Color.BlueViolet);
+            content.Append("generalized");
             content.switchToDefaultFormat();
             content.Append(".\n");
         }
