@@ -37,7 +37,7 @@ namespace Z3AxiomProfiler
 
         private readonly TreeNode historyNode = new TreeNode
         {
-            Text = "GRAPH HISTORY"
+            Text = "HISTORY"
         };
 
         public void addInstantiationToHistory(Instantiation inst)
@@ -599,6 +599,7 @@ namespace Z3AxiomProfiler
             Instantiation inst = c as Instantiation;
             if (inst != null)
             {
+                addInstantiationToHistory(inst);
                 dagView.selectInstantiation(inst);
             }
             else
