@@ -115,7 +115,7 @@ namespace Z3AxiomProfiler
 
         private void formatNode(Node currNode)
         {
-            var inst = (Instantiation) currNode.UserData;
+            var inst = (Instantiation)currNode.UserData;
             var nodeColor = getColor(inst.Quant);
             currNode.Attr.LineWidth = 1;
             currNode.Attr.LabelMargin = 5;
@@ -168,7 +168,7 @@ namespace Z3AxiomProfiler
         }
 
         private Node previouslySelectedNode;
-        private readonly List<Node> highlightedNodes = new List<Node>(); 
+        private readonly List<Node> highlightedNodes = new List<Node>();
         private void _ViewerViewClick(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left)
@@ -178,7 +178,12 @@ namespace Z3AxiomProfiler
 
             var node = _viewer.SelectedObject as Node;
             selectNode(node);
-            if (node != null) _z3AxiomProfiler.addInstantiationToHistory((Instantiation) node.UserData);
+            if (node != null) _z3AxiomProfiler.addInstantiationToHistory((Instantiation)node.UserData);
+        }
+
+        public void selectInstantiation(Instantiation inst)
+        {
+            selectNode(graph.FindNode(inst.uniqueID));
         }
 
         private void selectNode(Node node)
@@ -213,8 +218,9 @@ namespace Z3AxiomProfiler
             highlightedNodes.Add(node);
         }
 
-        private void unselectNode()
+        public void unselectNode()
         {
+            if (previouslySelectedNode == null) return;
             // restore old node
             formatNode(previouslySelectedNode);
 
@@ -225,6 +231,7 @@ namespace Z3AxiomProfiler
             }
             highlightedNodes.Clear();
             previouslySelectedNode = null;
+            _viewer.Invalidate();
         }
 
         private void hideInstantiationButton_Click(object sender, EventArgs e)
@@ -357,7 +364,7 @@ namespace Z3AxiomProfiler
         private Node connectToVisibleNodes(Instantiation instantiation)
         {
             var instNode = graph.FindNode(instantiation.uniqueID);
-            if(instNode == null)
+            if (instNode == null)
             {
                 instNode = graph.AddNode(instantiation.uniqueID);
                 instNode.UserData = instantiation;
@@ -394,7 +401,7 @@ namespace Z3AxiomProfiler
 
             var treeInstantiations = new List<Instantiation>();
             var todo = new Queue<Instantiation>();
-            todo.Enqueue((Instantiation) previouslySelectedNode.UserData);
+            todo.Enqueue((Instantiation)previouslySelectedNode.UserData);
 
             // collect tree
             while (todo.Count > 0)
@@ -440,7 +447,7 @@ namespace Z3AxiomProfiler
             basePath = new InstantiationPath(basePath);
             if (down)
             {
-                basePath.append((Instantiation) node.UserData);
+                basePath.append((Instantiation)node.UserData);
             }
             else
             {
