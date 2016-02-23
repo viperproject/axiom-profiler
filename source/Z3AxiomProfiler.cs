@@ -653,17 +653,21 @@ namespace Z3AxiomProfiler
             // clear toolTipBox if this is a new toolTip.
             if (!content.inProgress())
             {
+                toolTipBox.Enabled = false;
                 toolTipBox.Clear();
             }
 
-            content.writeToTextBox(toolTipBox, 1500);
+            
+            content.writeToTextBox(toolTipBox, 500);
 
             // check if finished
             if (content.finished)
             {
                 infoPanelQueue.TryDequeue(out content);
                 checkStopCounter();
+                toolTipBox.Enabled = true;
             }
+            
         }
 
         void Search()
@@ -785,6 +789,11 @@ namespace Z3AxiomProfiler
         public void updateInfoPanel()
         {
             SetInfoPanel(currentInfoPanelPrintable);
+        }
+
+        private void z3AxiomTree_Leave(object sender, EventArgs e)
+        {
+            z3AxiomTree.SelectedNode = null;
         }
     }
 }

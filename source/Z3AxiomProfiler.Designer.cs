@@ -123,7 +123,6 @@
             // 
             this.z3AxiomTree.Dock = System.Windows.Forms.DockStyle.Fill;
             this.z3AxiomTree.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.z3AxiomTree.HideSelection = false;
             this.z3AxiomTree.Location = new System.Drawing.Point(0, 0);
             this.z3AxiomTree.Name = "z3AxiomTree";
             this.z3AxiomTree.Size = new System.Drawing.Size(416, 655);
@@ -132,6 +131,7 @@
             this.z3AxiomTree.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.HandleTreeNodeSelect);
             this.z3AxiomTree.Enter += new System.EventHandler(this.z3AxiomTree_Enter);
             this.z3AxiomTree.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.z3AxiomTree_KeyPress);
+            this.z3AxiomTree.Leave += new System.EventHandler(this.z3AxiomTree_Leave);
             // 
             // fileToolStripMenuItem
             // 
