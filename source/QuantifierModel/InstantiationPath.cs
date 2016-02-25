@@ -73,7 +73,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append("Path explanation:");
             content.switchToDefaultFormat();
             content.Append("\n\nLength: " + Length()).Append('\n');
-            printPreamble(content);
+            printPreamble(content, false);
 
             var pathEnumerator = pathInstantiations.GetEnumerator();
             if (!pathEnumerator.MoveNext() || pathEnumerator.Current == null) return; // empty path
@@ -177,7 +177,11 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
             content.Append("\n");
 
-            printPreamble(content);
+            printPreamble(content, true);
+
+            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
+            content.Append("\n\nGeneralized Loop Iteration:\n\n");
+            content.switchToDefaultFormat();
 
             var generalizationState = cycleDetector.getGeneralization();
             var generalizedTerms = generalizationState.generalizedTerms;
@@ -185,7 +189,7 @@ namespace Z3AxiomProfiler.QuantifierModel
             // print last yield term before printing the complete loop
             // to give the user a term to match the highlighted pattern to
             content.Append("\nStarting anywhere with the following term(s):\n\n");
-            printGeneralizedTermWithPrerequisites(content, format, generalizationState, generalizedTerms.Last(), false);
+            printGeneralizedTermWithPrerequisites(content, format, generalizationState, generalizedTerms.Last(),true, false);
 
             var insts = cycleDetector.getCycleInstantiations().GetEnumerator();
             insts.MoveNext();
@@ -204,7 +208,7 @@ namespace Z3AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
                 content.Append("\n\nThis yields:\n\n");
 
-                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, count == cycle.Count);
+                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, false, count == cycle.Count);
                 count++;
             }
             format.restoreAllOriginalRules();
@@ -212,9 +216,9 @@ namespace Z3AxiomProfiler.QuantifierModel
         }
 
         private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
-            GeneralizationState generalizationState, Term term, bool last)
+            GeneralizationState generalizationState, Term term, bool first, bool last)
         {
-            generalizationState.tmpHighlightGeneralizedTerm(format, term);
+            generalizationState.tmpHighlightGeneralizedTerm(format, term, first);
             term.PrettyPrint(content, format);
             content.Append("\n");
 
@@ -229,13 +233,13 @@ namespace Z3AxiomProfiler.QuantifierModel
 
             foreach (var req in otherRequirements)
             {
-                generalizationState.tmpHighlightGeneralizedTerm(format, req);
+                generalizationState.tmpHighlightGeneralizedTerm(format, req, first);
                 req.PrettyPrint(content, format);
                 content.Append("\n\n");
             }
         }
 
-        private void printPreamble(InfoPanelContent content)
+        private void printPreamble(InfoPanelContent content, bool withGen)
         {
             content.Append("\nHighlighted terms are ");
             content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
@@ -253,10 +257,13 @@ namespace Z3AxiomProfiler.QuantifierModel
             content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
             content.Append("bound");
             content.switchToDefaultFormat();
-            content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.BlueViolet);
-            content.Append("generalized");
-            content.switchToDefaultFormat();
+            if (withGen)
+            {
+                content.Append(" or ");
+                content.switchFormat(InfoPanelContent.DefaultFont, Color.BlueViolet);
+                content.Append("generalized");
+                content.switchToDefaultFormat();
+            }
             content.Append(".\n");
         }
 

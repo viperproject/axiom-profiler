@@ -413,7 +413,7 @@ namespace Z3AxiomProfiler.CycleDetection
             }
         }
 
-        public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm)
+        public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, bool dashed)
         {
             foreach (var term in blameHighlightsYield[generalizedTerm])
             {
@@ -427,9 +427,13 @@ namespace Z3AxiomProfiler.CycleDetection
             {
                 term.highlightTemporarily(format, Color.Goldenrod);
             }
+            
             foreach (var term in genReplacements)
             {
-                term.highlightTemporarily(format, Color.BlueViolet);
+                var rule = format.getPrintRule(term).Clone();
+                rule.color = Color.BlueViolet;
+                rule.prefix = term.Name + (dashed ? "'(" : "(");
+                format.addTemporaryRule(term.id + "", rule);
             }
         }
     }
