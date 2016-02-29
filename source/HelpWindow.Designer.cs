@@ -27,28 +27,28 @@
     /// </summary>
     private void InitializeComponent()
     {
-      System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HelpWindow));
-      this.richTextBox1 = new System.Windows.Forms.RichTextBox();
-      this.SuspendLayout();
-      // 
-      // richTextBox1
-      // 
-      this.richTextBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-      this.richTextBox1.Location = new System.Drawing.Point(0, 0);
-      this.richTextBox1.Name = "richTextBox1";
-      this.richTextBox1.Size = new System.Drawing.Size(759, 681);
-      this.richTextBox1.TabIndex = 0;
-      this.richTextBox1.Text = resources.GetString("richTextBox1.Text");
-      // 
-      // HelpWindow
-      // 
-      this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-      this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-      this.ClientSize = new System.Drawing.Size(759, 681);
-      this.Controls.Add(this.richTextBox1);
-      this.Name = "HelpWindow";
-      this.Text = "Z3 Axiom Profiler Help";
-      this.ResumeLayout(false);
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HelpWindow));
+            this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.SuspendLayout();
+            // 
+            // richTextBox1
+            // 
+            this.richTextBox1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.richTextBox1.Location = new System.Drawing.Point(0, 0);
+            this.richTextBox1.Name = "richTextBox1";
+            this.richTextBox1.Size = new System.Drawing.Size(759, 681);
+            this.richTextBox1.TabIndex = 0;
+            this.richTextBox1.Text = resources.GetString("richTextBox1.Text");
+            // 
+            // HelpWindow
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(759, 681);
+            this.Controls.Add(this.richTextBox1);
+            this.Name = "HelpWindow";
+            this.Text = "Z3 Axiom Profiler Help";
+            this.ResumeLayout(false);
 
     }
 

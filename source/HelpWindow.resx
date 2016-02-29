@@ -112,10 +112,10 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="richTextBox1.Text" xml:space="preserve">
     <value>The usage is either:
@@ -127,12 +127,11 @@ Z3AxiomProfiler.exe
 Z3AxiomProfiler.exe file1.bpl file2.bpl /l:logfile
 
 The logfile can be obtained by running Z3 v2 with TRACE=true option. It goes to stdout. The overhead is about 50% in most cases. The option should not alter the search direction.
+Although possible, it is not recommended to load logfiles with multiple checks.
 
 QUANTIFIERS:
 
-The top level entries in the tree are quantifiers. H-over an entry to get a tooltip referring to the BPL file (which needs to specified in the command line or specified in the loading form). Every information that one can get with mouse H-over, is also displayed in the bottom pane, provided it is enabled (button on the right).
-
-In each quantifier entry the first number there is a “cost”, while after “direct:” you get number of instances of that quantifier. The cost is roughly the number of quantifier instances which the current instance/quantifier caused.
+The top level entries in the tree are quantifiers. By clicking a quantifier, more information is displayed in the left panel.
 
 After expanding a top level entry you get to choose if you want to see:
 -	DEEP instances, i.e. instances that appeared only after long chains of dependencies
@@ -141,11 +140,9 @@ After expanding a top level entry you get to choose if you want to see:
 -	ALL instances of that quantifier from the log file
 
 For each instance you get the following information:
-&lt;name of quantifier&gt; &lt;depth&gt; (&lt;weighted depth&gt;) / |&lt;size of bindings&gt;| @&lt;line in log file&gt;  &lt;cost&gt;  &lt;head of binding 0&gt; |&lt;size of binding 0&gt;| ...
+The quantifier name, the line as a unique identifier, the depth and the cost. Clicking an instantiation shows the bindings, pattern that matched the quantifier body and the yield terms, if any.
 
 The size of terms is given as two numbers: the first one is number of symbols (function applications and constants), the second one is maximal depth of the term.
-
-The size of bindings is sum of sizes and maximal depth of bindings.
 
 After expanding an instantiation you get access to:
 -	the terms that are BLAMED for the instantiation
@@ -157,7 +154,19 @@ The depth of an instantiation is 1 + maximum of depths of instantiations that ar
 
 The initial cost of an instantiation is 1. If an instantiation has cost C and is blaming N other instantiation for its existence, C/N is added to the cost of each of those blamed.
 
-The nodes in the tree corresponding to complex terms you can unfold. The “C: ...” is more or less C-programming-language transliteration of the term.
+The nodes in the tree corresponding to complex terms you can unfold.
+
+GRAPH VIEW
+
+The panel on the left shows a filtered view of the DAG given by the blame relations of the instantiations. By clicking instantiations, information is displayed in the left panel. All the operations above the graph view are only available when an instantiation is selected (except for redraw graph).
+
+Show longest path: show a longest path going through the selected instatiation. Very helpful to find matching loops.
+Explain path: Prints an explanation of the most expensive visible path through the selected instantiation. The path is also examined for possible matching loops. If one is found, a generalized explanation is printed before the concrete path explanation.
+
+PRINTING RULES
+
+To customize the appearance of terms in the info panel on the left, rewrite rules can be used. Rewrite rules match to terms by id, name + generic type and finally just name, in descending order of binding strength. The rewrite rules do support associativity and operator precedence in order to minimize the number of parentheses.
+
 
 CONFLICTS
 
