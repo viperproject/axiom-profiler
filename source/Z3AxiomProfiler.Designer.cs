@@ -293,7 +293,7 @@
             // 
             // rewritingRulesButton
             // 
-            this.rewritingRulesButton.Location = new System.Drawing.Point(672, 1);
+            this.rewritingRulesButton.Location = new System.Drawing.Point(679, 1);
             this.rewritingRulesButton.Name = "rewritingRulesButton";
             this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
             this.rewritingRulesButton.TabIndex = 7;
@@ -306,7 +306,7 @@
             this.enableRewritingCB.AutoSize = true;
             this.enableRewritingCB.Checked = true;
             this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.enableRewritingCB.Location = new System.Drawing.Point(533, 4);
+            this.enableRewritingCB.Location = new System.Drawing.Point(538, 4);
             this.enableRewritingCB.Name = "enableRewritingCB";
             this.enableRewritingCB.Size = new System.Drawing.Size(135, 17);
             this.enableRewritingCB.TabIndex = 6;
@@ -321,9 +321,9 @@
             this.showTermIdCB.CheckState = System.Windows.Forms.CheckState.Checked;
             this.showTermIdCB.Location = new System.Drawing.Point(404, 4);
             this.showTermIdCB.Name = "showTermIdCB";
-            this.showTermIdCB.Size = new System.Drawing.Size(123, 17);
+            this.showTermIdCB.Size = new System.Drawing.Size(128, 17);
             this.showTermIdCB.TabIndex = 5;
-            this.showTermIdCB.Text = "Show Term Identifier";
+            this.showTermIdCB.Text = "Show Term Identifiers";
             this.showTermIdCB.UseVisualStyleBackColor = true;
             this.showTermIdCB.CheckedChanged += new System.EventHandler(this.showTermIdCB_CheckedChanged);
             // 
