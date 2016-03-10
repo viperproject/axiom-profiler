@@ -210,6 +210,7 @@ namespace Z3AxiomProfiler.QuantifierModel
 
                 printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, false, count == cycle.Count);
                 count++;
+                insts.MoveNext();
             }
             format.restoreAllOriginalRules();
             content.Append("\n\n");
