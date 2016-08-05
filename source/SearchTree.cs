@@ -5,13 +5,13 @@ using System.Data;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class SearchTree : Form
     {
-        public SearchTree(Model model, Z3AxiomProfiler z3AxiomProfiler)
+        public SearchTree(Model model, AxiomProfiler z3AxiomProfiler)
         {
             this.model = model;
             InitializeComponent();
@@ -192,7 +192,7 @@ namespace Z3AxiomProfiler
 
         int prevX = -1, prevY;
         private Model model;
-        private Z3AxiomProfiler z3AxiomProfiler;
+        private AxiomProfiler z3AxiomProfiler;
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
             lastMouseX = e.X;

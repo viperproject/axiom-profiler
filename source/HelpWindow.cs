@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
   public partial class HelpWindow : Form
   {

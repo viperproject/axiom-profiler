@@ -4,16 +4,16 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Z3AxiomProfiler.PrettyPrinting;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class PrintRuleViewer : Form
     {
         private readonly PrintRuleDictionary printRuleDict;
-        private readonly Z3AxiomProfiler profiler;
-        public PrintRuleViewer(Z3AxiomProfiler profiler, PrintRuleDictionary rulesDictionary)
+        private readonly AxiomProfiler profiler;
+        public PrintRuleViewer(AxiomProfiler profiler, PrintRuleDictionary rulesDictionary)
         {
             this.profiler = profiler;
             printRuleDict = rulesDictionary;

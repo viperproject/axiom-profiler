@@ -7,7 +7,7 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class LoadZ3LogForm : Form
     {

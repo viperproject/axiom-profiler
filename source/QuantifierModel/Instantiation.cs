@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     public class Instantiation : Common
     {

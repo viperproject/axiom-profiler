@@ -3,9 +3,9 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     public class Term : Common
     {

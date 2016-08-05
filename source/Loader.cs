@@ -8,9 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
 
     public class ParameterConfiguration

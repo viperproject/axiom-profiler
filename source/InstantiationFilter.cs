@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
 
     public partial class InstantiationFilter : Form

@@ -6,7 +6,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     static class Program
     {
@@ -19,7 +19,7 @@ namespace Z3AxiomProfiler
 
         static void printUsage()
         {
-            Console.WriteLine("Usage: Z3AxiomProfiler [options] <prelude-file> <filename>");
+            Console.WriteLine("Usage: AxiomProfiler [options] <prelude-file> <filename>");
             Console.WriteLine("       prelude-file       : VCC prelude file location");
             Console.WriteLine("       filename           : Boogie input file");
             Console.WriteLine("       options ");
@@ -32,7 +32,7 @@ namespace Z3AxiomProfiler
             Environment.Exit(0);
         }
 
-        private static void InitConfig(Z3AxiomProfiler z3vis, string[] args)
+        private static void InitConfig(AxiomProfiler z3vis, string[] args)
         {
             string error_msg;
             if (!z3vis.parseCommandLineArguments(args, out error_msg))
@@ -49,7 +49,7 @@ namespace Z3AxiomProfiler
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Z3AxiomProfiler f = new Z3AxiomProfiler();
+            AxiomProfiler f = new AxiomProfiler();
             InitConfig(f, args);
             f.Show();
             Application.Run(f);

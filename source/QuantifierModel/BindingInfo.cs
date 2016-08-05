@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     public class BindingInfo
     {

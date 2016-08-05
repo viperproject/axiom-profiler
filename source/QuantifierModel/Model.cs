@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     /// <summary>
     ///  Abstraction of the Quantifier Model.

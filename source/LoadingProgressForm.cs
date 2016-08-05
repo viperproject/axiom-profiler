@@ -7,7 +7,7 @@ using System;
 using System.ComponentModel;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
   public partial class LoadingProgressForm : Form
   {

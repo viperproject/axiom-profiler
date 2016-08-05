@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler.PrettyPrinting
+namespace AxiomProfiler.PrettyPrinting
 {
     public class InfoPanelContent
     {

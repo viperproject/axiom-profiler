@@ -1,0 +1,313 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{29651769-4A5F-4C7F-BAA7-4064BA38324D}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>AxiomProfiler</RootNamespace>
+    <AssemblyName>AxiomProfiler</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <SccAuxPath>
+    </SccAuxPath>
+    <SccProvider>
+    </SccProvider>
+    <SignManifests>false</SignManifests>
+    <SignAssembly>false</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\..\Common\InterimKey.snk</AssemblyOriginatorKeyFile>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DocumentationFile>
+    </DocumentationFile>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>..\bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Msagl">
+      <HintPath>..\lib\Msagl\Microsoft.Msagl.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Msagl.Drawing">
+      <HintPath>..\lib\Msagl\Microsoft.Msagl.Drawing.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Msagl.GraphViewerGdi">
+      <HintPath>..\lib\Msagl\Microsoft.Msagl.GraphViewerGdi.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Msagl.WpfGraphControl">
+      <HintPath>..\lib\Msagl\Microsoft.Msagl.WpfGraphControl.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="WindowsFormsIntegration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AboutBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AboutBox.Designer.cs">
+      <DependentUpon>AboutBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CycleDetection\CycleDetection.cs" />
+    <Compile Include="EditPrintRuleDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditPrintRuleDialog.Designer.cs">
+      <DependentUpon>EditPrintRuleDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ColorVisalizationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ColorVisalizationForm.designer.cs">
+      <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DAGView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="DAGView.Designer.cs">
+      <DependentUpon>DAGView.cs</DependentUpon>
+    </Compile>
+    <Compile Include="HelpWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HelpWindow.Designer.cs">
+      <DependentUpon>HelpWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="InstantiationFilter.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InstantiationFilter.Designer.cs">
+      <DependentUpon>InstantiationFilter.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Loader.cs" />
+    <Compile Include="LoadingProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadingProgressForm.Designer.cs">
+      <DependentUpon>LoadingProgressForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LoadBoogieForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadBoogieForm.Designer.cs">
+      <DependentUpon>LoadBoogieForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LoadZ3Form.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadZ3Form.Designer.cs">
+      <DependentUpon>LoadZ3Form.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LoadZ3LogForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoadZ3LogForm.Designer.cs">
+      <DependentUpon>LoadZ3LogForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LogProcessor.cs" />
+    <Compile Include="Plotting.cs" />
+    <Compile Include="PrettyPrinting\InfoPanelContent.cs" />
+    <Compile Include="PrettyPrinting\IPrintable.cs" />
+    <Compile Include="QuantifierModel\Common.cs" />
+    <Compile Include="QuantifierModel\Conflict.cs" />
+    <Compile Include="QuantifierModel\FunApp.cs" />
+    <Compile Include="QuantifierModel\FunSymbol.cs" />
+    <Compile Include="QuantifierModel\Instantiation.cs" />
+    <Compile Include="QuantifierModel\InstantiationPath.cs" />
+    <Compile Include="QuantifierModel\Literal.cs" />
+    <Compile Include="QuantifierModel\Model.cs" />
+    <Compile Include="QuantifierModel\Partition.cs" />
+    <Compile Include="QuantifierModel\BindingInfo.cs" />
+    <Compile Include="QuantifierModel\Quantifier.cs" />
+    <Compile Include="QuantifierModel\Scope.cs" />
+    <Compile Include="QuantifierModel\Term.cs" />
+    <Compile Include="PrintRuleViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PrintRuleViewer.Designer.cs">
+      <DependentUpon>PrintRuleViewer.cs</DependentUpon>
+    </Compile>
+    <Compile Include="PrettyPrinting\PrettyPrinting.cs" />
+    <Compile Include="SearchBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SearchBox.Designer.cs">
+      <DependentUpon>SearchBox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SearchTree.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SearchTree.Designer.cs">
+      <DependentUpon>SearchTree.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SuffixTree\SuffixTree.cs" />
+    <Compile Include="AxiomProfiler.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AxiomProfiler.Designer.cs">
+      <DependentUpon>AxiomProfiler.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AboutBox.resx">
+      <DependentUpon>AboutBox.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="EditPrintRuleDialog.resx">
+      <DependentUpon>EditPrintRuleDialog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ColorVisalizationForm.resx">
+      <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DAGView.resx">
+      <DependentUpon>DAGView.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="HelpWindow.resx">
+      <DependentUpon>HelpWindow.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="InstantiationFilter.resx">
+      <DependentUpon>InstantiationFilter.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoadingProgressForm.resx">
+      <DependentUpon>LoadingProgressForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoadBoogieForm.resx">
+      <DependentUpon>LoadBoogieForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoadZ3Form.resx">
+      <DependentUpon>LoadZ3Form.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoadZ3LogForm.resx">
+      <DependentUpon>LoadZ3LogForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PrintRuleViewer.resx">
+      <DependentUpon>PrintRuleViewer.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SearchBox.resx">
+      <DependentUpon>SearchBox.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SearchTree.resx">
+      <DependentUpon>SearchTree.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AxiomProfiler.resx">
+      <DependentUpon>AxiomProfiler.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="axiom-profiler.css">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="axiom-profiler.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="axiom-profiler.template.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy /Y ..\..\source\axiom-profiler.* .</PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

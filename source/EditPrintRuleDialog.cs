@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
-using Z3AxiomProfiler.PrettyPrinting;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class EditPrintRuleDialog : Form
     {

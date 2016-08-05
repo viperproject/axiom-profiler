@@ -1,4 +1,4 @@
-﻿namespace Z3AxiomProfiler.PrettyPrinting
+﻿namespace AxiomProfiler.PrettyPrinting
 {
     public interface IPrintable
     {

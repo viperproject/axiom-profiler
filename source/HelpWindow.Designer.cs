@@ -1,4 +1,4 @@
-﻿namespace Z3AxiomProfiler
+﻿namespace AxiomProfiler
 {
   partial class HelpWindow
   {
@@ -47,7 +47,7 @@
             this.ClientSize = new System.Drawing.Size(759, 681);
             this.Controls.Add(this.richTextBox1);
             this.Name = "HelpWindow";
-            this.Text = "Z3 Axiom Profiler Help";
+            this.Text = "Axiom Profiler Help";
             this.ResumeLayout(false);
 
     }

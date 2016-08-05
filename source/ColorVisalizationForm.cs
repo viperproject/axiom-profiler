@@ -8,10 +8,10 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
-using Z3AxiomProfiler.QuantifierModel;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.QuantifierModel;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class ColorVisalizationForm : Form
     {

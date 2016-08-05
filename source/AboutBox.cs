@@ -7,7 +7,7 @@ using System;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
   partial class AboutBox : Form
   {
@@ -21,7 +21,7 @@ namespace Z3AxiomProfiler
       this.labelCompanyName.Text = AssemblyCompany;
       this.textBoxDescription.Text = AssemblyDescription;
 
-      this.textBoxDescription.Text += "\r\n\r\nAuthors: \r\n- Markus Dahlweid\r\n- Lieven Desmet \r\n- Michał Moskal\r\n- Frederik Rothenberger";
+      this.textBoxDescription.Text += "\r\n\r\nAuthors: \r\n- Markus Dahlweid\r\n- Lieven Desmet \r\n- Michał Moskal\r\n- Frederik Rothenberger\r\n- Alexander J. Summers";
     }
 
     #region Assembly Attribute Accessors

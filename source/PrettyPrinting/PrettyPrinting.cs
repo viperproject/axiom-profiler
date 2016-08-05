@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Security.Policy;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler.PrettyPrinting
+namespace AxiomProfiler.PrettyPrinting
 {
     public class PrintRuleDictionary
     {

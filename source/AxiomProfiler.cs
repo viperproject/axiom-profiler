@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //
 // Copyright (C) Microsoft Corporation.  All Rights Reserved.
 //
@@ -9,16 +9,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Timer = System.Windows.Forms.Timer;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
-    public partial class Z3AxiomProfiler : Form
+    public partial class AxiomProfiler : Form
     {
         public string SearchText = "";
         SearchTree searchTree;
@@ -51,7 +51,7 @@ namespace Z3AxiomProfiler
             }
         }
 
-        public Z3AxiomProfiler()
+        public AxiomProfiler()
         {
             InitializeComponent();
             dagView = new DAGView(this) {Dock = DockStyle.Fill};
@@ -62,7 +62,7 @@ namespace Z3AxiomProfiler
         }
 
 
-        private void Z3AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
+        private void AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
         {
             if (parameterConfiguration == null) return;
 
@@ -318,7 +318,7 @@ namespace Z3AxiomProfiler
 
         private void loadTree()
         {
-            Text = model.LogFileName + ": Z3 Axiom Profiler";
+            Text = model.LogFileName + ": Axiom Profiler";
 
             z3AxiomTree.Nodes.Add(historyNode);
             if (model.conflicts.Count > 0)

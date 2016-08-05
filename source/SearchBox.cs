@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
   public partial class SearchBox : Form
   {
-    public SearchBox(Z3AxiomProfiler a)
+    public SearchBox(AxiomProfiler a)
     {
       axprof = a;
       InitializeComponent();
@@ -25,7 +25,7 @@ namespace Z3AxiomProfiler
     }
 
     List<NodeText> nodes = new List<NodeText>();
-    Z3AxiomProfiler axprof;
+    AxiomProfiler axprof;
 
     private void AddNodes(TreeNodeCollection coll)
     {

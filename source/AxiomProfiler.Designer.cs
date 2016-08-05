@@ -1,6 +1,6 @@
-﻿namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
-    partial class Z3AxiomProfiler
+    partial class AxiomProfiler
     {
         /// <summary>
         /// Required designer variable.
@@ -394,7 +394,7 @@
             this.widthLabel.TabIndex = 0;
             this.widthLabel.Text = "Max Term Width:";
             // 
-            // Z3AxiomProfiler
+            // AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -402,9 +402,9 @@
             this.Controls.Add(this.toolsPanel);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.menuStrip1);
-            this.Name = "Z3AxiomProfiler";
-            this.Text = "Z3 Axiom Profiler";
-            this.Load += new System.EventHandler(this.Z3AxiomProfiler_OnLoadEvent);
+            this.Name = "AxiomProfiler";
+            this.Text = "Axiom Profiler";
+            this.Load += new System.EventHandler(this.AxiomProfiler_OnLoadEvent);
             this.splitContainer1.Panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);

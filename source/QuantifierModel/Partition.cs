@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     public class Partition
     {

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     // Class to represent a push statement.
     public class ScopeDesc

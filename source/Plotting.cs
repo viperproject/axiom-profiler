@@ -5,11 +5,11 @@ using System.Text;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.IO;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 using System.Text.RegularExpressions;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler {
+namespace AxiomProfiler {
   class Utils {
     internal static string Serialize<T>(T obj) {
       using (var ms = new MemoryStream()) {

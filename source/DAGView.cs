@@ -6,17 +6,17 @@ using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
 using Microsoft.Msagl.Layout.Layered;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
 using Size = System.Drawing.Size;
 
-namespace Z3AxiomProfiler
+namespace AxiomProfiler
 {
     public partial class DAGView : UserControl
     {
 
-        private readonly Z3AxiomProfiler _z3AxiomProfiler;
+        private readonly AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
         private Graph graph;
         private static int newNodeWarningThreshold = 40;
@@ -34,7 +34,7 @@ namespace Z3AxiomProfiler
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
         private int currColorIdx;
 
-        public DAGView(Z3AxiomProfiler profiler)
+        public DAGView(AxiomProfiler profiler)
         {
             _z3AxiomProfiler = profiler;
             InitializeComponent();

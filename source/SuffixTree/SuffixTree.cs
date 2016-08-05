@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-namespace Z3AxiomProfiler.SuffixTree
+namespace AxiomProfiler.SuffixTree
 {
     // Ported from the java implementation found here:
     // http://stackoverflow.com/questions/9452701/ukkonens-suffix-tree-algorithm-in-plain-english

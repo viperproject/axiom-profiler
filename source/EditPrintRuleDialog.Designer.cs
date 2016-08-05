@@ -1,4 +1,4 @@
-﻿namespace Z3AxiomProfiler
+﻿namespace AxiomProfiler
 {
     partial class EditPrintRuleDialog
     {

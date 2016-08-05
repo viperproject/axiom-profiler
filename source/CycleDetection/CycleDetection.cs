@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Z3AxiomProfiler.PrettyPrinting;
-using Z3AxiomProfiler.QuantifierModel;
+using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.QuantifierModel;
 
-namespace Z3AxiomProfiler.CycleDetection
+namespace AxiomProfiler.CycleDetection
 {
     public class CycleDetection
     {

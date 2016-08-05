@@ -1,15 +1,15 @@
-﻿<Properties>
+<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Z3AxiomProfiler.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="AxiomProfiler.cs">
     <Files>
       <File FileName="Program.cs" Line="28" Column="47" />
-      <File FileName="Z3AxiomProfiler.cs" Line="399" Column="5" />
+      <File FileName="AxiomProfiler.cs" Line="399" Column="5" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
-          <Node name="Z3AxiomProfiler" expanded="True">
-            <Node name="Z3AxiomProfiler.cs" selected="True" />
+          <Node name="AxiomProfiler" expanded="True">
+            <Node name="AxiomProfiler.cs" selected="True" />
           </Node>
         </State>
       </Pad>

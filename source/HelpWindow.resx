@@ -120,11 +120,11 @@
   <data name="richTextBox1.Text" xml:space="preserve">
     <value>The usage is either:
 
-Z3AxiomProfiler.exe
+AxiomProfiler.exe
 
 (and then load log file through menu) or
 
-Z3AxiomProfiler.exe file1.bpl file2.bpl /l:logfile
+AxiomProfiler.exe file1.bpl file2.bpl /l:logfile
 
 The logfile can be obtained by running Z3 v2 with TRACE=true option. It goes to stdout. The overhead is about 50% in most cases. The option should not alter the search direction.
 Although possible, it is not recommended to load logfiles with multiple checks.
@@ -210,7 +210,7 @@ Boogie myprelude.bpl file.bpl /printModel:1 /printModelToFile:mymodel.log
 
 and then run:
 
-Z3AxiomProfiler.exe myprelude.bpl file.bpl /l:mymodel.log
+AxiomProfiler.exe myprelude.bpl file.bpl /l:mymodel.log
 
 The models will be displayed in entries labeled MODEL #n per each model found.
 

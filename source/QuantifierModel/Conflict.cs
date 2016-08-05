@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Text;
-using Z3AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 
-namespace Z3AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.QuantifierModel
 {
     public class Conflict : Common
     {
