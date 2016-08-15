@@ -6,7 +6,7 @@ Fork with the goal to improve visualization and accessibility of this tool.
 
 1.  Clone repository:
 
-        hg clone https://vakaras@bitbucket.org/viperproject/axiom-profiler
+        hg clone https://bitbucket.org/viperproject/axiom-profiler
         cd axiom-profiler
 
 2.  Install mono.
