@@ -10,7 +10,7 @@ Fork with the goal to improve visualization and accessibility of this tool.
         
 2.  Build from Visual Studio (also possible on the command-line):
 
-Open source/AxiomProfiler.sln solution, and run the default (Debug) Build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2015).
+  Open source/AxiomProfiler.sln solution, and run the default (Debug) Build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2015).
         
 3.  Run the tool (either via Visual Studio, or by executing bin/Debug/AxiomProfiler.exe)
 
