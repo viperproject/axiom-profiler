@@ -1,6 +1,6 @@
-# Z3 Axiom Profiler
+# Axiom Profiler
 
-Fork with the goal to improve visualization and accessibility of this tool.
+An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/latest#vcc/Tools/Z3Visualizer/) providing navigable visualisations of instantiation graphs, some preliminary analysis of potential matching loops, and many stability and bug-fixes. This version is based on [Frederik Rothenberger's MSc project: Integration and Analysis of Alternative SMT Solvers for Software Verification](http://www.pm.inf.ethz.ch/education/student-projects/completedprojects.html), supervised by [Alexander J. Summers](http://people.inf.ethz.ch/summersa/), who can also be contacted with questions about the current version of the tool.
 
 ## Using on Windows
 
