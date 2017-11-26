@@ -204,11 +204,11 @@ namespace AxiomProfiler.SuffixTree
                 // check whether the candidate does fit the criteria.
                 if (curNode.nodeString.Length > 0 && curNode.leafs.Count >= minRepetitions)
                 {
-                    var nRepetitions = checkImmediateRepetitions(curNode.leafs, curNode.nodeString.Length);
+                    var nRepetitions = checkImmediateRepetitions(curNode.leafs, curNode.nodeString.Length, out var suffixStart);
                     if (nRepetitions >= minRepetitions && nRepetitions > nRep)
                     {
                         currentCandidate = curNode.nodeString;
-                        startIdx = curNode.suffixStart;
+                        startIdx = suffixStart;
                         nRep = nRepetitions;
                     }
                 }
@@ -225,11 +225,13 @@ namespace AxiomProfiler.SuffixTree
             longestCycle = currentCandidate;
         }
 
-        private int checkImmediateRepetitions(IEnumerable<Node> suffixes, int suffixLength)
+        private int checkImmediateRepetitions(IEnumerable<Node> suffixes, int suffixLength, out int suffixStart)
         {
             var curCount = 0;
             var max = 0;
             var prevStart = int.MinValue;
+            var curStart = int.MinValue;
+            suffixStart = int.MinValue;
             var enumerator = suffixes.GetEnumerator();
 
             while (enumerator.MoveNext() && enumerator.Current != null)
@@ -241,12 +243,21 @@ namespace AxiomProfiler.SuffixTree
                 }
                 else
                 {
-                    if (curCount > max) max = curCount;
+                    if (curCount > max)
+                    {
+                        suffixStart = curStart;
+                        max = curCount;
+                    }
                     curCount = 1;
+                    curStart = current.suffixStart;
                 }
                 prevStart = current.suffixStart;
             }
-            if (curCount > max) max = curCount;
+            if (curCount > max)
+            {
+                suffixStart = curStart;
+                max = curCount;
+            }
             return max;
         }
 

@@ -1,0 +1,89 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,700);
+
+html, body {
+    font-family: 'Segoe UI', 'Open Sans';
+    font-weight: 300;
+    margin: 0pt;
+    overflow: hidden;
+    padding: 0pt;
+}
+
+#control-panel > form {
+    display: table;
+    margin-top: 0.35em;
+}
+
+#control-panel, #control-panel > form {
+    width: 100%;
+}
+
+#control-panel .row {
+    display: table-row;
+}
+
+#control-panel .row > label, #control-panel .cell {
+    display: table-cell;
+    padding: 0.35em 1em;
+    white-space: nowrap;
+}
+
+#text-filter {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#node-name {
+    padding: 0.35em;
+    display: none;
+    width: 15em;
+}
+
+#network {
+    width: 100%;
+}
+
+#credits, #tips {
+    bottom: 0.35em;
+    max-width: 40%;
+    position: fixed;
+}
+
+#tips {
+    left: 0.35em;
+}
+
+#credits {
+    right: 0.35em;
+}
+
+kbd, .vis-network-tooltip, input, pre, samp {
+    font-family: Consolas, monospace !important;
+}
+
+b {
+    font-weight: bold;
+}
+
+.vis-network-tooltip {
+    font-size: 9pt !important;
+    white-space: pre-wrap !important;
+}
+
+.vis-network-tooltip i.fun {
+    color: blue;
+    font-style: normal;
+}
+
+.vis-network-tooltip i.var {
+    color: green;
+    font-style: normal;
+}
+
+.vis-network-tooltip i.special {
+    color: brown;
+    font-style: normal;
+}
+
+.ui-widget {
+    font-size: 0.9em !important;
+}

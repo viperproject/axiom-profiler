@@ -193,6 +193,7 @@ namespace AxiomProfiler
                         oldperc = perc;
                     }
                 }
+                processor.Finish();
                 processor.ComputeCost();
                 processor.model.BuildInstantiationDAG();
             }

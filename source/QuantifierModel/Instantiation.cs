@@ -8,6 +8,7 @@ namespace AxiomProfiler.QuantifierModel
     public class Instantiation : Common
     {
         public Quantifier Quant;
+        public Term concreteBody;
         public Term[] Bindings;
         public Term[] Responsible;
         public readonly List<Term> dependentTerms = new List<Term>();
@@ -36,6 +37,7 @@ namespace AxiomProfiler.QuantifierModel
             inst.Quant = Quant;
             inst.Bindings = (Term[])Bindings.Clone();
             inst.Responsible = (Term[])Responsible.Clone();
+            inst.concreteBody = new Term(concreteBody);
         }
 
         public int Depth
@@ -118,11 +120,9 @@ namespace AxiomProfiler.QuantifierModel
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
 
-            if (dependentTerms.Count <= 0) return;
-
             content.switchToDefaultFormat();
             content.Append("The resulting term:\n\n");
-            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+            concreteBody.PrettyPrint(content, format);
         }
 
         public void printNoMatchdisclaimer(InfoPanelContent content)
@@ -200,16 +200,18 @@ namespace AxiomProfiler.QuantifierModel
                 }
             }
 
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
             content.Append("\n\nThe quantifier body:\n\n");
+            content.switchToDefaultFormat();
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
             format.restoreAllOriginalRules();
 
-            if (dependentTerms.Count <= 0) return;
-
             content.switchToDefaultFormat();
+            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
             content.Append("The resulting term:\n\n");
-            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+            content.switchToDefaultFormat();
+            concreteBody.PrettyPrint(content, format);
         }
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
@@ -248,7 +250,7 @@ namespace AxiomProfiler.QuantifierModel
                     _bindingInfo = bindingCandidates[0];
                     return;
                 default:
-                    _bindingInfo = bindingCandidates.First(candidate => candidate.validate());
+                    _bindingInfo = bindingCandidates.FirstOrDefault(candidate => candidate.validate());
                     break;
             }
             if (_bindingInfo != null) return;

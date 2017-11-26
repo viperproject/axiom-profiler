@@ -36,6 +36,17 @@ namespace AxiomProfiler
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
 
+        //TODO: estimate capacity based on file size
+        private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000);
+        private readonly Dictionary<Term, HashSet<Term>> proofStepClosuresReverse = new Dictionary<Term, HashSet<Term>>(300_000);
+        private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000);
+        private readonly Dictionary<Term, HashSet<Term>> reverseRewriteClusureReverse = new Dictionary<Term, HashSet<Term>>(40_000);
+        private static readonly String[] proofRuleNames =
+            { "th-lemma", "quant-inst", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
+            "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
+            "der", "quant-inst", "hypothesis", "lemma", "unit-resolution", "iff-true", "iff-false", "commutativity", "def-axiom", "intro-def",
+            "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res" };
+
         public readonly Model model = new Model();
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
@@ -281,10 +292,6 @@ namespace AxiomProfiler
             line = SanitizeInputLine(line);
             string[] words = line.Split(sep, StringSplitOptions.RemoveEmptyEntries);
 
-            if (ParseProofStep(words))
-            {
-                return;
-            }
             if (ParseModelLine(words))
             {
                 return;
@@ -527,23 +534,103 @@ namespace AxiomProfiler
                 case "[mk-app]":
                     {
                         Term[] args = GetArgs(3, words);
-                        Term t = new Term(words[2], args);
+
+                        //We are only interested in the result of a proof step (i.e. the last argument)
+                        Term t = proofRuleNames.Contains(words[2]) ? new Term(args.Last()) : new Term(words[2], args);
+                        if (proofRuleNames.Contains(words[2]))
+                        {
+                            if (words[2] == "rewrite" || words[2] == "rewrite*" || words[2] == "unit-resolution")
+                            {
+                                Term from, to;
+                                if (words[2] == "unit-resolution")
+                                {
+                                    from = args.First();
+                                    to = t;
+                                }
+                                else
+                                {
+                                    var equality = args.Last();
+                                    if ((equality.Name != "=" && equality.Name != "iff" && equality.Name != "~") || equality.Args.Count() != 2)
+                                    {
+                                        throw new Exception("Unexpected result term for rewrite proof step.");
+                                    }
+                                    //TODO: result always rhs?
+                                    from = GetOrId(reverseRewriteClosure, equality.Args[0]);
+                                    to = equality.Args[1];
+                                }
+                                reverseRewriteClosure[to] = from;
+
+                                if (!reverseRewriteClusureReverse.TryGetValue(from, out var fromPaths))
+                                {
+                                    fromPaths = new HashSet<Term>();
+                                    reverseRewriteClusureReverse.Add(from, fromPaths);
+                                }
+                                fromPaths.Add(to);
+
+                                if (reverseRewriteClusureReverse.TryGetValue(to, out var pathBeginnings))
+                                {
+                                    fromPaths.UnionWith(pathBeginnings);
+
+                                    foreach (var pathBeginning in pathBeginnings)
+                                    {
+                                        reverseRewriteClosure[pathBeginning] = from;
+                                    }
+                                }
+                            }
+                            else if (words[2] == "refl" && args.First().Name == "iff")
+                            {
+                                //TODO: too many
+                                var arg = args.First();
+                                t = new Term("free_var_" + arg.id, EmptyTerms);
+                                model.terms[arg.id] = t;
+                                model.terms[parseIdentifier(words[1])] = t;
+                                break;
+                            }
+
+                            var prerequisiteClosure = new HashSet<Term>(args);
+                            foreach (var arg in args)
+                            {
+                                if (proofStepClosuresReverse.TryGetValue(arg, out var closure))
+                                {
+                                    prerequisiteClosure.UnionWith(closure);
+                                }
+                            }
+                            var newProofStepClosure = GetOrId(proofStepClosures, t);
+
+                            if (!proofStepClosuresReverse.TryGetValue(newProofStepClosure, out var reverse))
+                            {
+                                proofStepClosuresReverse[newProofStepClosure] = prerequisiteClosure;
+                            }
+                            else
+                            {
+                                reverse.UnionWith(prerequisiteClosure);
+                                proofStepClosuresReverse[newProofStepClosure] = reverse;
+                            }
+
+                            foreach (var prerequisite in prerequisiteClosure)
+                            {
+                                //if (prerequisite.id == 668 && (t.id == 733 || parseIdentifier(words[1]) == 733)) throw new Exception();
+                                proofStepClosures[prerequisite] = newProofStepClosure;
+                            }
+                        }
                         model.terms[parseIdentifier(words[1])] = t;
                         t.id = parseIdentifier(words[1]);
+
                     }
                     break;
-
+                    
                 case "[attach-enode]":
                     {
                         Term t = GetTerm(words[1]);
                         int gen = int.Parse(words[2]);
-                        if (lastInst != null && t.Responsible != lastInst)
+                        if (lastInst != null && t.Responsible != null && t.Responsible != lastInst)
                         {
                             // make a copy of the term, since we are overriding the Responsible field
+                            //TODO: shallow copy
                             t = new Term(t);
                             model.terms[parseIdentifier(words[1])] = t;
                         }
-                        if (lastInst != null)
+                        else if (lastInst != null)
                         {
                             t.Responsible = lastInst;
                             lastInst.dependentTerms.Add(t);
@@ -591,13 +678,51 @@ namespace AxiomProfiler
                             inst.CopyTo(tmp);
                             inst = tmp;
                         }
-                        AddInstance(inst);
                         int pos = 2;
                         if (words.Length > pos && words[pos] != ";")
                         {
                             long id = GetId(words[pos]);
-                            model.proofSteps[id] = inst;
+                            var t = model.terms[(int)id];
+                            Term quantImpliesBody = GetOrId(proofStepClosures, model.terms[(int) id]); //GetOrId(reverseRewriteClosure, GetOrId(proofStepClosures, model.terms[(int) id]));
+                            //if (id == 25968) throw new Exception();
+
+                            if (quantImpliesBody.Name == "or")
+                            {
+                                var bodyChildren = new List<Term>();
+                                foreach (var child in quantImpliesBody.Args)
+                                {
+                                    if (child.Name != "not" || child.Args.First().Name != "FORALL")
+                                    {
+                                        bodyChildren.Add(child);
+                                    }
+                                }
+                                if (bodyChildren.Count == 0)
+                                {
+                                    throw new Exception("Body couldn't be found");
+                                }
+                                else if (bodyChildren.Count == 1)
+                                {
+                                    inst.concreteBody = bodyChildren.First();
+                                }
+                                else
+                                {
+                                    inst.concreteBody = new Term("or", bodyChildren.ToArray())
+                                    {
+                                        id = quantImpliesBody.id
+                                    };
+                                }
+                            }
+                            else
+                            {
+                                inst.concreteBody = quantImpliesBody;
+                                //throw new Exception("unexpected shape");
+                            }
                             pos++;
+                        }
+                        else
+                        {
+                            //TODO: inform user to use "PROOF=true" option
+                            throw new Exception("pass \"PROOF=true\" to z3");
                         }
                         if (words.Length - 1 > pos && words[pos] == ";")
                         {
@@ -609,6 +734,7 @@ namespace AxiomProfiler
                         {
                             inst.Z3Generation = -1;
                         }
+                        AddInstance(inst);
                     }
                     break;
                 case "[end-of-instance]": lastInst = null; break;
@@ -861,7 +987,25 @@ namespace AxiomProfiler
             }
         }
 
-        private bool ParseProofStep(string[] words)
+        private static T GetOrId<T>(Dictionary<T, T> dict, T key)
+        {
+            if (!dict.TryGetValue(key, out var returnValue))
+            {
+                returnValue = key;
+            }
+            return returnValue;
+        }
+
+        public void Finish()
+        {
+            foreach (var reverseRewrite in reverseRewriteClosure)
+            {
+                reverseRewrite.Key.reverseRewrite = reverseRewrite.Value;
+            }
+        }
+
+        //Proof steps are now being parsed as by ParseTraceLine()
+        /*private bool ParseProofStep(string[] words)
         {
             if (words.Length >= 3 && words[0].Length >= 2 && words[0][0] == '#' && words[1] == ":=")
             {
@@ -920,7 +1064,7 @@ namespace AxiomProfiler
                 return true;
             }
             return false;
-        }
+        }*/
 
         private Term GetLiteralTerm(string w, out bool negated, out int id)
         {

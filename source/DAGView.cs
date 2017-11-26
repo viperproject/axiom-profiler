@@ -349,6 +349,13 @@ namespace AxiomProfiler
                     .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
 
                 pathInstantiations.Add(current);
+                foreach (var responsibleInst in current.ResponsibleInstantiations)
+                {
+                    if (!pathInstantiations.Contains(responsibleInst))
+                    {
+                        pathInstantiations.Add(responsibleInst);
+                    }
+                }
             }
             pathInstantiations = pathInstantiations.Where(inst => graph.FindNode(inst.uniqueID) == null).ToList();
             if (checkNumNodesWithDialog(ref pathInstantiations)) return;

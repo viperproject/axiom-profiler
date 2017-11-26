@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>__TITLE__</title>
+
+    <link href="http://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css" rel="stylesheet" type="text/css">
+    <link href="http://cdnjs.cloudflare.com/ajax/libs/vis/4.7.0/vis.css" rel="stylesheet" type="text/css">
+    <link href="__CSS__" rel="stylesheet" type="text/css">
+
+    <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/vis/4.7.0/vis.js"></script>
+    <script type="text/javascript" src="__JS__"></script>
+    <script type="text/javascript">
+      var data = __DATA__;
+      $(document).ready(function() {
+          graph.init(data.nodes, data.edges);
+      });
+    </script>
+  </head>
+
+  <body>
+    <header id="control-panel">
+      <form>
+        <div style="display: table-column;"></div>
+        <div style="display: table-column; width:100%;"></div>
+
+        <div class="row">
+          <label>Minimum cost of quantifier (nodes):</label>
+          <div class="cell"><div id="node-slider" title="Each node has a size proportional to the cost of the corresponding quantifier. This slider sets the cost threshold under which a node is hidden."></div></div>
+        </div>
+
+        <div class="row">
+          <label>Minimum number of instantiations (edges):</label>
+          <div class="cell"><div id="edge-slider" title="Each edge has a thickness proportional to the number of times an instantiation of its source node caused an instantiation of its destination node. This slider sets the instantiation threshold under which an edge is hidden."></div></div>
+        </div>
+
+        <div class="row">
+          <label>Text filter:</label>
+          <div class="cell"><input class="ui-corner-all" id="text-filter" title="Type text here to highlight quantifiers whose body contain a particular search term. This is more useful if the axiom profiler was passed a Boogie file. The boogie-friends package for Emacs has facilities for automatically launching the profiler with the right parameters."/></div>
+        </div>
+
+        <div class="row">
+          <label></label>
+          <div class="cell">
+            <input class="ui-corner-all" id="node-name"/>
+            <input type="checkbox" id="hide-orphan" checked>
+            <label for="hide-orphan" title="If set, only show nodes that are connected to at least one other node.">Hide orphan nodes</label>
+            <button id="trim-hidden" title="Hidden nodes and edges still influence node placement. Click this button to remove hidden nodes and redraw the graph.">Trim hidden nodes and edges</button>
+            <button id="reset" title="Reset the graph to the original view, with the default filters.">Reset trimmings and deletions</button>
+            <span>(hover controls for documentation)</span>
+          </div>
+        </div>
+      </form>
+    </header>
+
+    <div id="network">
+      <div tabindex="900" class="vis-network">
+        <canvas></canvas>
+      </div>
+    </div>
+
+    <footer id="tips">
+      <b>Tips:</b> Make sure to pass a <samp>/c:</samp> parameter if the log contains multiple <samp>(check-sat)</samp> calls. You can rename or delete selected nodes. Hover a node to show mode info. Cycles in this graph are not necessarily matching loops. Search terms are comma-separated. Click "Trim hidden nodes and edges" to remove hidden nodes. Instances of a nested quantifiers in different contexts are couted separately by Z3, but shown as one single square node. Self-promotion: to view z3 files in Emacs, try the <a href="https://github.com/boogie-org/boogie-friends">boogie-friends</a> package.
+    </footer>
+
+    <footer id="credits">
+      Bug reports, suggestions, and patches: <a href="mailto:clement.pitclaudel@live.com">Clément Pit--Claudel</a>
+    </footer>
+  </body>
+</html>

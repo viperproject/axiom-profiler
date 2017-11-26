@@ -12,6 +12,9 @@ namespace AxiomProfiler.QuantifierModel
         // unmatched blame terms
         private readonly List<Term> unusedBlameTerms;
 
+        //additional terms that didn't exist in the log but were used for matchings (parts of the pattern)
+        private readonly List<Term> additionalBlameTerms = new List<Term>();
+
         // outstanding check candidates
         // parent term -> subpattern, subterm
         // if parent is evicted the associated entry will be cleared
@@ -43,6 +46,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             bindings = new Dictionary<Term, Term>(other.bindings);
             unusedBlameTerms = new List<Term>(other.unusedBlameTerms);
+            additionalBlameTerms = new List<Term>(other.additionalBlameTerms);
             fullPattern = other.fullPattern;
             numEq = other.numEq;
 
@@ -68,7 +72,7 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private BindingInfo clone()
+        public BindingInfo clone()
         {
             return new BindingInfo(this);
         }
@@ -82,7 +86,9 @@ namespace AxiomProfiler.QuantifierModel
                 copy.handleOutstandingMatches(pattern);
                 return new List<BindingInfo> { copy };
             }
-            return (from blameTerm in unusedBlameTerms
+
+            IEnumerable<Term> possibleMatches = pattern.ContainsFreeVar() ? unusedBlameTerms : unusedBlameTerms.Concat(new Term[] { pattern });
+            return (from blameTerm in possibleMatches
                     let copy = clone()
                     where copy.matchBlameTerm(pattern, blameTerm)
                     select copy)
@@ -92,7 +98,14 @@ namespace AxiomProfiler.QuantifierModel
         private bool matchBlameTerm(Term pattern, Term matchTerm)
         {
             if (!matchCondition(pattern, matchTerm)) return false;
-            unusedBlameTerms.Remove(matchTerm);
+            if (unusedBlameTerms.Contains(matchTerm))
+            {
+                unusedBlameTerms.Remove(matchTerm);
+            }
+            else
+            {
+                additionalBlameTerms.Add(matchTerm);
+            }
 
             // add blame term without context
             // context is provided by previous matches
@@ -217,7 +230,7 @@ namespace AxiomProfiler.QuantifierModel
         public bool finalize(List<Term> blameTerms, List<Term> boundTerms)
         {
             if (unusedBlameTerms.Count != 0 ||
-                bindings.Count != boundTerms.Count + blameTerms.Count) return false;
+                bindings.Count != boundTerms.Count + blameTerms.Count + additionalBlameTerms.Count) return false;
 
             // decouple collections
             var freeVarsToRebind = bindings.Where(kvPair => kvPair.Key.id == -1).Select(kvPair => kvPair.Key).ToList();
@@ -236,6 +249,18 @@ namespace AxiomProfiler.QuantifierModel
                 var matched = bindings[eqPatterns];
                 numEq -= equalities[eqPatterns].RemoveAll(eq => eq.id == matched.id);
             }
+
+            // only keep top level terms
+            var toRemove = new List<Term>();
+            foreach (var additionalTerm in additionalBlameTerms)
+            {
+                // TODO: what if term is added twice?
+                if (additionalBlameTerms.Any(t => t != additionalTerm && t.isSubterm(additionalTerm)))
+                {
+                    toRemove.Add(additionalTerm);
+                }
+            }
+            additionalBlameTerms.RemoveAll(t => toRemove.Contains(t));
 
             addPatternPathconditions();
             return true;
@@ -273,7 +298,7 @@ namespace AxiomProfiler.QuantifierModel
         private bool fixBindingWithEqLookUp(List<Term> boundTerms, Term term, Term freeVar)
         {
             var eqFound = false;
-            foreach (var bndTerm in boundTerms.Where(bndTerm => recursiveEqualityLookUp(term, bndTerm)))
+            foreach (var bndTerm in boundTerms.Where(bndTerm => SameEqClass(term, bndTerm)))
             {
                 addEquality(freeVar, term);
                 bindings[freeVar] = bndTerm;
@@ -283,42 +308,29 @@ namespace AxiomProfiler.QuantifierModel
             return eqFound;
         }
 
-        private static bool recursiveEqualityLookUp(Term term1, Term term2)
+        private static bool SameEqClass(Term t1, Term t2, ISet<Term> alreadyVisited = null)
         {
-            // shortcut for comparing identical terms.
-            if (term1.id == term2.id) return true;
-            Term searchTerm;
-            Term lookUpTerm;
-            if (term1.dependentTerms.Count < term2.dependentTerms.Count)
+            if (t1.id == -1 || t2.id == -1) return false;
+            if (t1.id == t2.id) return true;
+
+            if (alreadyVisited == null)
             {
-                searchTerm = term1;
-                lookUpTerm = term2;
+                alreadyVisited = new HashSet<Term>();
             }
-            else
-            {
-                searchTerm = term2;
-                lookUpTerm = term1;
+            foreach (var equality in t1.dependentTerms
+                .Where(dependentTerm => dependentTerm.Name == "=" && !alreadyVisited.Contains(dependentTerm))) {
+                alreadyVisited.Add(equality);
+                foreach (var term in equality.Args)
+                {
+                    if (term != t1 && SameEqClass(term, t2, alreadyVisited))
+                    {
+                        return true;
+                    }
+                }
             }
 
-            // direct equality
-            if (searchTerm.dependentTerms
-                .Where(dependentTerm => dependentTerm.Name == "=")
-                .Any(dependentTerm => dependentTerm.Args.Any(term => term.id == lookUpTerm.id)))
-            {
-                return true;
-            }
-
-            // no direct equality, check if prerequisites for recursive lookup are met. 
-            if (searchTerm.Name != lookUpTerm.Name ||
-                searchTerm.GenericType != lookUpTerm.GenericType ||
-                searchTerm.Args.Length != lookUpTerm.Args.Length)
-            {
-                return false;
-            }
-
-            // do recursive lookup
-            return searchTerm.Args.Zip(lookUpTerm.Args, Tuple.Create)
-                .All(recursiveCompare => recursiveEqualityLookUp(recursiveCompare.Item1, recursiveCompare.Item2));
+            return t1.Name == t2.Name && t1.GenericType == t2.GenericType && t1.Args.Length == t2.Args.Length &&
+                t1.Args.Zip(t2.Args, Tuple.Create).All(argEquality => SameEqClass(argEquality.Item1, argEquality.Item2));
         }
 
         public List<Term> getDistinctBlameTerms()
@@ -327,6 +339,7 @@ namespace AxiomProfiler.QuantifierModel
                 .Where(bnd => bnd.Key.id != -1)
                 .Select(bnd => bnd.Value)
                 .Where(term => getContext(term).Count == 0)
+                .Concat(additionalBlameTerms)
                 .ToList();
         }
 
@@ -341,7 +354,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             return !(from equality in equalities
                      let eqBaseTerm = bindings[equality.Key]
-                     where equality.Value.Any(otherTerm => !recursiveEqualityLookUp(eqBaseTerm, otherTerm))
+                     where equality.Value.Any(otherTerm => !SameEqClass(eqBaseTerm, otherTerm))
                      select equality)
                      .Any();
         }

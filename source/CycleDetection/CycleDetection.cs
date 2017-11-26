@@ -53,8 +53,17 @@ namespace AxiomProfiler.CycleDetection
             var chars = new List<char>();
 
             // map the instantiations
+            var path = this.path;
+            if (path.First().bindingInfo == null)
+            {
+                path = path.Skip(1);
+            }
             foreach (var instantiation in path)
             {
+                if (instantiation.bindingInfo == null)
+                {
+                    throw new Exception($"Cannot execute findCycle(): bindingInfo missing for {instantiation}");
+                }
                 var key = instantiation.Quant.BodyTerm.id + "" +
                     instantiation.bindingInfo.fullPattern.id + "" +
                     instantiation.bindingInfo.numEq;
@@ -89,7 +98,7 @@ namespace AxiomProfiler.CycleDetection
             if (!processed) findCycle();
             // return empty list if there is no cycle
             return !hasCycle() ? new List<Instantiation>() :
-                path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
+                path.Skip(suffixTree.getStartIdx() + (path.First().bindingInfo == null ? 1 : 0)).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
         }
 
         public int getRepetiontions()
@@ -110,6 +119,7 @@ namespace AxiomProfiler.CycleDetection
         private readonly Dictionary<Term, List<Term>> bindHighlightsYields = new Dictionary<Term, List<Term>>();
         private readonly Dictionary<Term, List<Term>> eqHighlightsYield = new Dictionary<Term, List<Term>>();
         private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
+        private readonly Dictionary<int, BindingInfo> generalizedBindings = new Dictionary<int, BindingInfo>();
 
         // associated info to generalized blame term 
         // (meaning other generalized blame terms that are not yield terms in the loop)
@@ -131,11 +141,17 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        public bool IsReplaced(int id)
+        {
+            return replacementDict.ContainsKey(id);
+        }
+
         public void generalize()
         {
-            for (var i = 0; i < loopInstantiations.Length; i++)
+            for (var it = 0; it < loopInstantiations.Length+1; it++)
             {
-                var j = (i + 1) % loopInstantiations.Length;
+                var i = (loopInstantiations.Length + it - 1) % loopInstantiations.Length;
+                var j = it % loopInstantiations.Length;
                 var generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i);
                 generalizedTerms.Add(generalizedYield);
 
@@ -143,9 +159,19 @@ namespace AxiomProfiler.CycleDetection
                 var robustIdx = loopInstantiations[i].Count / 2;
                 var parent = loopInstantiations[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
                 var child = loopInstantiations[j][robustIdx];
+                var subterms = parent.dependentTerms.FindAll(dt => parent.concreteBody.isSubterm(dt));
+                if (subterms.Count != parent.dependentTerms.Count)
+                {
+                    throw new Exception();
+                }
+
+                var disitnctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
                 var idxList = Enumerable.Range(0, child.bindingInfo.getDistinctBlameTerms().Count)
-                                        .Where(y => !parent.dependentTerms.Last()
-                                                    .isSubterm(child.bindingInfo.getDistinctBlameTerms()[y]))
+                                        .Where(y => {
+                                            var yTerm = child.bindingInfo.getDistinctBlameTerms()[y];
+                                            return child.bindingInfo.equalities.Any(eq => child.bindingInfo.bindings[eq.Key] == yTerm) ||
+                                                !parent.concreteBody.isSubterm(yTerm);
+                                        })
                                         .ToList();
 
                 foreach (var index in idxList)
@@ -160,16 +186,85 @@ namespace AxiomProfiler.CycleDetection
                     assocGenBlameTerm[generalizedYield].Add(otherGenTerm);
                 }
 
+                loopInstantiations[j] = loopInstantiations[j].Select(inst => {
+                    var tmp = new Instantiation();
+                    inst.CopyTo(tmp);
+                    var newBody = GeneralizeBindings(inst.concreteBody, inst.Quant.BodyTerm.Args.Last(), generalizedBindings[inst.Quant.BodyTerm.id]);
+                    if (newBody != null) {
+                        tmp.concreteBody = newBody;
+                    } else
+                    {
+                        //TODO: try partial generalization?
+                        Console.Out.WriteLine($"couldn't generalize bindings for {inst}");
+                    }
+                    return tmp;
+                }).ToList();
+            }
+            MarkGeneralizations(generalizedTerms.First(), generalizedTerms.Last());
+        }
+
+        private void MarkGeneralizations(Term loopStart, Term loopEnd)
+        {
+            if (genReplacements.Contains(loopStart))
+            {
+                genReplacements.Add(loopEnd);
+            }
+            else
+            {
+                for (int i = 0; i < loopStart.Args.Length; i++)
+                {
+                    MarkGeneralizations(loopStart.Args[i], loopEnd.Args[i]);
+                }
             }
         }
 
         private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool wrapAround)
         {
             var yieldTerms = parentInsts
-                .Select(inst => inst.dependentTerms.Last())
+                .Select(inst => inst.concreteBody)
                 .Where(t => t != null);
 
             return generalizeTerms(yieldTerms, childInsts, wrapAround);
+        }
+
+        private static Term GeneralizeBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
+        {
+            if (quantifier.id == -1)
+            {
+                return bindingInfo.bindings[quantifier];
+            }
+            Term concreteContinue = concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite : concrete;
+            return GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo);
+        }
+
+        private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
+        {
+            if (concrete == null) return null;
+            Term copy = new Term(concrete);
+            if (!concrete.ContainsFreeVar()) return copy; 
+            if (concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name) return null;
+            for (int i = 0; i < concrete.Args.Count(); i++)
+            {
+                var replacement = GeneralizeBindings(concrete.Args[i], quantifier.Args[i], bindingInfo);
+                if (replacement == null)
+                {
+                    return GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo);
+                }
+                copy.Args[i] = replacement;
+            }
+            return copy;
+        }
+
+        private static List<Term> AllFreeVarsIn(Term t)
+        {
+            if (t.id == -1)
+            {
+                return new List<Term>(new[] { t });
+            }
+            else
+            {
+                return t.Args.SelectMany(AllFreeVarsIn).ToList();
+            }
         }
 
         private Term generalizeTerms(IEnumerable<Term> terms, List<Instantiation> highlightInfoInsts, bool wrapAround)
@@ -180,7 +275,8 @@ namespace AxiomProfiler.CycleDetection
             // map to 'vote' on generalization
             // also exposes outliers
             // term name + type + #Args -> #votes
-            var candidates = new Dictionary<string, Tuple<int, string, int>>();
+            // last element is id (kept if all terms agree)
+            var candidates = new Dictionary<string, Tuple<int, string, int, int>>();
             var concreteHistory = new Stack<Term>();
             var generalizedHistory = new Stack<Term>();
 
@@ -191,6 +287,11 @@ namespace AxiomProfiler.CycleDetection
             var localEqHighlight = new List<Term>();
 
             var idx = wrapAround ? Math.Max(highlightInfoInsts.Count / 2 - 1, 0) : highlightInfoInsts.Count / 2;
+
+            if (!generalizedBindings.TryGetValue(highlightInfoInsts[idx].Quant.BodyTerm.id, out var localBindingInfo))
+            {
+                localBindingInfo = highlightInfoInsts[idx].bindingInfo.clone();
+            }
 
             while (true)
             {
@@ -210,6 +311,7 @@ namespace AxiomProfiler.CycleDetection
                             blameHighlightsYield[mostRecent] = localBlameHighlight;
                             bindHighlightsYields[mostRecent] = localBindHighlight;
                             eqHighlightsYield[mostRecent] = localEqHighlight;
+                            generalizedBindings[highlightInfoInsts[idx].Quant.BodyTerm.id] = localBindingInfo;
 
                             return mostRecent;
                         }
@@ -240,10 +342,20 @@ namespace AxiomProfiler.CycleDetection
                 }
                 else if (isBindTerm(highlightInfoInsts, todoStacks, concreteHistory, wrapAround))
                 {
+                    var key = localBindingInfo.bindings.Keys.FirstOrDefault(
+                        (t) => localBindingInfo.bindings[t].id == todoStacks[wrapAround ? idx-1 : idx].Peek().id);
+                    if (key != null)
+                    {
+                        localBindingInfo.bindings[key] = currTerm;
+                    }
                     localBindHighlight.Add(currTerm);
                 }
                 else if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistory, wrapAround))
                 {
+                    var oldTerm = todoStacks[idx].Peek();
+                    var key = localBindingInfo.equalities.Keys.First((t) => localBindingInfo.equalities[t].Exists(res => res.id == oldTerm.id));
+                    var index = localBindingInfo.equalities[key].FindIndex(el => el.id == oldTerm.id);
+                    localBindingInfo.equalities[key][index] = currTerm;
                     localEqHighlight.Add(currTerm);
                 }
 
@@ -315,15 +427,23 @@ namespace AxiomProfiler.CycleDetection
                                 .Any(intermediate => intermediate.All(val => val));
         }
 
-        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory)
+        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory)
         {
             Term currTerm;
             if (candidates.Count == 1)
             {
                 // consensus -> decend further
                 var value = candidates.Values.First();
-                currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
-                idCounter--;
+                if (value.Item4 == -1)
+                {
+                    currTerm = new Term(value.Item2 + "_" + (-1 - idCounter), new Term[value.Item3]) { id = idCounter };
+                    idCounter--;
+                }
+                else
+                {
+                    //agree on id
+                    currTerm = new Term(value.Item2, new Term[value.Item3]) { id = value.Item4 };
+                }
             }
             else
             {
@@ -397,23 +517,23 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private static void collectCandidateTerm(Term currentTerm, Dictionary<string, Tuple<int, string, int>> candidates)
+        private static void collectCandidateTerm(Term currentTerm, Dictionary<string, Tuple<int, string, int, int>> candidates)
         {
             var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length;
             if (!candidates.ContainsKey(key))
             {
-                candidates[key] = new Tuple<int, string, int>
-                    (0, currentTerm.Name + currentTerm.GenericType, currentTerm.Args.Length);
+                candidates[key] = new Tuple<int, string, int, int>
+                    (0, currentTerm.Name + currentTerm.GenericType, currentTerm.Args.Length, currentTerm.id);
             }
             else
             {
                 var oldTuple = candidates[key];
-                candidates[key] = new Tuple<int, string, int>
-                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3);
+                candidates[key] = new Tuple<int, string, int, int>
+                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1);
             }
         }
 
-        public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, bool dashed)
+        public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm)
         {
             foreach (var term in blameHighlightsYield[generalizedTerm])
             {
@@ -427,14 +547,11 @@ namespace AxiomProfiler.CycleDetection
             {
                 term.highlightTemporarily(format, Color.Goldenrod);
             }
-            
-            foreach (var term in genReplacements)
-            {
-                var rule = format.getPrintRule(term).Clone();
-                rule.color = Color.BlueViolet;
-                rule.prefix = term.Name + (dashed ? "'(" : "(");
-                format.addTemporaryRule(term.id + "", rule);
-            }
+        }
+
+        public BindingInfo generalizedBindingInfo(Instantiation instantiation)
+        {
+            return generalizedBindings[instantiation.Quant.BodyTerm.id];
         }
     }
 }

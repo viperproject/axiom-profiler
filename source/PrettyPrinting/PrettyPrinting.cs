@@ -142,7 +142,7 @@ namespace AxiomProfiler.PrettyPrinting
                 prefix = prefix,
                 infix = ", ",
                 suffix = ")",
-                color = Color.DarkSlateGray,
+                color = t.id < -1 ? Color.DeepPink : Color.DarkSlateGray,
                 printChildren = true,
                 associative = false,
                 indent = true,

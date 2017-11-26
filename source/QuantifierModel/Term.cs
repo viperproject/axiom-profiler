@@ -20,6 +20,7 @@ namespace AxiomProfiler.QuantifierModel
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
         private static string indentDiff = "¦ ";
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
+        public Term reverseRewrite = null;
 
         public Term(string name, Term[] args)
         {
@@ -35,6 +36,7 @@ namespace AxiomProfiler.QuantifierModel
                 GenericType = "";
             }
             Args = args;
+            reverseRewrite = this;
 
             // Note: the null check was added to have it easier to construct the
             // generalized terms top down.
@@ -51,11 +53,25 @@ namespace AxiomProfiler.QuantifierModel
         public Term(Term t)
         {
             Name = t.Name;
-            Args = t.Args;
+            Args = (Term[]) t.Args.Clone();
             Responsible = t.Responsible;
             id = t.id;
             size = t.size;
             GenericType = t.GenericType;
+            if (object.ReferenceEquals(t.reverseRewrite, t))
+            {
+                reverseRewrite = this;
+            }
+            else
+            {
+                reverseRewrite = t.reverseRewrite;
+            }
+        }
+
+        public bool ContainsFreeVar()
+        {
+            if (id == -1) return true;
+            return Args.Any(arg => arg.ContainsFreeVar());
         }
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color)

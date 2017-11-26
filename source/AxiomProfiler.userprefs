@@ -1,22 +1,21 @@
-<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="AxiomProfiler.cs">
+﻿<Properties StartupConfiguration="{29651769-4A5F-4C7F-BAA7-4064BA38324D}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="PrettyPrinting/InfoPanelContent.cs">
     <Files>
-      <File FileName="Program.cs" Line="28" Column="47" />
-      <File FileName="AxiomProfiler.cs" Line="399" Column="5" />
+      <File FileName="Program.cs" Line="1" Column="1" />
+      <File FileName="AxiomProfiler.cs" Line="328" Column="14" />
+      <File FileName="QuantifierModel/Model.cs" Line="19" Column="6" />
+      <File FileName="QuantifierModel/Scope.cs" Line="1" Column="1" />
+      <File FileName="QuantifierModel/Instantiation.cs" Line="288" Column="54" />
+      <File FileName="QuantifierModel/BindingInfo.cs" Line="192" Column="10" />
+      <File FileName="DAGView.cs" Line="129" Column="36" />
+      <File FileName="PrettyPrinting/InfoPanelContent.cs" Line="207" Column="1" />
     </Files>
-    <Pads>
-      <Pad Id="ProjectPad">
-        <State expanded="True">
-          <Node name="AxiomProfiler" expanded="True">
-            <Node name="AxiomProfiler.cs" selected="True" />
-          </Node>
-        </State>
-      </Pad>
-    </Pads>
   </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.AxiomProfiler PreferredExecutionTarget="MonoDevelop.Default" />
+  <MultiItemStartupConfigurations />
 </Properties>
