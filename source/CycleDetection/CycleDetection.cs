@@ -571,6 +571,20 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        private void HighlightNewTerms(Term newTerm, Term referenceTerm, PrettyPrintFormat format)
+        {
+            if (newTerm.id < 0 && !referenceTerm.isSubterm(newTerm.id))
+            {
+                var rule = format.getPrintRule(newTerm);
+                rule.font = PrintConstants.ItalicFont;
+                format.addTemporaryRule(newTerm.id.ToString(), rule);
+                foreach (var subterm in newTerm.Args)
+                {
+                    HighlightNewTerms(subterm, referenceTerm, format);
+                }
+            }
+        }
+
         public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, bool last)
         {
             foreach (var term in genReplacements)
@@ -607,6 +621,11 @@ namespace AxiomProfiler.CycleDetection
             foreach (var term in bindingInfo.equalities.SelectMany(kv1 => kv1.Value))
             {
                 term.highlightTemporarily(format, PrintConstants.equalityColor);
+            }
+
+            if (last)
+            {
+                HighlightNewTerms(generalizedTerms.Last(), generalizedTerms.First(), format);
             }
         }
 

@@ -154,14 +154,14 @@ namespace AxiomProfiler.QuantifierModel
             var startLength = content.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
-            content.switchFormat(PrintConstants.DefaultFont, printRule.color);
+            content.switchFormat(printRule.font ?? PrintConstants.DefaultFont, printRule.color);
 
             // check for cutoff
             if (format.maxDepth == 1)
             {
                 if (ContainsGeneralization())
                 {
-                    content.switchFormat(PrintConstants.DefaultFont, PrintConstants.generalizationColor);
+                    content.switchFormat(printRule.font ?? PrintConstants.DefaultFont, PrintConstants.generalizationColor);
                     content.Append(">...<");
                 }
                 else
@@ -300,7 +300,7 @@ namespace AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(PrintConstants.DefaultFont, rule.color);
+            content.switchFormat(rule.font ?? PrintConstants.DefaultFont, rule.color);
             if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {

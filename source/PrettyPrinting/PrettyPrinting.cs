@@ -140,6 +140,7 @@ namespace AxiomProfiler.PrettyPrinting
         public string infix;
         public string suffix;
         public Color color;
+        public Font font;
         public bool printChildren;
         public bool associative;
         public bool indent;
