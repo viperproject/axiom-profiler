@@ -16,7 +16,7 @@ namespace AxiomProfiler.QuantifierModel
         public abstract IEnumerable<Common> Children();
         public virtual bool HasChildren() { return true; }
         public virtual bool AutoExpand() { return false; }
-        public virtual Color ForeColor() { return Color.Black; }
+        public virtual Color ForeColor() { return PrintConstants.defaultTextColor; }
 
         protected static IEnumerable<T> ConvertIEnumerable<T, S>(IEnumerable<S> x)
             where S : T

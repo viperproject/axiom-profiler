@@ -93,7 +93,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             printNoMatchdisclaimer(content);
             SummaryInfo(content);
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Blamed terms:\n\n");
             content.switchToDefaultFormat();
 
@@ -105,7 +105,7 @@ namespace AxiomProfiler.QuantifierModel
             }
             content.Append('\n');
             content.switchToDefaultFormat();
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Bound terms:\n\n");
             content.switchToDefaultFormat();
             foreach (var t in Bindings)
@@ -127,7 +127,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public void printNoMatchdisclaimer(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+            content.switchFormat(PrintConstants.ItalicFont, PrintConstants.warningTextColor);
             content.Append("No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
             content.switchToDefaultFormat();
         }
@@ -136,32 +136,32 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (isAmbiguous)
             {
-                content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+                content.switchFormat(PrintConstants.ItalicFont, PrintConstants.warningTextColor);
                 content.Append( "Pattern match is ambiguos. Most likely match presented.\n");
                 content.switchToDefaultFormat();
             }
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
             content.Append("matched");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
             content.Append("matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
             content.Append("blamed");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.bindColor);
             content.Append("bound");
             content.switchToDefaultFormat();
             content.Append(".\n\n");
 
             tempHighlightBlameBindTerms(format);
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.warningTextColor);
             content.Append("Blamed Terms:\n\n");
 
             foreach (var t in bindingInfo.getDistinctBlameTerms())
@@ -171,36 +171,36 @@ namespace AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Binding information:\n\n");
             content.switchToDefaultFormat();
 
             foreach (var bindings in bindingInfo.getBindingsToFreeVars())
             {
-                content.Append(bindings.Key.Name).Append(" was bound to ");
-                bindings.Value.printName(content, format);
-                content.Append('\n');
+                content.Append(bindings.Key.Name).Append(" was bound to:\n");
+                bindings.Value.PrettyPrint(content, format);
+                content.Append("\n\n");
             }
 
             if (bindingInfo.equalities.Count > 0)
             {
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
 
                 foreach (var equality in bindingInfo.equalities)
                 {
-                    bindingInfo.bindings[equality.Key].printName(content, format);
+                    bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
                     foreach (var term in equality.Value)
                     {
-                        content.Append(" = ");
-                        term.printName(content, format);
+                        content.Append("\n=\n");
+                        term.PrettyPrint(content, format);
                     }
-                    content.Append('\n');
+                    content.Append("\n\n");
                 }
             }
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\n\nThe quantifier body:\n\n");
             content.switchToDefaultFormat();
             Quant.BodyTerm.PrettyPrint(content, format);
@@ -208,7 +208,7 @@ namespace AxiomProfiler.QuantifierModel
             format.restoreAllOriginalRules();
 
             content.switchToDefaultFormat();
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("The resulting term:\n\n");
             content.switchToDefaultFormat();
             concreteBody.PrettyPrint(content, format);
@@ -217,22 +217,22 @@ namespace AxiomProfiler.QuantifierModel
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
             if (bindingInfo == null) return;
-            bindingInfo.fullPattern.highlightTemporarily(format, Color.LimeGreen);
+            bindingInfo.fullPattern.highlightTemporarily(format, PrintConstants.patternMatchColor);
             foreach (var binding in bindingInfo.bindings)
             {
                 var patternTerm = binding.Key;
                 var term = binding.Value;
-                var color = Color.Coral;
-                if (patternTerm.id == -1) color = Color.DeepSkyBlue;
+                var color = PrintConstants.blameColor;
+                if (patternTerm.id == -1) color = PrintConstants.bindColor;
 
-                patternTerm.highlightTemporarily(format, color, bindingInfo.matchContext[patternTerm.id]);
+                patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
                 term.highlightTemporarily(format, color, bindingInfo.matchContext[term.id]);
                 if (!bindingInfo.equalities.ContainsKey(patternTerm)) continue;
 
                 // highlight replaced, equal terms as well
                 foreach (var eqTerm in bindingInfo.equalities[patternTerm])
                 {
-                    eqTerm.highlightTemporarily(format, Color.Goldenrod, bindingInfo.matchContext[eqTerm.id]);
+                    eqTerm.highlightTemporarily(format, PrintConstants.equalityColor, bindingInfo.matchContext[eqTerm.id]);
                 }
             }
         }
@@ -319,7 +319,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.instantiationTitleColor);
             content.Append("Instantiation ").Append('@').Append(LineNo + ":\n");
             content.switchToDefaultFormat();
 

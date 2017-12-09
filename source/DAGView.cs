@@ -445,8 +445,16 @@ namespace AxiomProfiler
             var bestDownPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, true);
             var bestUpPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, false);
             bestUpPath.appendWithOverlap(bestDownPath);
-            highlightPath(bestUpPath);
-            _z3AxiomProfiler.SetInfoPanel(bestUpPath);
+            if (bestUpPath.TryGetCyclePath(out var cyclePath))
+            {
+                highlightPath(cyclePath);
+                _z3AxiomProfiler.SetInfoPanel(cyclePath);
+            }
+            else
+            {
+                highlightPath(bestUpPath);
+                _z3AxiomProfiler.SetInfoPanel(bestUpPath);
+            }
         }
 
         private InstantiationPath buildPathDepthFirst(InstantiationPath basePath, Node node, bool down)
@@ -463,11 +471,13 @@ namespace AxiomProfiler
 
             var relevantEdges = down ? node.OutEdges : node.InEdges;
             var returnPath = basePath;
-            foreach (var edge in relevantEdges)
+            foreach (var edge in relevantEdges.Reverse())
             {
-                var pathCandidate = buildPathDepthFirst(basePath, down ? edge.TargetNode : edge.SourceNode, down);
+                var tryNode = down ? edge.TargetNode : edge.SourceNode;
+                var pathCandidate = buildPathDepthFirst(basePath, tryNode, down);
 
-                if (pathCandidate.Cost() >= returnPath.Cost())
+                if (pathCandidate.Length() > returnPath.Length() || (pathCandidate.Length() == returnPath.Length() &&
+                    ((Instantiation) tryNode.UserData).Quant == ((Instantiation) node.UserData).Quant))
                 {
                     returnPath = pathCandidate;
                 }
@@ -477,6 +487,11 @@ namespace AxiomProfiler
 
         private void highlightPath(InstantiationPath path)
         {
+            if (previouslySelectedNode != null)
+            {
+                unselectNode();
+            }
+
             foreach (var instantiation in path.getInstantiations())
             {
                 highlightNode(graph.FindNode(instantiation.uniqueID));

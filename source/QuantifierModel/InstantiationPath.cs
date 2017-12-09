@@ -69,7 +69,7 @@ namespace AxiomProfiler.QuantifierModel
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             printCycleInfo(content, format);
-            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
             content.Append("Path explanation:");
             content.switchToDefaultFormat();
             content.Append("\n\nLength: " + Length()).Append('\n');
@@ -118,9 +118,9 @@ namespace AxiomProfiler.QuantifierModel
         {
             foreach (var term in potGens)
             {
-                if (term is Term && generalization.IsReplaced(((Term)term).id))
+                if (term is Term && generalization.IsReplaced(term.id))
                 {
-                    ((Term)term).highlightTemporarily(format, Color.DeepPink);
+                    term.highlightTemporarily(format, PrintConstants.generalizationColor);
                 }
                 else
                 {
@@ -137,7 +137,7 @@ namespace AxiomProfiler.QuantifierModel
             var generalization = cycDetect.getGeneralization();
             highlightGens(potGens, format, generalization);
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\n\nThis instantiation yields:\n\n");
             content.switchToDefaultFormat();
             previous.concreteBody.PrettyPrint(content, format);
@@ -148,7 +148,7 @@ namespace AxiomProfiler.QuantifierModel
                         !previous.concreteBody.isSubterm(term)).ToList();
             if (otherRequiredTerms.Count > 0)
             {
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nTogether with the following term(s):");
                 content.switchToDefaultFormat();
                 foreach (var distinctBlameTerm in otherRequiredTerms)
@@ -160,23 +160,23 @@ namespace AxiomProfiler.QuantifierModel
 
             if (current.bindingInfo.equalities.Count > 0)
             {
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
 
                 foreach (var equality in current.bindingInfo.equalities)
                 {
-                    current.bindingInfo.bindings[equality.Key].printName(content, format);
+                    current.bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
                     foreach (var term in equality.Value)
                     {
-                        content.Append(" = ");
-                        term.printName(content, format);
+                        content.Append("\n=\n");
+                        term.PrettyPrint(content, format);
                     }
-                    content.Append('\n');
+                    content.Append("\n\n");
                 }
             }
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\n\nApplication of ");
             content.Append(current.Quant.PrintName);
             content.switchToDefaultFormat();
@@ -188,16 +188,17 @@ namespace AxiomProfiler.QuantifierModel
 
         private static void printPathHead(InfoPanelContent content, PrettyPrintFormat format, Instantiation current)
         {
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nStarting from the following term(s):\n\n");
             content.switchToDefaultFormat();
             current.tempHighlightBlameBindTerms(format);
             foreach (var distinctBlameTerm in current.bindingInfo.getDistinctBlameTerms())
             {
                 distinctBlameTerm.PrettyPrint(content, format);
+                content.Append("\n\n");
             }
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nApplication of ");
             content.Append(current.Quant.PrintName);
             content.switchToDefaultFormat();
@@ -211,7 +212,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
-            content.switchFormat(InfoPanelContent.TitleFont, Color.Red);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.warningTextColor);
             content.Append("Possible matching loop found!\n");
             content.switchToDefaultFormat();
             content.Append("Number of repetitions: ").Append(cycleDetector.getRepetiontions() + "\n");
@@ -222,7 +223,7 @@ namespace AxiomProfiler.QuantifierModel
 
             printPreamble(content, true);
 
-            content.switchFormat(InfoPanelContent.TitleFont, Color.Black);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
             content.Append("\n\nGeneralized Loop Iteration:\n\n");
 
             var generalizationState = cycleDetector.getGeneralization();
@@ -230,7 +231,7 @@ namespace AxiomProfiler.QuantifierModel
 
             // print last yield term before printing the complete loop
             // to give the user a term to match the highlighted pattern to
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nStarting anywhere with the following term(s):\n\n");
             content.switchToDefaultFormat();
             var insts = cycleDetector.getCycleInstantiations().GetEnumerator();
@@ -242,7 +243,7 @@ namespace AxiomProfiler.QuantifierModel
             foreach (var term in loopYields)
             {
                 format.restoreAllOriginalRules();
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nApplication of ");
                 content.Append(insts.Current?.Quant.PrintName);
                 content.switchToDefaultFormat();
@@ -251,12 +252,12 @@ namespace AxiomProfiler.QuantifierModel
                 // print quantifier body with pattern
                 insts.Current?.tempHighlightBlameBindTerms(format);
                 insts.Current?.Quant.BodyTerm.PrettyPrint(content, format);
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nThis yields:\n\n");
                 content.switchToDefaultFormat();
 
                 insts.MoveNext();
-                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, insts.Current, false, count == cycle.Count);
+                printGeneralizedTermWithPrerequisites(content, format, generalizationState, term, insts.Current, false, count == loopYields.Count);
                 count++;
             }
             format.restoreAllOriginalRules();
@@ -266,43 +267,75 @@ namespace AxiomProfiler.QuantifierModel
         private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
             GeneralizationState generalizationState, Term term, Instantiation instantiation, bool first, bool last)
         {
-            generalizationState.tmpHighlightGeneralizedTerm(format, term);
+            generalizationState.tmpHighlightGeneralizedTerm(format, term, last);
             term.PrettyPrint(content, format);
             content.Append("\n");
 
-            if (last ||
-                !generalizationState.assocGenBlameTerm.ContainsKey(term) ||
-                generalizationState.assocGenBlameTerm[term].Count <= 0)
-                return;
-
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
-            content.Append("\nTogether with the following term(s):");
-            content.switchToDefaultFormat();
-            var otherRequirements = generalizationState.assocGenBlameTerm[term];
-
-            foreach (var req in otherRequirements)
+            if (generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements))
             {
-                content.Append("\n\n");
-                generalizationState.tmpHighlightGeneralizedTerm(format, req);
-                req.PrettyPrint(content, format);
+                var constantTermsLookup = otherRequirements.ToLookup(t => t.ContainsGeneralization());
+                var setTems = constantTermsLookup[true];
+                var constantTerms = constantTermsLookup[false];
+
+                if (constantTerms.Count() > 0)
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nTogether with the following term(s):");
+                    content.switchToDefaultFormat();
+
+                    foreach (var req in constantTerms)
+                    {
+                        content.Append("\n\n");
+                        generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
+                        req.PrettyPrint(content, format);
+                    }
+                    content.Append("\n");
+                }
+
+                if (setTems.Count() > 0)
+                {
+                    foreach (var req in setTems)
+                    {
+                        content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                        content.Append($"\nTogether with a set of terms generated by {req.Responsible.Quant.PrintName} ({(generalizationState.IsProducedByLoop(req) ? "" : "not ")}part of the current matching loop) with the shape:\n\n");
+                        content.switchToDefaultFormat();
+                        generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
+                        req.PrettyPrint(content, format);
+                        content.Append("\n");
+                    }
+                }
             }
 
-            var bindingInfo = generalizationState.generalizedBindingInfo(instantiation);
+            var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
             if (bindingInfo.equalities.Count > 0)
             {
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
-                content.Append("\n\nRelevant equalities:\n\n");
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
 
                 foreach (var equality in bindingInfo.equalities)
                 {
-                    bindingInfo.bindings[equality.Key].printName(content, format);
+                    bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
                     foreach (var t in equality.Value)
                     {
-                        content.Append(" = ");
-                        t.printName(content, format);
+                        content.Append("\n=\n");
+                        t.PrettyPrint(content, format);
                     }
-                    content.Append('\n');
+                    content.Append("\n\n");
+                }
+            }
+
+            if (last)
+            {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nBindings for Next Instantiation:\n\n");
+                content.switchToDefaultFormat();
+
+                foreach (var binding in bindingInfo.getBindingsToFreeVars())
+                {
+                    content.Append(binding.Key.Name).Append(" was bound to:\n");
+                    binding.Value.PrettyPrint(content, format);
+                    content.Append("\n\n");
                 }
             }
         }
@@ -310,27 +343,32 @@ namespace AxiomProfiler.QuantifierModel
         private void printPreamble(InfoPanelContent content, bool withGen)
         {
             content.Append("\nHighlighted terms are ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
             content.Append("matched");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
             content.Append("matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
             content.Append("blamed");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.bindColor);
             content.Append("bound");
             content.switchToDefaultFormat();
             if (withGen)
             {
                 content.Append(" or ");
-                content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepPink);
-                content.Append("change between iterations");
+                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.generalizationColor);
+                content.Append("generalized");
                 content.switchToDefaultFormat();
+                content.Append(".\n\"");
+                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.generalizationColor);
+                content.Append(">...<");
+                content.switchToDefaultFormat();
+                content.Append("\" indicates that a generalization is hidden below the max term depth");
             }
             content.Append(".\n");
         }
@@ -338,7 +376,7 @@ namespace AxiomProfiler.QuantifierModel
         private static void legacyInstantiationInfo(InfoPanelContent content, PrettyPrintFormat format, Instantiation instantiation)
         {
             instantiation.printNoMatchdisclaimer(content);
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("\n\nBlamed terms:\n\n");
             content.switchToDefaultFormat();
 
@@ -351,7 +389,7 @@ namespace AxiomProfiler.QuantifierModel
 
             content.Append('\n');
             content.switchToDefaultFormat();
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Bound terms:\n\n");
             content.switchToDefaultFormat();
             foreach (var t in instantiation.Bindings)
@@ -361,7 +399,7 @@ namespace AxiomProfiler.QuantifierModel
                 content.Append("\n\n");
             }
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Quantifier Body:\n\n");
 
             instantiation.concreteBody?.PrettyPrint(content, format);
@@ -370,6 +408,19 @@ namespace AxiomProfiler.QuantifierModel
         public IEnumerable<Instantiation> getInstantiations()
         {
             return pathInstantiations;
+        }
+
+        public bool TryGetCyclePath(out InstantiationPath cyclePath)
+        {
+            cyclePath = null;
+            if (!hasCycle()) return false;
+            var cycleInstantiations = cycleDetector.getCycleInstantiations();
+            cyclePath = new InstantiationPath();
+            foreach (var inst in cycleInstantiations)
+            {
+                cyclePath.append(inst);
+            }
+            return true;
         }
     }
 }

@@ -29,6 +29,9 @@ namespace AxiomProfiler.QuantifierModel
         // highlighting info: Term --> List of path constraints
         public readonly Dictionary<int, List<List<Term>>> matchContext = new Dictionary<int, List<List<Term>>>();
 
+        // highlighting info for pattern: Term --> List of path constraints
+        public readonly Dictionary<int, List<List<Term>>> patternMatchContext = new Dictionary<int, List<List<Term>>>();
+
         // equalities inferred from pattern matching
         public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
 
@@ -55,6 +58,13 @@ namespace AxiomProfiler.QuantifierModel
             foreach (var context in other.matchContext)
             {
                 matchContext[context.Key] = new List<List<Term>>(context.Value);
+            }
+
+            // 'deeper' copy
+            patternMatchContext = new Dictionary<int, List<List<Term>>>();
+            foreach (var context in other.patternMatchContext)
+            {
+                patternMatchContext[context.Key] = new List<List<Term>>(context.Value);
             }
 
             // 'deeper' copy
@@ -150,6 +160,12 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (!matchContext.ContainsKey(term.id)) matchContext[term.id] = new List<List<Term>>();
             matchContext[term.id].AddRange(context);
+        }
+
+        private void addPatternMatchContext(Term term, List<List<Term>> context)
+        {
+            if (!patternMatchContext.ContainsKey(term.id)) patternMatchContext[term.id] = new List<List<Term>>();
+            patternMatchContext[term.id].AddRange(context);
         }
 
         private List<List<Term>> getContext(Term term)
@@ -251,16 +267,7 @@ namespace AxiomProfiler.QuantifierModel
             }
 
             // only keep top level terms
-            var toRemove = new List<Term>();
-            foreach (var additionalTerm in additionalBlameTerms)
-            {
-                // TODO: what if term is added twice?
-                if (additionalBlameTerms.Any(t => t != additionalTerm && t.isSubterm(additionalTerm)))
-                {
-                    toRemove.Add(additionalTerm);
-                }
-            }
-            additionalBlameTerms.RemoveAll(t => toRemove.Contains(t));
+            additionalBlameTerms.RemoveAll(t1 => additionalBlameTerms.Any(t2 => t1 != t2 && t2.isSubterm(t1)));
 
             addPatternPathconditions();
             return true;
@@ -284,7 +291,7 @@ namespace AxiomProfiler.QuantifierModel
 
                 var pathConstraint = history.ToList();
                 pathConstraint.Reverse();
-                addMatchContext(currentPattern, new List<List<Term>> { pathConstraint});
+                addPatternMatchContext(currentPattern, new List<List<Term>> { pathConstraint });
                 
                 history.Push(currentPattern);
                 foreach (var subPattern in currentPattern.Args)
@@ -339,7 +346,6 @@ namespace AxiomProfiler.QuantifierModel
                 .Where(bnd => bnd.Key.id != -1)
                 .Select(bnd => bnd.Value)
                 .Where(term => getContext(term).Count == 0)
-                .Concat(additionalBlameTerms)
                 .ToList();
         }
 

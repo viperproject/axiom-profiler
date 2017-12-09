@@ -74,6 +74,12 @@ namespace AxiomProfiler.QuantifierModel
             return Args.Any(arg => arg.ContainsFreeVar());
         }
 
+        public bool ContainsGeneralization()
+        {
+            if (id < -1) return true;
+            return Args.Any(arg => arg.ContainsGeneralization());
+        }
+
         public void highlightTemporarily(PrettyPrintFormat format, Color color)
         {
             var tmp = format.getPrintRule(this).Clone();
@@ -121,6 +127,12 @@ namespace AxiomProfiler.QuantifierModel
             return false;
         }
 
+        public bool isSubterm(int subtermId)
+        {
+            if (id == subtermId) return true;
+            return Args.Any(t => t.isSubterm(subtermId));
+        }
+
         public void printName(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.Append(Name);
@@ -142,12 +154,20 @@ namespace AxiomProfiler.QuantifierModel
             var startLength = content.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
-            content.switchFormat(InfoPanelContent.DefaultFont, printRule.color);
+            content.switchFormat(PrintConstants.DefaultFont, printRule.color);
 
             // check for cutoff
             if (format.maxDepth == 1)
             {
-                content.Append("...");
+                if (ContainsGeneralization())
+                {
+                    content.switchFormat(PrintConstants.DefaultFont, PrintConstants.generalizationColor);
+                    content.Append(">...<");
+                }
+                else
+                {
+                    content.Append("...");
+                }
                 return false;
             }
 
@@ -247,7 +267,7 @@ namespace AxiomProfiler.QuantifierModel
                 // add the indents
                 foreach (var color in indentColors)
                 {
-                    content.Insert(breakIndices[i] + offset, indentDiff, InfoPanelContent.DefaultFont, color);
+                    content.Insert(breakIndices[i] + offset, indentDiff, PrintConstants.DefaultFont, color);
                     offset += content.Length - oldLength;
                     oldLength = content.Length;
                 }
@@ -266,7 +286,7 @@ namespace AxiomProfiler.QuantifierModel
 
         private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
+            content.switchFormat(PrintConstants.DefaultFont, rule.color);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
@@ -280,7 +300,7 @@ namespace AxiomProfiler.QuantifierModel
 
         private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
+            content.switchFormat(PrintConstants.DefaultFont, rule.color);
             if (!string.IsNullOrWhiteSpace(rule.suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
@@ -344,7 +364,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Term Info:\n");
             content.switchToDefaultFormat();
             content.Append("\nIdentifier: " + id).Append('\n');

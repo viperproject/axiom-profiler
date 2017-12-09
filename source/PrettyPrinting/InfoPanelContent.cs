@@ -9,12 +9,6 @@ namespace AxiomProfiler.PrettyPrinting
 {
     public class InfoPanelContent
     {
-        public static readonly Font DefaultFont = new Font("Consolas", 9, FontStyle.Regular);
-        public static readonly Font TitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
-        public static readonly Font SubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
-        public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
-        public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
-
         private readonly StringBuilder textBuilder = new StringBuilder();
         private bool finalized;
         private readonly List<TextFormat> formats = new List<TextFormat>();
@@ -186,7 +180,7 @@ namespace AxiomProfiler.PrettyPrinting
 
         public void switchToDefaultFormat()
         {
-            switchFormat(DefaultFont, Color.Black);
+            switchFormat(PrintConstants.DefaultFont, PrintConstants.defaultTextColor);
         }
 
         private void checkFinalized()
@@ -257,7 +251,7 @@ namespace AxiomProfiler.PrettyPrinting
 
         public static TextFormat defaultFormat(int startIndex)
         {
-            return new TextFormat(startIndex, InfoPanelContent.DefaultFont, Color.Black);
+            return new TextFormat(startIndex, PrintConstants.DefaultFont, PrintConstants.defaultTextColor);
         }
     }
 }

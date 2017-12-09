@@ -7,6 +7,30 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler.PrettyPrinting
 {
+    public class PrintConstants
+    {
+        //colors
+        public static readonly Color patternMatchColor = Color.LimeGreen;
+        public static readonly Color blameColor = Color.Goldenrod;
+        public static readonly Color bindColor = Color.DeepSkyBlue;
+        public static readonly Color equalityColor = Color.DarkViolet;
+        public static readonly Color generalizationColor = Color.OrangeRed;
+        public static readonly Color defaultTextColor = Color.Black;
+        public static readonly Color defaultTermColor = Color.DarkSlateGray;
+        public static readonly Color warningTextColor = Color.Red;
+        public static readonly Color sectionTitleColor = Color.DarkCyan;
+        public static readonly Color instantiationTitleColor = Color.DarkRed;
+
+        //fonts
+        public static readonly Font DefaultFont = new Font("Consolas", 9, FontStyle.Regular);
+        public static readonly Font TitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
+        public static readonly Font SubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
+        public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
+        public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
+
+        private PrintConstants() {}
+    }
+
     public class PrintRuleDictionary
     {
         private readonly Dictionary<string, PrintRule> termTranslations = new Dictionary<string, PrintRule>();
@@ -142,7 +166,7 @@ namespace AxiomProfiler.PrettyPrinting
                 prefix = prefix,
                 infix = ", ",
                 suffix = ")",
-                color = t.id < -1 ? Color.DeepPink : Color.DarkSlateGray,
+                color = PrintConstants.defaultTermColor,
                 printChildren = true,
                 associative = false,
                 indent = true,
