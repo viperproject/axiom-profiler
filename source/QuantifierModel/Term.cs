@@ -21,9 +21,11 @@ namespace AxiomProfiler.QuantifierModel
         private static string indentDiff = "¦ ";
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
+        public readonly int generalizationCounter = -1;
 
-        public Term(string name, Term[] args)
+        public Term(string name, Term[] args, int generalizationCounter = -1)
         {
+            this.generalizationCounter = generalizationCounter;
             Match typeMatch = TypeRegex.Match(name);
             if (typeMatch.Success)
             {
@@ -58,7 +60,7 @@ namespace AxiomProfiler.QuantifierModel
             id = t.id;
             size = t.size;
             GenericType = t.GenericType;
-            if (object.ReferenceEquals(t.reverseRewrite, t))
+            if (ReferenceEquals(t.reverseRewrite, t))
             {
                 reverseRewrite = this;
             }
@@ -66,6 +68,7 @@ namespace AxiomProfiler.QuantifierModel
             {
                 reverseRewrite = t.reverseRewrite;
             }
+            generalizationCounter = t.generalizationCounter;
         }
 
         public bool ContainsFreeVar()
@@ -76,8 +79,13 @@ namespace AxiomProfiler.QuantifierModel
 
         public bool ContainsGeneralization()
         {
-            if (id < -1) return true;
-            return Args.Any(arg => arg.ContainsGeneralization());
+            return GetAllGeneralizationSubterms().Any();
+        }
+
+        public IEnumerable<Term> GetAllGeneralizationSubterms()
+        {
+            return Args.SelectMany(arg => arg.GetAllGeneralizationSubterms())
+                .Concat(Enumerable.Repeat(this, generalizationCounter >= 0 ? 1 : 0));
         }
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color)

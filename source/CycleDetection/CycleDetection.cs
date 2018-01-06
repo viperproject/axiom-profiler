@@ -118,6 +118,8 @@ namespace AxiomProfiler.CycleDetection
         private readonly Dictionary<int, BindingInfo> generalizedBindings = new Dictionary<int, BindingInfo>();
         private BindingInfo wrapBindings = null;
         private HashSet<Term> loopProducedAssocBlameTerms = new HashSet<Term>();
+        private Term[] potGeneralizationDependencies = new Term[0];
+        private Dictionary<Term, Term> genReplacementTermsForNextIteration = new Dictionary<Term, Term>();
 
         // associated info to generalized blame term 
         // (meaning other generalized blame terms that are not yield terms in the loop)
@@ -153,11 +155,15 @@ namespace AxiomProfiler.CycleDetection
         {
             for (var it = 0; it < loopInstantiations.Length+1; it++)
             {
+                potGeneralizationDependencies = new Term[0];
                 var i = (loopInstantiations.Length + it - 1) % loopInstantiations.Length;
                 var j = it % loopInstantiations.Length;
                 var generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i, it == loopInstantiations.Length);
                 generalizedYield.dependentInstantiationsBlame.Add(loopInstantiations[i].First());
                 generalizedTerms.Add(generalizedYield);
+
+                potGeneralizationDependencies = genReplacements.Where(repl => repl.Args.Count() == 0)
+                    .GroupBy(repl => repl.generalizationCounter).Select(group => group.First()).ToArray();
 
                 // Other prerequisites:
                 var robustIdx = loopInstantiations[i].Count / 2;
@@ -224,7 +230,7 @@ namespace AxiomProfiler.CycleDetection
         {
             if (genReplacements.Contains(loopStart))
             {
-                genReplacements.Add(loopEnd);
+                genReplacementTermsForNextIteration[loopStart] = loopEnd;
             }
             else
             {
@@ -531,7 +537,7 @@ namespace AxiomProfiler.CycleDetection
                     return copy;
                 }
             }
-            var t = new Term("generalization_" + genCounter, new Term[0]) { id = idCounter };
+            var t = new Term("T", potGeneralizationDependencies, genCounter) { id = idCounter };
             genReplacements.Add(t);
             idCounter--;
             genCounter++;
@@ -587,11 +593,20 @@ namespace AxiomProfiler.CycleDetection
 
         public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, bool last)
         {
-            foreach (var term in genReplacements)
+            var onlyOne = !genReplacements.Where(gen => gen.Args.Count() == 0 && gen.generalizationCounter >= 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
+            foreach (var term in genReplacements.Concat(genReplacementTermsForNextIteration.Values))
             {
                 var rule = format.getPrintRule(term);
                 rule.color = PrintConstants.generalizationColor;
-                rule.prefix = term.Name + "(";
+                if (term.Args.Count() == 0)
+                {
+                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter);
+                    rule.suffix = "";
+                }
+                else
+                {
+                    rule.prefix = term.Name + (term.generalizationCounter < 0 ? "" :"_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter)) + "(";
+                }
                 format.addTemporaryRule(term.id.ToString(), rule);
             }
 
@@ -626,6 +641,18 @@ namespace AxiomProfiler.CycleDetection
             if (last)
             {
                 HighlightNewTerms(generalizedTerms.Last(), generalizedTerms.First(), format);
+            }
+        }
+
+        public void PrintGeneralizationsForNextIteration(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            foreach (var binding in genReplacementTermsForNextIteration.GroupBy(kv => kv.Key.generalizationCounter).Select(group => group.First()))
+            {
+                binding.Value.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
+                content.Append(" will be generalized to ");
+                binding.Key.PrettyPrint(content, format);
+                content.Append("\n\n");
             }
         }
 

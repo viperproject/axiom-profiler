@@ -160,6 +160,7 @@ namespace AxiomProfiler.PrettyPrinting
         {
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
+                (t.generalizationCounter >= 0 ? "_" + t.generalizationCounter : "") +
                 (format.showTermId && t.id >= 0 ? "[" + t.id + "]" : "") +
                 "(";
             return new PrintRule

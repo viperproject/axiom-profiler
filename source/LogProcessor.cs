@@ -1002,6 +1002,38 @@ namespace AxiomProfiler
             {
                 reverseRewrite.Key.reverseRewrite = reverseRewrite.Value;
             }
+            var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {
+                var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
+                foreach (var quant in group)
+                {
+                    var separation = quant.BodyTerm.Args.ToLookup(arg => arg.Name == "pattern");
+                    if (separation[false].Count() != 1) throw new Exception();
+                    if (!patternsForBodies.TryGetValue(separation[false].First(), out var collectedPatterns))
+                    {
+                        collectedPatterns = Tuple.Create(quant, new HashSet<Term>());
+                        patternsForBodies[separation[false].First()] = collectedPatterns;
+                    }
+                    foreach (var inst in quant.Instances)
+                    {
+                        inst.Quant = collectedPatterns.Item1;
+                    }
+                    collectedPatterns.Item2.UnionWith(separation[true]);
+                }
+                foreach (var found in patternsForBodies)
+                {
+                    var quant = found.Value.Item1;
+                    quant.BodyTerm = new Term(quant.BodyTerm.Name, found.Value.Item2.Concat(new Term[] { found.Key }).ToArray())
+                    {
+                        id = quant.BodyTerm.id
+                    };
+                }
+                return patternsForBodies.Select(kv => kv.Value.Item1);
+            }).ToList();
+            model.quantifiers.Clear();
+            foreach (var quant in unifiedQuantifiers)
+            {
+                model.quantifiers.Add("#" + quant.BodyTerm.id, quant);
+            }
         }
 
         //Proof steps are now being parsed as by ParseTraceLine()
