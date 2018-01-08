@@ -55,6 +55,11 @@ namespace AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
+        public IEnumerable<System.Tuple<System.Tuple<Quantifier, Term>, int>> Statistics()
+        {
+            return pathInstantiations.GroupBy(i => System.Tuple.Create(i.Quant, i.bindingInfo.fullPattern)).Select(group => System.Tuple.Create(group.Key, group.Count()));
+        }
+
         private CycleDetection.CycleDetection cycleDetector;
 
         private bool hasCycle()
@@ -174,6 +179,8 @@ namespace AxiomProfiler.QuantifierModel
                     }
                     content.Append("\n\n");
                 }
+
+                current.bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -196,6 +203,26 @@ namespace AxiomProfiler.QuantifierModel
             {
                 distinctBlameTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
+            }
+
+            if (current.bindingInfo.equalities.Count > 0)
+            {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nRelevant equalities:\n\n");
+                content.switchToDefaultFormat();
+
+                foreach (var equality in current.bindingInfo.equalities)
+                {
+                    current.bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
+                    foreach (var t in equality.Value)
+                    {
+                        content.Append("\n=\n");
+                        t.PrettyPrint(content, format);
+                    }
+                    content.Append("\n\n");
+                }
+
+                current.bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -385,6 +412,8 @@ namespace AxiomProfiler.QuantifierModel
                     }
                     content.Append("\n\n");
                 }
+
+                bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
             if (last)
@@ -478,6 +507,15 @@ namespace AxiomProfiler.QuantifierModel
             return pathInstantiations;
         }
 
+        public bool TryGetLoop(out IEnumerable<System.Tuple<Quantifier, Term>> loop)
+        {
+            loop = null;
+            if (!hasCycle()) return false;
+            loop = cycleDetector.getCycleInstantiations().Take(cycleDetector.getCycleQuantifiers().Count)
+                .Select(inst => System.Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern));
+            return true;
+        }
+
         public bool TryGetCyclePath(out InstantiationPath cyclePath)
         {
             cyclePath = null;
@@ -489,6 +527,11 @@ namespace AxiomProfiler.QuantifierModel
                 cyclePath.append(inst);
             }
             return true;
+        }
+
+        public int GetNumRepetitions()
+        {
+            return cycleDetector.getRepetiontions();
         }
     }
 }

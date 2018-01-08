@@ -111,9 +111,7 @@
     <Compile Include="ColorVisalizationForm.designer.cs">
       <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="DAGView.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Include="DAGView.cs" />
     <Compile Include="DAGView.Designer.cs">
       <DependentUpon>DAGView.cs</DependentUpon>
     </Compile>

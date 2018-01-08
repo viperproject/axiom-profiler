@@ -180,7 +180,15 @@ namespace AxiomProfiler
                 string l;
                 while ((l = rd.ReadLine()) != null && !isCancelled)
                 {
-                    processor.ParseSingleLine(l);
+                    try
+                    {
+                        processor.ParseSingleLine(l);
+                    }
+                    catch (LogProcessor.OldLogFormatException)
+                    {
+                        System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to z3 when generating logs.", "Invalid Log File");
+                        return;
+                    }
                     curPos += l.Length + 2;
 
                     if (fi.Length == 0) continue;
@@ -228,7 +236,7 @@ namespace AxiomProfiler
             boogieOptions = boogieOptions ?? "";
             string z3Log = Path.ChangeExtension(config.codeBplFileInfo.FullName, "z3log");
             string arguments =
-                $" {bplFilesString} {boogieOptions} /proc:{functionName} /z3opt:TRACE=true /z3opt:TRACE_FILE_NAME=\"'{z3Log.Replace("\\", "\\\\")}'\" /z3opt:/T:{timeOut}";
+                $" {bplFilesString} {boogieOptions} /proc:{functionName} /z3opt:TRACE=true /z3opt:PROOF=true /z3opt:TRACE_FILE_NAME=\"'{z3Log.Replace("\\", "\\\\")}'\" /z3opt:/T:{timeOut}";
             Process process = createLoaderProcess("boogie.exe", arguments);
             if (isCancelled)
                 return;
@@ -254,7 +262,7 @@ namespace AxiomProfiler
             z3options = "NNF.SK_HACK=true SMT.QI.EAGER_THRESHOLD=10000 SMT.PHASE_SELECTION=0 SMT.RESTART_STRATEGY=0 SMT.RESTART_FACTOR=1.5 " + z3options;
             string z3Log = outputFile;
             string arguments =
-                $"{z3options} TRACE=true TRACE_FILE_NAME=\"{z3Log.Replace("\\", "\\\\")}\" /T:{timeOut} \"{proverLog}\"";
+                $"{z3options} TRACE=true PROOF=true TRACE_FILE_NAME=\"{z3Log.Replace("\\", "\\\\")}\" /T:{timeOut} \"{proverLog}\"";
             Process process = createLoaderProcess("z3.exe", arguments);
 
             if (isCancelled)

@@ -17,7 +17,7 @@ namespace AxiomProfiler.CycleDetection
         private readonly Dictionary<string, char> mapping = new Dictionary<string, char>();
         private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>();
         private SuffixTree.SuffixTree suffixTree;
-        private GeneralizationState gen;
+        private GeneralizationState gen = null;
 
         public CycleDetection(IEnumerable<Instantiation> pathToCheck, int minRep)
         {
@@ -34,6 +34,11 @@ namespace AxiomProfiler.CycleDetection
         public GeneralizationState getGeneralization()
         {
             if (!processed) findCycle();
+            if (gen == null)
+            {
+                gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
+                gen.generalize();
+            }
             return gen;
         }
 
@@ -88,8 +93,6 @@ namespace AxiomProfiler.CycleDetection
                 suffixTree.addChar(c);
             }
             processed = true;
-            gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
-            gen.generalize();
         }
 
         public List<Instantiation> getCycleInstantiations()
@@ -153,6 +156,7 @@ namespace AxiomProfiler.CycleDetection
 
         public void generalize()
         {
+            if (loopInstantiations.Length == 0) return;
             for (var it = 0; it < loopInstantiations.Length+1; it++)
             {
                 potGeneralizationDependencies = new Term[0];

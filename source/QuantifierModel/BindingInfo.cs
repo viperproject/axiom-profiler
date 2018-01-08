@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AxiomProfiler.PrettyPrinting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -38,6 +39,82 @@ namespace AxiomProfiler.QuantifierModel
         // number of equalities
         public int numEq;
 
+        private List<Term> _BlamedEffectiveTerms = new List<Term>();
+        private List<Term> _BoundEffectiveTerms = new List<Term>();
+
+        public List<Term> BlamedEffectiveTerms
+        {
+            get
+            {
+                if (_EffectiveBlameTerms == null)
+                {
+                    _EffectiveBlameTerms = fullPattern.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToList();
+                }
+                return _BlamedEffectiveTerms;
+            }
+        }
+
+        public List<Term> BoundEffectiveTerms
+        {
+            get
+            {
+                if (_EffectiveBlameTerms == null)
+                {
+                    _EffectiveBlameTerms = fullPattern.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToList();
+                }
+                return _BoundEffectiveTerms;
+            }
+        }
+
+        private List<Term> _EffectiveBlameTerms = null;
+        public List<Term> EffectiveBlameTerms {
+            get {
+                if (_EffectiveBlameTerms == null)
+                {
+                    _EffectiveBlameTerms = fullPattern.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToList();
+                }
+                return _EffectiveBlameTerms;
+            }
+        }
+
+        private Term EffectiveBlameTermForPatternTerm(Term patternTerm)
+        {
+            var boundTerm = bindings[patternTerm];
+            var newArgs = patternTerm.Args.Count() == 0 ? boundTerm.Args : patternTerm.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToArray();
+            var effectiveTerm = new Term(boundTerm.Name, newArgs, boundTerm.generalizationCounter) { id = boundTerm.id };
+            if (patternTerm.id == -1)
+            {
+                _BoundEffectiveTerms.Add(effectiveTerm);
+            }
+            else
+            {
+                _BlamedEffectiveTerms.Add(effectiveTerm);
+            }
+            return effectiveTerm;
+        }
+
+        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format)
+        {
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+            content.Append("\nSubstituting equalities yields:\n\n");
+            content.switchToDefaultFormat();
+
+            foreach (var blamedTerm in BlamedEffectiveTerms)
+            {
+                blamedTerm.highlightTemporarily(format, PrintConstants.blameColor);
+            }
+
+            foreach (var boundTerm in BoundEffectiveTerms)
+            {
+                boundTerm.highlightTemporarily(format, PrintConstants.bindColor);
+            }
+
+            foreach (var effectiveTerm in EffectiveBlameTerms)
+            {
+                effectiveTerm.PrettyPrint(content, format);
+                content.Append("\n\n");
+            }
+        }
 
         public BindingInfo(Term pattern, ICollection<Term> blameTerms)
         {
@@ -329,6 +406,7 @@ namespace AxiomProfiler.QuantifierModel
                 alreadyVisited.Add(equality);
                 foreach (var term in equality.Args)
                 {
+                    if (alreadyVisited.Count > 1000) return false;
                     if (term != t1 && SameEqClass(term, t2, alreadyVisited))
                     {
                         return true;

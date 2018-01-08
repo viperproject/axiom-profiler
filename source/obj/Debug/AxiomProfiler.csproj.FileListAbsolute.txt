@@ -58,7 +58,6 @@
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.AboutBox.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.EditPrintRuleDialog.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.ColorVisalizationForm.resources
-\\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.DAGView.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.HelpWindow.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.InstantiationFilter.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.LoadingProgressForm.resources
@@ -74,3 +73,4 @@
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.csproj.CoreCompileInputs.cache
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.exe
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.pdb
+\\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.RepeatIndefinietely.resources

@@ -161,14 +161,35 @@ namespace AxiomProfiler.QuantifierModel
 
             tempHighlightBlameBindTerms(format);
 
-            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.warningTextColor);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Blamed Terms:\n\n");
+            content.switchToDefaultFormat();
 
             foreach (var t in bindingInfo.getDistinctBlameTerms())
             {
                 content.Append("\n");
                 t.PrettyPrint(content, format);
                 content.Append("\n\n");
+            }
+
+            if (bindingInfo.equalities.Count > 0)
+            {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nRelevant equalities:\n\n");
+                content.switchToDefaultFormat();
+
+                foreach (var equality in bindingInfo.equalities)
+                {
+                    bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
+                    foreach (var t in equality.Value)
+                    {
+                        content.Append("\n=\n");
+                        t.PrettyPrint(content, format);
+                    }
+                    content.Append("\n\n");
+                }
+
+                bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -179,6 +200,7 @@ namespace AxiomProfiler.QuantifierModel
             {
                 content.Append(bindings.Key.Name).Append(" was bound to:\n");
                 bindings.Value.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
                 content.Append("\n\n");
             }
 

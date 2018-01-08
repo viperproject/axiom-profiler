@@ -722,7 +722,7 @@ namespace AxiomProfiler
                         else
                         {
                             //TODO: inform user to use "PROOF=true" option
-                            throw new Exception("pass \"PROOF=true\" to z3");
+                            throw new OldLogFormatException();
                         }
                         if (words.Length - 1 > pos && words[pos] == ";")
                         {
@@ -1034,7 +1034,233 @@ namespace AxiomProfiler
             {
                 model.quantifiers.Add("#" + quant.BodyTerm.id, quant);
             }
+
+            /*var random = new Random();
+            Console.Out.WriteLine("start");
+            foreach (var i in new int[] { 30715 })//Enumerable.Range(0, 100))
+            {
+                var randomIndex = i;// random.Next(model.instances.Count);
+                var randomInstantiation = model.instances[randomIndex];
+                var graph = new HashSet<Instantiation> { randomInstantiation };
+                AddUpNodes(1000, graph);
+                AddDownNodes(1000, graph);
+                /*var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction1(path, pre, post, 1));
+                var p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction2(path, pre, post, 0.05));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations())) {
+                    Console.Out.WriteLine($"1: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }*/
+                //var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3(path, pre, post, 0.2));
+                /*var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3(path, pre, post, 0.3));
+                var p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3_(path, pre, post, 0.3));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations()))
+                {
+                    Console.Out.WriteLine($"2: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    Console.Out.WriteLine($"{InstantiationPathScoreFunction3(p0, true, false, 0.3)}, {InstantiationPathScoreFunction3_(p0, true, false, 0.3)}");
+                    Console.Out.WriteLine($"{InstantiationPathScoreFunction3(p, true, false, 0.3)}, {InstantiationPathScoreFunction3_(p, true, false, 0.3)}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        var selected = Tuple.Create(randomInstantiation.Quant, randomInstantiation.bindingInfo.fullPattern);
+                        Console.Out.WriteLine($"{cycle0.Contains(selected)}, {cycle1.Contains(selected)}");
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }
+                /*p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction4(path, pre, post, 5));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations()))
+                {
+                    Console.Out.WriteLine($"3: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }*/
+                //Console.Out.WriteLine("iteration");
+            //}
         }
+
+        /*private static double InstantiationPathScoreFunction1(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double factor)
+        {
+            var statistics = instantiationPath.Statistics();
+            var expectation = statistics.Average(dataPoint => dataPoint.Item2);
+            var stddev = Math.Sqrt(statistics.Sum(dataPoint => Math.Pow(dataPoint.Item2 - expectation, 2)) / statistics.Count());
+            var eliminationTreshhold = Math.Max(expectation - factor * stddev, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction2(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(instantiationPath.Length() * percentile, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction3(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * percentile, 0);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction3_(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * percentile, 0);
+            //var eliminatableQuantifiers = statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1);
+            var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
+            foreach (var quant in statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1))
+            {
+                eliminatableQuantifiers.Add(quant);
+            }
+
+            var clearSpace = (int) Math.Floor(eliminationTreshhold);
+            var remainingInstantiations = instantiationPath.getInstantiations();
+            if (eliminatePostfix) remainingInstantiations = remainingInstantiations.Reverse();
+            while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
+            {
+                remainingInstantiations = remainingInstantiations.Skip(1);
+            }
+
+            if (remainingInstantiations.Count() == 0) return -1;
+
+            var remainingPath = new InstantiationPath();
+            foreach (var inst in remainingInstantiations)
+            {
+                remainingPath.append(inst);
+            }
+
+            return 1.0 * remainingPath.Length() / remainingPath.Statistics().Count();
+        }
+
+        private static double InstantiationPathScoreFunction4(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double diff)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) - diff, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static void AddUpNodes(int limit, ISet<Instantiation> graph)
+        {
+            List<Instantiation> generation = graph.ToList();
+            var added = 0;
+            while (added < limit)
+            {
+                generation = generation.SelectMany(i => i.ResponsibleInstantiations).ToList();
+                graph.UnionWith(generation.Take(limit-added));
+                added += generation.Count;
+                if (generation.Count == 0) break;
+            }
+        }
+
+        private static void AddDownNodes(int limit, ISet<Instantiation> graph)
+        {
+            List<Instantiation> generation = graph.ToList();
+            var added = 0;
+            while (added < limit)
+            {
+                generation = generation.SelectMany(i => i.DependantInstantiations).ToList();
+                graph.UnionWith(generation.Take(limit - added));
+                added += generation.Count;
+                if (generation.Count == 0) break;
+            }
+        }
+
+        private static InstantiationPath PathSelect(ISet<Instantiation> nodes, Instantiation startNode, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            // building path downwards:
+            var bestDownPath = BestDownPath(nodes, startNode, scoreFunction);
+            InstantiationPath bestUpPath;
+            if (bestDownPath.TryGetLoop(out var loop))
+            {
+                bestUpPath = ExtendPathUpwardsWithLoop(loop, nodes, startNode);
+                if (bestUpPath == null)
+                {
+                    bestUpPath = BestUpPath(nodes, startNode, scoreFunction);
+                }
+            }
+            else
+            {
+                bestUpPath = BestUpPath(nodes, startNode, scoreFunction);
+            }
+
+            bestUpPath.appendWithOverlap(bestDownPath);
+
+            return bestUpPath;
+        }
+
+        private static InstantiationPath BestDownPath(ISet<Instantiation> nodes, Instantiation node, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            var paths = AllDownPaths(new InstantiationPath(), nodes, node);
+            return paths.OrderByDescending(p => scoreFunction(p, false, true)).First();
+        }
+
+        private static InstantiationPath BestUpPath(ISet<Instantiation> nodes, Instantiation node, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            return AllUpPaths(new InstantiationPath(), nodes, node).OrderByDescending(p => scoreFunction(p, true, false)).First();
+        }
+
+        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, ISet<Instantiation> nodes, Instantiation node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.append(node);
+            var outNodes = node.DependantInstantiations.Where(i => nodes.Contains(i));
+            if (outNodes.Any()) return outNodes.SelectMany(n => AllDownPaths(basePath, nodes, n));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, ISet<Instantiation> nodes, Instantiation node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.prepend(node);
+            var inNodes = node.ResponsibleInstantiations.Where(i => nodes.Contains(i));
+            if (inNodes.Any()) return inNodes.SelectMany(n => AllUpPaths(basePath, nodes, n));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, ISet<Instantiation> nodes, Instantiation node)
+        {
+            if (!loop.Any(inst => inst.Item1 == node.Quant && inst.Item2 == node.bindingInfo.fullPattern)) return null;
+            loop = loop.Reverse().RepeatIndefinietly();
+            loop = loop.SkipWhile(inst => inst.Item1 != node.Quant || inst.Item2 != node.bindingInfo.fullPattern);
+            return ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, nodes, node);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, ISet<Instantiation> nodes, Instantiation node)
+        {
+            if (!instantiations.Any()) return path;
+            var instantiation = instantiations.First();
+            if (instantiation.Item1 != node.Quant || instantiation.Item2 != node.bindingInfo.fullPattern) return path;
+            var extendedPath = new InstantiationPath(path);
+            extendedPath.prepend(node);
+            var bestPath = extendedPath;
+            var remainingInstantiations = instantiations.Skip(1);
+            var inNodes = node.ResponsibleInstantiations.Where(i => nodes.Contains(i));
+            foreach (var predecessor in inNodes)
+            {
+                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, nodes, predecessor);
+                if (candidatePath.Length() > bestPath.Length())
+                {
+                    bestPath = candidatePath;
+                }
+            }
+            return bestPath;
+        }*/
 
         //Proof steps are now being parsed as by ParseTraceLine()
         /*private bool ParseProofStep(string[] words)
@@ -1202,8 +1428,8 @@ namespace AxiomProfiler
             loadBoogieToken(quant);
             return quant;
         }
-
-
+        
+        public class OldLogFormatException : Exception {}
     }
 
 

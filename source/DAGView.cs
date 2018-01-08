@@ -13,6 +13,22 @@ using Size = System.Drawing.Size;
 
 namespace AxiomProfiler
 {
+    //TODO: move elsewhere
+    public static class RepeatIndefinietely
+    {
+        public static IEnumerable<T> RepeatIndefinietly<T>(this IEnumerable<T> source)
+        {
+            var list = source.ToList();
+            while (true)
+            {
+                foreach (var item in list)
+                {
+                    yield return item;
+                }
+            }
+        }
+    }
+
     public partial class DAGView : UserControl
     {
 
@@ -188,7 +204,7 @@ namespace AxiomProfiler
 
         private void selectNode(Node node)
         {
-            if (previouslySelectedNode != null)
+            if (previouslySelectedNode != null || highlightedNodes.Count != 0)
             {
                 unselectNode();
             }
@@ -220,9 +236,9 @@ namespace AxiomProfiler
 
         public void unselectNode()
         {
-            if (previouslySelectedNode == null) return;
+            if (previouslySelectedNode == null && highlightedNodes.Count == 0) return;
             // restore old node
-            formatNode(previouslySelectedNode);
+            if (previouslySelectedNode != null) formatNode(previouslySelectedNode);
 
             // plus all parents
             foreach (var node in highlightedNodes)
@@ -442,8 +458,21 @@ namespace AxiomProfiler
             }
 
             // building path downwards:
-            var bestDownPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, true);
-            var bestUpPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, false);
+            var bestDownPath = BestDownPath(previouslySelectedNode);
+            InstantiationPath bestUpPath;
+            if (bestDownPath.TryGetLoop(out var loop))
+            {
+                bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode);
+                if (bestUpPath == null)
+                {
+                    bestUpPath = BestUpPath(previouslySelectedNode);
+                }
+            }
+            else
+            {
+                bestUpPath = BestUpPath(previouslySelectedNode);
+            }
+
             bestUpPath.appendWithOverlap(bestDownPath);
             if (bestUpPath.TryGetCyclePath(out var cyclePath))
             {
@@ -457,37 +486,105 @@ namespace AxiomProfiler
             }
         }
 
-        private InstantiationPath buildPathDepthFirst(InstantiationPath basePath, Node node, bool down)
+        private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
-            basePath = new InstantiationPath(basePath);
-            if (down)
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * 0.3, 1);
+            var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
+            foreach (var quant in statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1))
             {
-                basePath.append((Instantiation)node.UserData);
-            }
-            else
-            {
-                basePath.prepend((Instantiation)node.UserData);
+                eliminatableQuantifiers.Add(quant);
             }
 
-            var relevantEdges = down ? node.OutEdges : node.InEdges;
-            var returnPath = basePath;
-            foreach (var edge in relevantEdges.Reverse())
+            var clearSpace = (int) Math.Floor(eliminationTreshhold);
+            var remainingInstantiations = instantiationPath.getInstantiations();
+            if (eliminatePrefix)
             {
-                var tryNode = down ? edge.TargetNode : edge.SourceNode;
-                var pathCandidate = buildPathDepthFirst(basePath, tryNode, down);
-
-                if (pathCandidate.Length() > returnPath.Length() || (pathCandidate.Length() == returnPath.Length() &&
-                    ((Instantiation) tryNode.UserData).Quant == ((Instantiation) node.UserData).Quant))
+                while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
                 {
-                    returnPath = pathCandidate;
+                    remainingInstantiations = remainingInstantiations.Skip(1);
                 }
             }
-            return returnPath;
+            if (eliminatePostfix)
+            {
+                remainingInstantiations = remainingInstantiations.Reverse();
+                while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
+                {
+                    remainingInstantiations = remainingInstantiations.Skip(1);
+                }
+            }
+
+            if (remainingInstantiations.Count() == 0) return -1;
+
+            var remainingPath = new InstantiationPath();
+            foreach (var inst in remainingInstantiations)
+            {
+                remainingPath.append(inst);
+            }
+
+            return 1.0 * remainingPath.Length() / remainingPath.Statistics().Count();
+        }
+
+        private static InstantiationPath BestDownPath(Node node)
+        {
+            var orderedPaths = AllDownPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).ToList();
+            return orderedPaths.First();
+        }
+
+        private static InstantiationPath BestUpPath(Node node)
+        {
+            return AllUpPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, true, false)).First();
+        }
+
+        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.append((Instantiation)node.UserData);
+            if (node.OutEdges.Any()) return node.OutEdges.SelectMany(e => AllDownPaths(basePath, e.TargetNode));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.prepend((Instantiation)node.UserData);
+            if (node.InEdges.Any()) return node.InEdges.SelectMany(e => AllUpPaths(basePath, e.SourceNode));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node)
+        {
+            var nodeInst = (Instantiation)node.UserData;
+            if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
+            loop = loop.Reverse().RepeatIndefinietly();
+            loop = loop.SkipWhile(inst => inst.Item1 != nodeInst.Quant || inst.Item2 != nodeInst.bindingInfo.fullPattern);
+            return ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
+        {
+            if (!instantiations.Any()) return path;
+            var instantiation = instantiations.First();
+            var nodeInst = (Instantiation)node.UserData;
+            if (instantiation.Item1 != nodeInst.Quant || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
+            var extendedPath = new InstantiationPath(path);
+            extendedPath.prepend(nodeInst);
+            var bestPath = extendedPath;
+            var remainingInstantiations = instantiations.Skip(1);
+            foreach (var predecessor in node.InEdges)
+            {
+                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, predecessor.SourceNode);
+                if (candidatePath.Length() > bestPath.Length())
+                {
+                    bestPath = candidatePath;
+                }
+            }
+            return bestPath;
         }
 
         private void highlightPath(InstantiationPath path)
         {
-            if (previouslySelectedNode != null)
+            if (previouslySelectedNode != null || highlightedNodes.Count != 0)
             {
                 unselectNode();
             }
