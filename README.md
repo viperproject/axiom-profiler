@@ -40,15 +40,15 @@ An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/late
 
 To obtain a Z3 log with Boogie, use e.g:
 
-    boogie /z3opt:TRACE=true ./file.bpl
+    boogie /z3opt:TRACE=true /z3opt:POOF=true ./file.bpl
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
 
-    silicon ./file.sil --z3Args TRACE=true
+    silicon ./file.sil --z3Args "TRACE=true PROOF=true"
 
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
     carbon ./file.sil --print ./file.bpl
-    boogie /z3opt:TRACE=true ./file.bpl
+    boogie /z3opt:TRACE=true /z3opt:PROOF=true ./file.bpl
 
 In all cases, the Z3 log should be stored in `./z3.log`. It is also possible to change this filename (see Z3 -pd for more options).
