@@ -314,6 +314,10 @@ namespace AxiomProfiler
 
             // clear history
             historyNode.Nodes.Clear();
+
+            dagView.Clear();
+
+            GC.Collect(2);
         }
 
         private void loadTree()

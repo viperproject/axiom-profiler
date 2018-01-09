@@ -95,6 +95,11 @@ namespace AxiomProfiler
             drawGraphWithInstantiations(newNodeInsts);
         }
 
+        public void Clear()
+        {
+            drawGraphWithInstantiations(new List<Instantiation>());
+        }
+
         private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts)
         {
             colorMap.Clear();
@@ -462,18 +467,17 @@ namespace AxiomProfiler
             InstantiationPath bestUpPath;
             if (bestDownPath.TryGetLoop(out var loop))
             {
-                bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode);
+                bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
                 if (bestUpPath == null)
                 {
-                    bestUpPath = BestUpPath(previouslySelectedNode);
+                    bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
                 }
             }
             else
             {
-                bestUpPath = BestUpPath(previouslySelectedNode);
+                bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
             }
-
-            bestUpPath.appendWithOverlap(bestDownPath);
+            
             if (bestUpPath.TryGetCyclePath(out var cyclePath))
             {
                 highlightPath(cyclePath);
@@ -496,23 +500,47 @@ namespace AxiomProfiler
                 eliminatableQuantifiers.Add(quant);
             }
 
-            var clearSpace = (int) Math.Floor(eliminationTreshhold);
-            var remainingInstantiations = instantiationPath.getInstantiations();
-            if (eliminatePrefix)
+            var instantiations = instantiationPath.getInstantiations().Select(inst => Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern)).ToArray();
+            var maxStartIndex = 0;
+            var maxLength = 0;
+            var lastMaxStartIndex = 0;
+            var curStartIndex = 0;
+            var curLength = 0;
+            for (var i = 0; i < instantiations.Count(); ++i)
             {
-                while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
+                if (eliminatableQuantifiers.Contains(instantiations[i]))
                 {
-                    remainingInstantiations = remainingInstantiations.Skip(1);
+                    if (curLength > maxLength)
+                    {
+                        maxStartIndex = curStartIndex;
+                        lastMaxStartIndex = curStartIndex;
+                        maxLength = curLength;
+                    }
+                    else if (curLength == maxLength)
+                    {
+                        lastMaxStartIndex = curStartIndex;
+                    }
+                    curStartIndex = i + 1;
+                    curLength = 0;
+                }
+                else
+                {
+                    ++curLength;
                 }
             }
-            if (eliminatePostfix)
+            if (curLength > maxLength)
             {
-                remainingInstantiations = remainingInstantiations.Reverse();
-                while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
-                {
-                    remainingInstantiations = remainingInstantiations.Skip(1);
-                }
+                maxStartIndex = curStartIndex;
+                maxLength = curLength;
             }
+            else if (curLength == maxLength)
+            {
+                lastMaxStartIndex = curStartIndex;
+            }
+
+            var remainingStart = eliminatePrefix ? maxStartIndex : 0;
+            var remainingLength = (eliminatePostfix ? lastMaxStartIndex + maxLength : instantiations.Count()) - remainingStart;
+            var remainingInstantiations = instantiationPath.getInstantiations().ToList().GetRange(remainingStart, remainingLength);
 
             if (remainingInstantiations.Count() == 0) return -1;
 
@@ -531,9 +559,13 @@ namespace AxiomProfiler
             return orderedPaths.First();
         }
 
-        private static InstantiationPath BestUpPath(Node node)
+        private static InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
         {
-            return AllUpPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, true, false)).First();
+            return AllUpPaths(new InstantiationPath(), node).OrderByDescending(path =>
+            {
+                path.appendWithOverlap(downPath);
+                return InstantiationPathScoreFunction(path, true, true);
+            }).First();
         }
 
         private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node)
@@ -552,13 +584,15 @@ namespace AxiomProfiler
             else return Enumerable.Repeat(basePath, 1);
         }
 
-        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node)
+        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
         {
             var nodeInst = (Instantiation)node.UserData;
             if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
             loop = loop.Reverse().RepeatIndefinietly();
             loop = loop.SkipWhile(inst => inst.Item1 != nodeInst.Quant || inst.Item2 != nodeInst.bindingInfo.fullPattern);
-            return ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
+            var res = ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
+            res.appendWithOverlap(downPath);
+            return res;
         }
 
         private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)

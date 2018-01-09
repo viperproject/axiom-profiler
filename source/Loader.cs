@@ -187,6 +187,7 @@ namespace AxiomProfiler
                     catch (LogProcessor.OldLogFormatException)
                     {
                         System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to z3 when generating logs.", "Invalid Log File");
+                        isCancelled = true;
                         return;
                     }
                     curPos += l.Length + 2;

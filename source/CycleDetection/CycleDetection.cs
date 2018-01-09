@@ -650,13 +650,16 @@ namespace AxiomProfiler.CycleDetection
 
         public void PrintGeneralizationsForNextIteration(InfoPanelContent content, PrettyPrintFormat format)
         {
+            content.switchToDefaultFormat();
             foreach (var binding in genReplacementTermsForNextIteration.GroupBy(kv => kv.Key.generalizationCounter).Select(group => group.First()))
             {
+                content.Append("Where ");
+                binding.Key.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
+                content.Append(" was used in this iteration\n");
                 binding.Value.PrettyPrint(content, format);
                 content.switchToDefaultFormat();
-                content.Append(" will be generalized to ");
-                binding.Key.PrettyPrint(content, format);
-                content.Append("\n\n");
+                content.Append(" will be used in the next iteration.\n\n");
             }
         }
 

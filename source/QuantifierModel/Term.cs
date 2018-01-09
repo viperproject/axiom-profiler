@@ -22,6 +22,7 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public readonly int generalizationCounter = -1;
+        public ISet<Term> eqClassCache = null;
 
         public Term(string name, Term[] args, int generalizationCounter = -1)
         {
@@ -148,9 +149,21 @@ namespace AxiomProfiler.QuantifierModel
             if (format.showTermId) content.Append("[" + id + "]");
         }
 
-        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format)
+        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int indent = 0)
         {
-            PrettyPrint(content, new Stack<Color>(), format);
+            Stack<Color> indentStack;
+            if (indent >= 2)
+            {
+                var colors = Enumerable.Repeat(PrintConstants.defaultTextColor, 1);
+                colors = colors.Concat(Enumerable.Repeat(Color.Transparent, indent - 2));
+                indentStack = new Stack<Color>(colors);
+            }
+            else
+            {
+                indentStack = new Stack<Color>();
+            }
+                
+            PrettyPrint(content, indentStack, format);
         }
 
         private bool PrettyPrint(InfoPanelContent content, Stack<Color> indentFormats, PrettyPrintFormat format)
@@ -275,7 +288,7 @@ namespace AxiomProfiler.QuantifierModel
                 // add the indents
                 foreach (var color in indentColors)
                 {
-                    content.Insert(breakIndices[i] + offset, indentDiff, PrintConstants.DefaultFont, color);
+                    content.Insert(breakIndices[i] + offset, color == Color.Transparent ? " " : indentDiff, PrintConstants.DefaultFont, color);
                     offset += content.Length - oldLength;
                     oldLength = content.Length;
                 }

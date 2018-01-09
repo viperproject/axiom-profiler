@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using AxiomProfiler.PrettyPrinting;
+using System;
 
 namespace AxiomProfiler.QuantifierModel
 {
@@ -165,10 +166,17 @@ namespace AxiomProfiler.QuantifierModel
             content.Append("Blamed Terms:\n\n");
             content.switchToDefaultFormat();
 
+            var termNumber = 1;
+            var termNumberings = new List<Tuple<Term, int>>();
+
             foreach (var t in bindingInfo.getDistinctBlameTerms())
             {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
+                var numberingString = $"({termNumber}) ";
+                content.Append($"\n{numberingString}");
+                termNumberings.Add(Tuple.Create(t, termNumber));
+                ++termNumber;
+                t.PrettyPrint(content, format, numberingString.Length);
+                content.switchToDefaultFormat();
                 content.Append("\n\n");
             }
 
@@ -189,7 +197,7 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append("\n\n");
                 }
 
-                bindingInfo.PrintEqualitySubstitution(content, format);
+                bindingInfo.PrintEqualitySubstitution(content, format, termNumberings);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -202,24 +210,6 @@ namespace AxiomProfiler.QuantifierModel
                 bindings.Value.PrettyPrint(content, format);
                 content.switchToDefaultFormat();
                 content.Append("\n\n");
-            }
-
-            if (bindingInfo.equalities.Count > 0)
-            {
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\n\nRelevant equalities:\n\n");
-                content.switchToDefaultFormat();
-
-                foreach (var equality in bindingInfo.equalities)
-                {
-                    bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
-                    foreach (var term in equality.Value)
-                    {
-                        content.Append("\n=\n");
-                        term.PrettyPrint(content, format);
-                    }
-                    content.Append("\n\n");
-                }
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);

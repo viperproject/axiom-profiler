@@ -93,7 +93,7 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
-        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format)
+        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings)
         {
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nSubstituting equalities yields:\n\n");
@@ -109,10 +109,17 @@ namespace AxiomProfiler.QuantifierModel
                 boundTerm.highlightTemporarily(format, PrintConstants.bindColor);
             }
 
-            foreach (var effectiveTerm in EffectiveBlameTerms)
+            foreach (var pair in EffectiveBlameTerms.Zip(fullPattern.Args, Tuple.Create))
             {
+                var effectiveTerm = pair.Item1;
+                var usedPattern = pair.Item2;
+                var topLevelTerm = termNumberings.First(numbering => numbering.Item1.isSubterm(effectiveTerm.id));
+                var insertedTermNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
+                    .Select(b => termNumberings.First(numbering => numbering != topLevelTerm && numbering.Item1.isSubterm(b.id)).Item2).Distinct();
+                content.Append($"Inserting ({String.Join("), (", insertedTermNumbers)}) into ({topLevelTerm.Item2}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
+                content.switchToDefaultFormat();
             }
         }
 
@@ -392,30 +399,57 @@ namespace AxiomProfiler.QuantifierModel
             return eqFound;
         }
 
-        private static bool SameEqClass(Term t1, Term t2, ISet<Term> alreadyVisited = null)
+        private static bool SameEqClass(Term t1, Term t2)
         {
-            if (t1.id == -1 || t2.id == -1) return false;
-            if (t1.id == t2.id) return true;
+            var currentGeneration = new HashSet<Term>() { t1 };
+            var nextGeneration = new HashSet<Term>();
+            var eqClass = new HashSet<Term>();
+            var alreadyVisited = new HashSet<Term>();
+            var generations = new List<HashSet<Term>>();
 
-            if (alreadyVisited == null)
+            if (t2.id == -1) return false;
+
+            while (currentGeneration.Any())
             {
-                alreadyVisited = new HashSet<Term>();
-            }
-            foreach (var equality in t1.dependentTerms
-                .Where(dependentTerm => dependentTerm.Name == "=" && !alreadyVisited.Contains(dependentTerm))) {
-                alreadyVisited.Add(equality);
-                foreach (var term in equality.Args)
+                eqClass.UnionWith(currentGeneration.SelectMany(t => t.eqClassCache ?? Enumerable.Repeat(t, 1)));
+                foreach(var t in currentGeneration)
                 {
-                    if (alreadyVisited.Count > 1000) return false;
-                    if (term != t1 && SameEqClass(term, t2, alreadyVisited))
+                    t.eqClassCache = eqClass;
+                }
+                if (eqClass.Contains(t2)) return true;
+
+                foreach (var t in currentGeneration)
+                {
+                    if (t.id == -1) return false;
+                    if (t.id == t2.id)
                     {
+                        eqClass.Add(t2);
                         return true;
                     }
+
+                    foreach (var equality in t.dependentTerms
+                        .Where(dependentTerm => dependentTerm.Name == "=" && !alreadyVisited.Contains(dependentTerm)))
+                    {
+                        alreadyVisited.Add(equality);
+                        foreach (var term in equality.Args)
+                        {
+                            if (alreadyVisited.Count > 10_000) return false;
+                            if (term != t1)
+                            {
+                                nextGeneration.Add(term);
+                            }
+                        }
+                    }
                 }
+
+                generations.Add(currentGeneration);
+                currentGeneration = nextGeneration;
+                nextGeneration = new HashSet<Term>();
             }
 
-            return t1.Name == t2.Name && t1.GenericType == t2.GenericType && t1.Args.Length == t2.Args.Length &&
-                t1.Args.Zip(t2.Args, Tuple.Create).All(argEquality => SameEqClass(argEquality.Item1, argEquality.Item2));
+            return generations.Any(generation => generation.Any(t =>
+                t.Name == t2.Name && t.GenericType == t2.GenericType && t.Args.Length == t2.Args.Length &&
+                t.Args.Zip(t2.Args, Tuple.Create).All(argEquality => SameEqClass(argEquality.Item1, argEquality.Item2))));
         }
 
         public List<Term> getDistinctBlameTerms()

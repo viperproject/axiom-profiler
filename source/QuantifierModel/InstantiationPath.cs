@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using AxiomProfiler.CycleDetection;
 using AxiomProfiler.PrettyPrinting;
+using System;
 
 namespace AxiomProfiler.QuantifierModel
 {
@@ -96,6 +97,7 @@ namespace AxiomProfiler.QuantifierModel
                 printPathHead(content, format, current);
             }
 
+            var termNumbering = 1;
             while (pathEnumerator.MoveNext() && pathEnumerator.Current != null)
             {
                 // between stuff
@@ -106,7 +108,7 @@ namespace AxiomProfiler.QuantifierModel
                     legacyInstantiationInfo(content, format, current);
                     continue;
                 }
-                printInstantiationWithPredecessor(content, format, current, previous, cycleDetector);
+                termNumbering = printInstantiationWithPredecessor(content, format, current, previous, cycleDetector, termNumbering);
             }
 
             // Quantifier info for last in chain
@@ -134,18 +136,23 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void printInstantiationWithPredecessor(InfoPanelContent content, PrettyPrintFormat format,
-            Instantiation current, Instantiation previous, CycleDetection.CycleDetection cycDetect)
+        private static int printInstantiationWithPredecessor(InfoPanelContent content, PrettyPrintFormat format,
+            Instantiation current, Instantiation previous, CycleDetection.CycleDetection cycDetect, int termNumbering)
         {
             current.tempHighlightBlameBindTerms(format);
             var potGens = previous.concreteBody.Args;
             var generalization = cycDetect.getGeneralization();
             highlightGens(potGens, format, generalization);
+            var termNumberings = new List<Tuple<Term, int>>();
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\n\nThis instantiation yields:\n\n");
             content.switchToDefaultFormat();
-            previous.concreteBody.PrettyPrint(content, format);
+            var numberingString = $"({termNumbering}) ";
+            content.Append($"{numberingString}");
+            termNumberings.Add(Tuple.Create(previous.concreteBody, termNumbering));
+            ++termNumbering;
+            previous.concreteBody.PrettyPrint(content, format, numberingString.Length);
 
             // Other prerequisites:
             var otherRequiredTerms = current.bindingInfo.getDistinctBlameTerms()
@@ -158,8 +165,12 @@ namespace AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
                 foreach (var distinctBlameTerm in otherRequiredTerms)
                 {
-                    content.Append("\n\n");
-                    distinctBlameTerm.PrettyPrint(content, format);
+                    numberingString = $"({termNumbering}) ";
+                    content.Append($"\n\n{numberingString}");
+                    termNumberings.Add(Tuple.Create(distinctBlameTerm, termNumbering));
+                    ++termNumbering;
+                    distinctBlameTerm.PrettyPrint(content, format, numberingString.Length);
+                    content.switchToDefaultFormat();
                 }
             }
 
@@ -180,7 +191,7 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append("\n\n");
                 }
 
-                current.bindingInfo.PrintEqualitySubstitution(content, format);
+                current.bindingInfo.PrintEqualitySubstitution(content, format, termNumberings);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -191,18 +202,26 @@ namespace AxiomProfiler.QuantifierModel
 
             current.Quant.BodyTerm.PrettyPrint(content, format);
             format.restoreAllOriginalRules();
+            return termNumbering;
         }
 
-        private static void printPathHead(InfoPanelContent content, PrettyPrintFormat format, Instantiation current)
+        private static int printPathHead(InfoPanelContent content, PrettyPrintFormat format, Instantiation current)
         {
+            var termNumbering = 1;
+            var termNumberings = new List<Tuple<Term, int>>();
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nStarting from the following term(s):\n\n");
             content.switchToDefaultFormat();
             current.tempHighlightBlameBindTerms(format);
             foreach (var distinctBlameTerm in current.bindingInfo.getDistinctBlameTerms())
             {
-                distinctBlameTerm.PrettyPrint(content, format);
+                var numberingString = $"({termNumbering}) ";
+                content.Append(numberingString);
+                termNumberings.Add(Tuple.Create(distinctBlameTerm, termNumbering));
+                ++termNumbering;
+                distinctBlameTerm.PrettyPrint(content, format, numberingString.Length);
                 content.Append("\n\n");
+                content.switchToDefaultFormat();
             }
 
             if (current.bindingInfo.equalities.Count > 0)
@@ -222,7 +241,7 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append("\n\n");
                 }
 
-                current.bindingInfo.PrintEqualitySubstitution(content, format);
+                current.bindingInfo.PrintEqualitySubstitution(content, format, termNumberings);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -233,6 +252,7 @@ namespace AxiomProfiler.QuantifierModel
 
             current.Quant.BodyTerm.PrettyPrint(content, format);
             format.restoreAllOriginalRules();
+            return termNumbering;
         }
 
         private void printCycleInfo(InfoPanelContent content, PrettyPrintFormat format)
@@ -266,7 +286,8 @@ namespace AxiomProfiler.QuantifierModel
             
             var alreadyIntroducedGeneralizations = new HashSet<int>();
 
-            printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, generalizedTerms.First(), insts.Current, true, false);
+            var termNumbering = 1;
+            termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, generalizedTerms.First(), insts.Current, true, false, termNumbering);
 
             var count = 1;
             var loopYields = generalizedTerms.GetRange(1, generalizedTerms.Count - 1);
@@ -287,7 +308,7 @@ namespace AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
 
                 insts.MoveNext();
-                printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, term, insts.Current, false, count == loopYields.Count);
+                termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, term, insts.Current, false, count == loopYields.Count, termNumbering);
                 count++;
             }
             format.restoreAllOriginalRules();
@@ -339,9 +360,10 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
-            GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations, Term term, Instantiation instantiation, bool first, bool last)
+        private static int printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
+            GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations, Term term, Instantiation instantiation, bool first, bool last, int termNumbering)
         {
+            var termNumberings = new List<Tuple<Term, int>>();
             generalizationState.tmpHighlightGeneralizedTerm(format, term, last);
 
             var newlyIntroducedGeneralizations = term.GetAllGeneralizationSubterms()
@@ -350,8 +372,13 @@ namespace AxiomProfiler.QuantifierModel
             PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
             alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
-            term.PrettyPrint(content, format);
+            var numberingString = $"({termNumbering}) ";
+            content.Append(numberingString);
+            term.PrettyPrint(content, format, numberingString.Length);
             content.Append("\n");
+
+            termNumberings.Add(Tuple.Create(term, termNumbering));
+            ++termNumbering;
 
             if (generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements))
             {
@@ -367,9 +394,13 @@ namespace AxiomProfiler.QuantifierModel
 
                     foreach (var req in constantTerms)
                     {
-                        content.Append("\n\n");
+                        numberingString = $"({termNumbering}) ";
+                        content.Append($"\n\n{numberingString}");
+                        termNumberings.Add(Tuple.Create(req, termNumbering));
+                        ++termNumbering;
+
                         generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
-                        req.PrettyPrint(content, format);
+                        req.PrettyPrint(content, format, numberingString.Length);
                     }
                     content.Append("\n");
                 }
@@ -389,7 +420,14 @@ namespace AxiomProfiler.QuantifierModel
                         alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
                         generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
-                        req.PrettyPrint(content, format);
+
+                        content.switchToDefaultFormat();
+                        numberingString = $"({termNumbering}) ";
+                        content.Append(numberingString);
+                        termNumberings.Add(Tuple.Create(req, termNumbering));
+                        ++termNumbering;
+
+                        req.PrettyPrint(content, format, numberingString.Length);
                         content.Append("\n");
                     }
                 }
@@ -398,28 +436,51 @@ namespace AxiomProfiler.QuantifierModel
             var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
             if (bindingInfo.equalities.Count > 0)
             {
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nRelevant equalities:\n\n");
-                content.switchToDefaultFormat();
+                var equalitySetLookup = bindingInfo.equalities.ToLookup(eq => eq.Key.ContainsGeneralization() || eq.Value.Any(t => t.ContainsGeneralization()));
 
-                foreach (var equality in bindingInfo.equalities)
+                if (equalitySetLookup[true].Any())
                 {
-                    bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
-                    foreach (var t in equality.Value)
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nWith a Set of equalities:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var equality in equalitySetLookup[true])
                     {
-                        content.Append("\n=\n");
-                        t.PrettyPrint(content, format);
+                        bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
+                        foreach (var t in equality.Value)
+                        {
+                            content.Append("\n=\n");
+                            t.PrettyPrint(content, format);
+                        }
+                        content.Append("\n\n");
                     }
-                    content.Append("\n\n");
                 }
 
-                bindingInfo.PrintEqualitySubstitution(content, format);
+                if (equalitySetLookup[false].Any())
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nRelevant equalities:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var equality in equalitySetLookup[false])
+                    {
+                        bindingInfo.bindings[equality.Key].PrettyPrint(content, format);
+                        foreach (var t in equality.Value)
+                        {
+                            content.Append("\n=\n");
+                            t.PrettyPrint(content, format);
+                        }
+                        content.Append("\n\n");
+                    }
+                }
+
+                bindingInfo.PrintEqualitySubstitution(content, format, termNumberings);
             }
 
             if (last)
             {
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nGeneralizations in the Next Iteration:\n\n");
+                content.Append("\nTerms for the Next Iteration:\n\n");
                 content.switchToDefaultFormat();
                 generalizationState.PrintGeneralizationsForNextIteration(content, format);
 
@@ -435,6 +496,7 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append("\n\n");
                 }
             }
+            return termNumbering;
         }
 
         private void printPreamble(InfoPanelContent content, bool withGen)
