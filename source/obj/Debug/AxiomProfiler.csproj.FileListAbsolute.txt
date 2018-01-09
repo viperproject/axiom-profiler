@@ -54,7 +54,6 @@
 \\VBOXSVR\axiom-profiler\bin\Debug\AxiomProfiler.exe.config
 \\VBOXSVR\axiom-profiler\bin\Debug\AxiomProfiler.exe
 \\VBOXSVR\axiom-profiler\bin\Debug\AxiomProfiler.pdb
-\\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.csprojResolveAssemblyReference.cache
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.AboutBox.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.EditPrintRuleDialog.resources
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.ColorVisalizationForm.resources
@@ -74,3 +73,4 @@
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.exe
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.pdb
 \\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.RepeatIndefinietely.resources
+\\VBOXSVR\axiom-profiler\source\obj\Debug\AxiomProfiler.csprojResolveAssemblyReference.cache

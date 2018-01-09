@@ -1429,6 +1429,7 @@ namespace AxiomProfiler
             return quant;
         }
         
+        [Serializable]
         public class OldLogFormatException : Exception {}
     }
 

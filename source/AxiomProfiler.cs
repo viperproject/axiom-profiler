@@ -305,6 +305,7 @@ namespace AxiomProfiler
 
             // reset everything
             model = null;
+            Model.MarkerLiteral.Cause = null;
             z3AxiomTree.Nodes.Clear();
             toolTipBox.Clear();
             printRuleDict = new PrintRuleDictionary();
@@ -317,7 +318,7 @@ namespace AxiomProfiler
 
             dagView.Clear();
 
-            GC.Collect(2);
+            GC.Collect(2, GCCollectionMode.Optimized);
         }
 
         private void loadTree()
