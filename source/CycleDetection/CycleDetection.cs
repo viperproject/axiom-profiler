@@ -588,9 +588,10 @@ namespace AxiomProfiler.CycleDetection
                 var rule = format.getPrintRule(newTerm);
                 rule.font = PrintConstants.ItalicFont;
                 format.addTemporaryRule(newTerm.id.ToString(), rule);
-                foreach (var subterm in newTerm.Args)
+                for (int i = 0; i < newTerm.Args.Length; ++i)
                 {
-                    HighlightNewTerms(subterm, referenceTerm, format);
+                    var subterm = newTerm.Args[i];
+                    HighlightNewTerms(subterm, referenceTerm, format.nextDepth(newTerm, i));
                 }
             }
         }

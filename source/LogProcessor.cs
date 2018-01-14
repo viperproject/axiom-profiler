@@ -552,6 +552,7 @@ namespace AxiomProfiler
                                     var equality = args.Last();
                                     if ((equality.Name != "=" && equality.Name != "iff" && equality.Name != "~") || equality.Args.Count() != 2)
                                     {
+                                        if (equality.id == -1) return;
                                         throw new Exception("Unexpected result term for rewrite proof step.");
                                     }
                                     //TODO: result always rhs?
@@ -577,7 +578,7 @@ namespace AxiomProfiler
                                     }
                                 }
                             }
-                            else if (words[2] == "refl" && args.First().Name == "iff")
+                            else if ((words[2] == "refl" && args.First().Name == "iff") || (words[2] == "asserted" && args.First().id < 25))
                             {
                                 //TODO: too many
                                 var arg = args.First();

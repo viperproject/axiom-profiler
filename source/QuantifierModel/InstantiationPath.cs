@@ -56,9 +56,10 @@ namespace AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
-        public IEnumerable<System.Tuple<System.Tuple<Quantifier, Term>, int>> Statistics()
+        public IEnumerable<Tuple<Tuple<Quantifier, Term>, int>> Statistics()
         {
-            return pathInstantiations.GroupBy(i => System.Tuple.Create(i.Quant, i.bindingInfo.fullPattern)).Select(group => System.Tuple.Create(group.Key, group.Count()));
+            return pathInstantiations.Skip(pathInstantiations.First().bindingInfo == null ? 1 : 0)
+                .GroupBy(i => Tuple.Create(i.Quant, i.bindingInfo.fullPattern)).Select(group => Tuple.Create(group.Key, group.Count()));
         }
 
         private CycleDetection.CycleDetection cycleDetector;
