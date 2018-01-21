@@ -23,7 +23,7 @@ namespace AxiomProfiler
         public string functionName = "";
         public string z3LogFile = "";
         public string z3InputFile = null;
-        public bool skipDecisions = false;
+        public bool skipDecisions = true;
         public int checkToConsider = 0; // 0 is a special value, meaning "process all checks"
 
 

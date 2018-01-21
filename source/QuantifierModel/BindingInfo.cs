@@ -93,7 +93,7 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
-        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings)
+        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings, IEnumerable<Tuple<IEnumerable<Term>, int>> equalityNumberings)
         {
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nSubstituting equalities yields:\n\n");
@@ -114,9 +114,9 @@ namespace AxiomProfiler.QuantifierModel
                 var effectiveTerm = pair.Item1;
                 var usedPattern = pair.Item2;
                 var topLevelTerm = termNumberings.First(numbering => numbering.Item1.isSubterm(effectiveTerm.id));
-                var insertedTermNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
-                    .Select(b => termNumberings.First(numbering => numbering != topLevelTerm && numbering.Item1.isSubterm(b.id)).Item2).Distinct();
-                content.Append($"Inserting ({String.Join("), (", insertedTermNumbers)}) into ({topLevelTerm.Item2}):\n");
+                var usedEqualityNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
+                    .Select(b => equalityNumberings.First(numbering => numbering.Item1.Contains(b)).Item2).Distinct();
+                content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Item2}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
                 content.switchToDefaultFormat();

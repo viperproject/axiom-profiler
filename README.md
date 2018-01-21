@@ -40,7 +40,7 @@ An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/late
 
 To obtain a Z3 log with Boogie, use e.g:
 
-    boogie /z3opt:TRACE=true /z3opt:POOF=true ./file.bpl
+    boogie /z3opt:TRACE=true /z3opt:PROOF=true ./file.bpl
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
 

@@ -161,7 +161,7 @@ namespace AxiomProfiler.PrettyPrinting
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
                 (t.generalizationCounter >= 0 ? "_" + t.generalizationCounter : "") +
-                (format.showTermId && t.id >= 0 ? "[" + t.id + "]" : "") +
+                (format.showTermId && t.id != -1 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + "]" : "") +
                 "(";
             return new PrintRule
             {
@@ -277,6 +277,7 @@ namespace AxiomProfiler.PrettyPrinting
         public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
+        public bool printContextSensitive = true;
 
         public PrettyPrintFormat nextDepth(Term parent, int childNo)
         {
@@ -292,6 +293,7 @@ namespace AxiomProfiler.PrettyPrinting
             };
             nextFormat.history.AddRange(history);
             nextFormat.history.Add(parent);
+            nextFormat.printContextSensitive = printContextSensitive;
             return nextFormat;
         }
 
@@ -319,7 +321,7 @@ namespace AxiomProfiler.PrettyPrinting
             // userdefined & disabled --> default
             if (!rewritingEnabled && rule.isUserdefined) return PrintRule.DefaultRewriteRule(t, this);
             // history constraint ok --> rule ok
-            if (historyConstraintSatisfied(rule)) return rule;
+            if (!printContextSensitive || historyConstraintSatisfied(rule)) return rule;
 
             // freeVar --> no usable id, therefore specific rule is on name
             // there is therefore no generale rule to fall back on.

@@ -17,6 +17,9 @@ namespace AxiomProfiler.CycleDetection
         private readonly Dictionary<string, char> mapping = new Dictionary<string, char>();
         private readonly Dictionary<char, List<Instantiation>> reverseMapping = new Dictionary<char, List<Instantiation>>();
         private SuffixTree.SuffixTree suffixTree;
+
+        //It might not always be necessary to compute a generalization after finding a matching loop (e.g. during path selection).
+        //If processed is true but gen is null the matching loop detection has run but the generalization has not.
         private GeneralizationState gen = null;
 
         public CycleDetection(IEnumerable<Instantiation> pathToCheck, int minRep)
@@ -36,6 +39,9 @@ namespace AxiomProfiler.CycleDetection
             if (!processed) findCycle();
             if (gen == null)
             {
+                //It might not always be necessary to compute a generalization after finding a matching loop (e.g. during path selection).
+                //If processed is true but gen is null the matching loop detection has run but the generalization has not.
+
                 gen = new GeneralizationState(suffixTree.getCycleLength(), getCycleInstantiations());
                 gen.generalize();
             }
@@ -61,6 +67,8 @@ namespace AxiomProfiler.CycleDetection
             var path = this.path;
             if (path.First().bindingInfo == null)
             {
+                //in some cases the binding info for the first instantiation in a path cannot be calculated
+                //=> we skip to avoid a null-pointer-exception when accessing the matched pattern in the next step
                 path = path.Skip(1);
             }
             foreach (var instantiation in path)
@@ -103,7 +111,7 @@ namespace AxiomProfiler.CycleDetection
                 path.Skip(suffixTree.getStartIdx() + (path.First().bindingInfo == null ? 1 : 0)).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
         }
 
-        public int getRepetiontions()
+        public int GetNumRepetitions()
         {
             if (!processed) findCycle();
             return suffixTree.nRep;
@@ -178,14 +186,7 @@ namespace AxiomProfiler.CycleDetection
                 var idxList = Enumerable.Range(0, disitinctBlameTerms.Count)
                                         .Where(y => {
                                             var yTerm = disitinctBlameTerms[y];
-                                            if (!parent.concreteBody.isSubterm(yTerm)) return true;
-
-                                            //Always print terms that are used to expand some subterm of the parent's yield
-                                            var matchedIn = child.bindingInfo.equalities.Where(eq => child.bindingInfo.bindings[eq.Key] == yTerm)
-                                                    .SelectMany(eq => eq.Value)
-                                                    .Select(rhs => child.bindingInfo.matchContext[rhs.id])
-                                                    .SelectMany(contexts => contexts.Select(context => context.First()));
-                                                return matchedIn.Any(topLevelBlame => parent.concreteBody.isSubterm(topLevelBlame));
+                                            return !parent.concreteBody.isSubterm(yTerm);
                                         })
                                         .ToList();
 
@@ -483,7 +484,7 @@ namespace AxiomProfiler.CycleDetection
                 var value = candidates.Values.First();
                 if (value.Item4 == -1)
                 {
-                    currTerm = new Term(value.Item2 + "_" + (-1 - idCounter), new Term[value.Item3]) { id = idCounter };
+                    currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
                     idCounter--;
                 }
                 else
