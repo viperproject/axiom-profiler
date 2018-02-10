@@ -42,7 +42,7 @@ namespace AxiomProfiler
         private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000);
         private readonly Dictionary<Term, HashSet<Term>> reverseRewriteClusureReverse = new Dictionary<Term, HashSet<Term>>(40_000);
         private static readonly String[] proofRuleNames =
-            { "th-lemma", "quant-inst", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
+            { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
             "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
             "der", "quant-inst", "hypothesis", "lemma", "unit-resolution", "iff-true", "iff-false", "commutativity", "def-axiom", "intro-def",
             "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res" };
@@ -610,13 +610,11 @@ namespace AxiomProfiler
 
                             foreach (var prerequisite in prerequisiteClosure)
                             {
-                                //if (prerequisite.id == 668 && (t.id == 733 || parseIdentifier(words[1]) == 733)) throw new Exception();
                                 proofStepClosures[prerequisite] = newProofStepClosure;
                             }
                         }
                         model.terms[parseIdentifier(words[1])] = t;
                         t.id = parseIdentifier(words[1]);
-
                     }
                     break;
                     
@@ -684,8 +682,7 @@ namespace AxiomProfiler
                         {
                             long id = GetId(words[pos]);
                             var t = model.terms[(int)id];
-                            Term quantImpliesBody = GetOrId(proofStepClosures, model.terms[(int) id]); //GetOrId(reverseRewriteClosure, GetOrId(proofStepClosures, model.terms[(int) id]));
-                            //if (id == 25968) throw new Exception();
+                            Term quantImpliesBody = /*model.terms[(int)id];*/ GetOrId(proofStepClosures, model.terms[(int) id]);
 
                             if (quantImpliesBody.Name == "or")
                             {
@@ -716,13 +713,11 @@ namespace AxiomProfiler
                             else
                             {
                                 inst.concreteBody = quantImpliesBody;
-                                //throw new Exception("unexpected shape");
                             }
                             pos++;
                         }
                         else
                         {
-                            //TODO: inform user to use "PROOF=true" option
                             throw new OldLogFormatException();
                         }
                         if (words.Length - 1 > pos && words[pos] == ";")

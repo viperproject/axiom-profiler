@@ -330,7 +330,7 @@ namespace AxiomProfiler.QuantifierModel
         public bool finalize(List<Term> blameTerms, List<Term> boundTerms)
         {
             if (unusedBlameTerms.Count != 0 ||
-                bindings.Count != boundTerms.Count + blameTerms.Count + additionalBlameTerms.Count) return false;
+                bindings.Count != boundTerms.Count + blameTerms.Count + additionalBlameTerms.Distinct().Count()) return false;
 
             // decouple collections
             var freeVarsToRebind = bindings.Where(kvPair => kvPair.Key.id == -1).Select(kvPair => kvPair.Key).ToList();
