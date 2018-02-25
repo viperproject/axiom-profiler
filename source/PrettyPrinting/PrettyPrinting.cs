@@ -33,9 +33,9 @@ namespace AxiomProfiler.PrettyPrinting
 
     public class PrintRuleDictionary
     {
-        private readonly Dictionary<string, PrintRule> termTranslations = new Dictionary<string, PrintRule>();
+        private readonly Dictionary<string, List<PrintRule>> termTranslations = new Dictionary<string, List<PrintRule>>();
 
-        public PrintRule getRewriteRule(Term t)
+        public IEnumerable<PrintRule> getRewriteRules(Term t)
         {
             if (termTranslations.ContainsKey(t.id + ""))
             {
@@ -52,7 +52,7 @@ namespace AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
-        public PrintRule getRewriteRule(string match)
+        public IEnumerable<PrintRule> getRewriteRules(string match)
         {
             if (termTranslations.ContainsKey(match))
             {
@@ -78,16 +78,6 @@ namespace AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
-        public KeyValuePair<string, PrintRule> getGeneralTermTranslationPair(Term t)
-        {
-            if (termTranslations.ContainsKey(t.Name + t.GenericType))
-            {
-                return new KeyValuePair<string, PrintRule>(t.Name + t.GenericType, termTranslations[t.Name + t.GenericType]);
-            }
-
-            return new KeyValuePair<string, PrintRule>(t.Name, termTranslations[t.Name]);
-        }
-
         public bool hasRule(Term t)
         {
             return termTranslations.ContainsKey(t.id + "") ||
@@ -107,12 +97,19 @@ namespace AxiomProfiler.PrettyPrinting
 
         public void addRule(string ruleMatch, PrintRule rule)
         {
-            termTranslations[ruleMatch] = rule;
+            if (!termTranslations.ContainsKey(ruleMatch))
+            {
+                termTranslations[ruleMatch] = new List<PrintRule>();
+            }
+            if (!termTranslations[ruleMatch].Contains(rule))
+            {
+                termTranslations[ruleMatch].Add(rule);
+            }
         }
 
         public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
         {
-            return termTranslations.OrderBy(kvPair => kvPair.Key);
+            return termTranslations.OrderBy(kvPair => kvPair.Key).SelectMany(kv => kv.Value.Select(rule => new KeyValuePair<string, PrintRule>(kv.Key, rule)));
         }
 
         public PrintRuleDictionary()
@@ -122,7 +119,10 @@ namespace AxiomProfiler.PrettyPrinting
 
         private PrintRuleDictionary(PrintRuleDictionary other)
         {
-            termTranslations = new Dictionary<string, PrintRule>(other.termTranslations);
+            foreach (var kv in other.termTranslations)
+            {
+                termTranslations[kv.Key] = new List<PrintRule>(kv.Value);
+            }
         }
 
         public PrintRuleDictionary clone()
@@ -151,7 +151,7 @@ namespace AxiomProfiler.PrettyPrinting
         public ParenthesesSetting parentheses;
         public bool isDefault;
         public bool isUserdefined;
-        public List<List<Term>> historyConstraints;
+        public List<Term> historyConstraints;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
         public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
@@ -174,7 +174,7 @@ namespace AxiomProfiler.PrettyPrinting
                 indent = true,
                 isDefault = true,
                 precedence = 0,
-                historyConstraints = new List<List<Term>>(),
+                historyConstraints = new List<Term>(),
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,
                 suffixLineBreak = LineBreakSetting.Before,
@@ -256,7 +256,7 @@ namespace AxiomProfiler.PrettyPrinting
                 infixLineBreak = infixLineBreak,
                 suffixLineBreak = suffixLineBreak,
                 associative = associative,
-                historyConstraints = new List<List<Term>>(historyConstraints),
+                historyConstraints = new List<Term>(historyConstraints),
                 indent = indent,
                 isDefault = isDefault,
                 parentheses = parentheses,
@@ -316,12 +316,19 @@ namespace AxiomProfiler.PrettyPrinting
             // no rule -> default
             if (!printRuleDict.hasRule(t)) return PrintRule.DefaultRewriteRule(t, this);
 
-            var rule = printRuleDict.getRewriteRule(t);
+            IEnumerable<PrintRule> rules = printRuleDict.getRewriteRules(t);
 
             // userdefined & disabled --> default
-            if (!rewritingEnabled && rule.isUserdefined) return PrintRule.DefaultRewriteRule(t, this);
+            if (!rewritingEnabled)
+            {
+                rules = rules.Where(rule => !rule.isUserdefined);
+            }
+            rules = rules.Reverse().OrderByDescending(rule => rule.historyConstraints.Count);
             // history constraint ok --> rule ok
-            if (!printContextSensitive || historyConstraintSatisfied(rule)) return rule;
+
+            if (!printContextSensitive) return rules.FirstOrDefault() ?? PrintRule.DefaultRewriteRule(t, this);
+            var contextRule = rules.FirstOrDefault(rule => historyConstraintSatisfied(rule));
+            if (contextRule != null) return contextRule;
 
             // freeVar --> no usable id, therefore specific rule is on name
             // there is therefore no generale rule to fall back on.
@@ -329,9 +336,9 @@ namespace AxiomProfiler.PrettyPrinting
 
             // history constraint violated --> find less specific rules (but more specific than default)
             if (printRuleDict.hasRule(t.Name + t.GenericType))
-                return printRuleDict.getRewriteRule(t.Name + t.GenericType);
+                return printRuleDict.getRewriteRules(t.Name + t.GenericType).Single();
             return printRuleDict.hasRule(t.Name) ?
-                printRuleDict.getRewriteRule(t.Name) : PrintRule.DefaultRewriteRule(t, this);
+                printRuleDict.getRewriteRules(t.Name).Single() : PrintRule.DefaultRewriteRule(t, this);
         }
 
         public PrintRule GetParentPrintRule()
@@ -343,14 +350,11 @@ namespace AxiomProfiler.PrettyPrinting
         private bool historyConstraintSatisfied(PrintRule rule)
         {
             if (rule.historyConstraints.Count == 0) return true;
-            foreach (var constraint in rule.historyConstraints)
-            {
-                if (constraint.Count > history.Count) continue;
-                var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
-                var intermediate = slice.Zip(constraint, (term1, term2) => term1.id == term2.id);
-                if (intermediate.All(val => val)) return true;
-            }
-            return false;
+            var constraint = rule.historyConstraints;
+            if (constraint.Count > history.Count) return false;
+            var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
+            var intermediate = slice.Zip(constraint, (term1, term2) => term1.id == term2.id);
+            return intermediate.All(val => val);
         }
 
         public void addTemporaryRule(string match, PrintRule rule)
@@ -360,7 +364,7 @@ namespace AxiomProfiler.PrettyPrinting
             PrintRule oldRule = null;
             if (printRuleDict.hasRule(match))
             {
-                oldRule = printRuleDict.getRewriteRule(match);
+                oldRule = printRuleDict.getRewriteRules(match).FirstOrDefault();
             }
             // save original rule only if it was not already a temporary rule.
             if (!originalRulesReplacedByTemp.ContainsKey(match))

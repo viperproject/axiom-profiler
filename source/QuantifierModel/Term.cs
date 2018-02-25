@@ -98,16 +98,39 @@ namespace AxiomProfiler.QuantifierModel
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color, List<List<Term>> pathConstraints)
         {
-            var tmp = format.getPrintRule(this).Clone();
-            tmp.color = color;
-            tmp.historyConstraints.AddRange(pathConstraints);
-            if (id == -1)
+            var baseRule = format.getPrintRule(this);
+            IEnumerable<PrintRule> newRules;
+            if (pathConstraints.Any())
             {
-                format.addTemporaryRule(Name, tmp);
+                newRules = pathConstraints.Select(constraint =>
+                {
+                    var tmp = baseRule.Clone();
+                    tmp.color = color;
+                    tmp.historyConstraints = constraint;
+                    return tmp;
+                });
             }
             else
             {
-                format.addTemporaryRule(id + "", tmp);
+                var tmp = baseRule.Clone();
+                tmp.color = color;
+                tmp.historyConstraints = new List<Term>();
+                newRules = Enumerable.Repeat(tmp, 1);
+            }
+
+            if (id == -1)
+            {
+                foreach (var tmp in newRules)
+                {
+                    format.addTemporaryRule(Name, tmp);
+                }
+            }
+            else
+            {
+                foreach (var tmp in newRules)
+                {
+                    format.addTemporaryRule(id + "", tmp);
+                }
             }
         }
 

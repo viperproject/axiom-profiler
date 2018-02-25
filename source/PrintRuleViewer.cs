@@ -224,7 +224,7 @@ namespace AxiomProfiler
                     parentheses = parenthesesSettings,
                     precedence = precedence,
                     indent = indent,
-                    historyConstraints = new List<List<Term>>(),
+                    historyConstraints = new List<Term>(),
                     isDefault = false,
                     isUserdefined = true
                 });

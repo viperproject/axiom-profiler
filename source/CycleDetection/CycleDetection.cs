@@ -169,40 +169,6 @@ namespace AxiomProfiler.CycleDetection
             return loopProducedAssocBlameTerms.Contains(term);
         }
 
-        private static Term UpperBoundIn(IEnumerable<Term> terms, Term inTerm, out List<Term> eliminatedHistoryPrefix)
-        {
-            eliminatedHistoryPrefix = new List<Term>();
-
-            Term prev = inTerm;
-            for (var cont = inTerm.Args.FirstOrDefault(arg => terms.All(t => arg.isSubterm(t.id))); cont != null; cont = cont.Args.FirstOrDefault(arg => terms.All(t => arg.isSubterm(t.id))))
-            {
-                eliminatedHistoryPrefix.Add(prev);
-                prev = cont;
-            }
-            return prev;
-        }
-
-        private static IEnumerable<Term> TopLevelCommonSubterms(Term t1, Term t2)
-        {
-            var todoQueue = new Queue<Term>();
-            todoQueue.Enqueue(t1);
-            while (todoQueue.Any())
-            {
-                var current = todoQueue.Dequeue();
-                if (t2.isSubterm(current.id))
-                {
-                    yield return current;
-                }
-                else
-                {
-                    foreach (var subterm in current.Args)
-                    {
-                        todoQueue.Enqueue(subterm);
-                    }
-                }
-            }
-        }
-
         public void generalize()
         {
             if (loopInstantiations.Length == 0) return;
@@ -211,7 +177,23 @@ namespace AxiomProfiler.CycleDetection
                 potGeneralizationDependencies = new Term[0];
                 var i = (loopInstantiations.Length + it - 1) % loopInstantiations.Length;
                 var j = it % loopInstantiations.Length;
-                var generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i, it == loopInstantiations.Length);
+
+                var robustIdx = loopInstantiations[i].Count / 2;
+                var parent = loopInstantiations[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
+                var child = loopInstantiations[j][robustIdx];
+                var disitinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
+
+                Term generalizedYield;
+                if (it == 0)
+                {
+                    var loopResultIndex = Enumerable.Range(0, disitinctBlameTerms.Count).First(y => parent.concreteBody.isSubterm(disitinctBlameTerms[y]));
+                    var concreteTerms = loopInstantiations[j].Select(inst => inst.bindingInfo.getDistinctBlameTerms()[loopResultIndex]).Where(t => t != null);
+                    generalizedYield = generalizeTerms(concreteTerms, loopInstantiations[j], false, false);
+                }
+                else
+                {
+                    generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i, it == loopInstantiations.Length);
+                }
                 generalizedYield.dependentInstantiationsBlame.Add(loopInstantiations[j].First());
                 generalizedTerms.Add(generalizedYield);
 
@@ -219,11 +201,6 @@ namespace AxiomProfiler.CycleDetection
                     .GroupBy(repl => repl.generalizationCounter).Select(group => group.First()).ToArray();
 
                 // Other prerequisites:
-                var robustIdx = loopInstantiations[i].Count / 2;
-                var parent = loopInstantiations[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
-                var child = loopInstantiations[j][robustIdx];
-
-                var disitinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
                 var idxList = Enumerable.Range(0, disitinctBlameTerms.Count)
                                         .Where(y => {
                                             var yTerm = disitinctBlameTerms[y];
@@ -270,48 +247,9 @@ namespace AxiomProfiler.CycleDetection
                     return tmp;
                 }).ToList();
             }
-            MarkGeneralizations(generalizedTerms.First(), generalizedTerms.Last());
 
-            var oldLoopEntryTerm = generalizedTerms[0];
-            var bindingInfo = generalizedBindings[loopInstantiations.First().First().Quant.BodyTerm.id];
-            var blamedTerms = bindingInfo.EffectiveBlameTerms.SelectMany(effective => TopLevelCommonSubterms(effective, oldLoopEntryTerm));
-            var loopEntryTerm = UpperBoundIn(blamedTerms, oldLoopEntryTerm, out var eliminatedPrefix);
-            var prefixLength = eliminatedPrefix.Count();
-            foreach (var matchContext in bindingInfo.matchContext.Values)
-            {
-                for (var i = 0; i < matchContext.Count; ++i)
-                {
-                    if (matchContext[i].Take(prefixLength).SequenceEqual(eliminatedPrefix))
-                    {
-                        matchContext[i] = matchContext[i].Skip(prefixLength).ToList();
-                    }
-                }
-            }
-            loopEntryTerm.dependentInstantiationsBlame.AddRange(generalizedTerms[0].dependentInstantiationsBlame);
-            generalizedTerms[0] = loopEntryTerm;
-            if (assocGenBlameTerm.TryGetValue(oldLoopEntryTerm, out var assocTerms))
-            {
-                assocGenBlameTerm[loopEntryTerm] = assocTerms;
-            }
-
-            var allTerms = generalizedTerms.Concat(assocGenBlameTerm.Values.SelectMany(l => l));
-            var remainingTerms = genReplacements.Where(t => allTerms.Any(term => term.isSubterm(t.id))).ToList();
-            var remainingGeneralizations = new HashSet<int>(remainingTerms.Select(t => t.generalizationCounter));
-            var eliminatedGeneralizations = new HashSet<int>(genReplacements.Select(t => t.generalizationCounter).Except(remainingGeneralizations));
-
-            var eliminatedKeys = genReplacementTermsForNextIteration.Keys.Where(k => eliminatedGeneralizations.Contains(k.generalizationCounter)).ToList();
-            foreach (var key in eliminatedKeys)
-            {
-                genReplacementTermsForNextIteration.Remove(key);
-            }
-
-            genReplacements.Clear();
-            genReplacements.AddRange(remainingTerms);
-            genReplacements.ForEach(t =>
-            {
-                var genCounterOffset = eliminatedGeneralizations.Where(genCount => genCount < t.generalizationCounter).Count();
-                t.generalizationCounter -= genCounterOffset;
-            });
+            var iterationFinalTerm = generalizedTerms.Last();
+            MarkGeneralizations(generalizedTerms.First(), wrapBindings.getDistinctBlameTerms().First(t => iterationFinalTerm.isSubterm(t.id)));
         }
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd)
@@ -716,12 +654,12 @@ namespace AxiomProfiler.CycleDetection
                 rule.color = PrintConstants.generalizationColor;
                 if (term.Args.Count() == 0)
                 {
-                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.generalizationCounter < 0 ? $"[g{-term.id}]" : "");
+                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}]" : "");
                     rule.suffix = "";
                 }
                 else
                 {
-                    rule.prefix = term.Name + (term.generalizationCounter < 0 ? $"[g{-term.id}]" : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter)) + "(";
+                    rule.prefix = term.Name + (term.generalizationCounter < 0 ? (format.showTermId ? $"[g{-term.id}]" : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter)) + "(";
                 }
                 format.addTemporaryRule(term.id.ToString(), rule);
             }

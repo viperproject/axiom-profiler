@@ -155,7 +155,7 @@ namespace AxiomProfiler
                 indent = indentCB.Checked,
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
                 precedence = (int)precedenceUD.Value,
-                historyConstraints = new List<List<Term>>(),
+                historyConstraints = new List<Term>(),
                 isDefault = false,
                 isUserdefined = true
             };

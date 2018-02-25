@@ -215,19 +215,19 @@ namespace AxiomProfiler.QuantifierModel
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-            content.Append("Binding information:\n\n");
+            content.Append("Binding information:");
             content.switchToDefaultFormat();
 
             foreach (var bindings in bindingInfo.getBindingsToFreeVars())
             {
+                content.Append("\n\n");
                 content.Append(bindings.Key.Name).Append(" was bound to:\n");
                 bindings.Value.PrettyPrint(content, format);
                 content.switchToDefaultFormat();
-                content.Append("\n\n");
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-            content.Append("\n\nThe quantifier body:\n\n");
+            content.Append("\n\n\nThe quantifier body:\n\n");
             content.switchToDefaultFormat();
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");

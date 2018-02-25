@@ -206,7 +206,7 @@ namespace AxiomProfiler
             int id = parseIdentifier(RemoveParen(key));
             if (!model.terms.ContainsKey(id))
             {
-                model.terms[id] = new Term("free_var_" + id, EmptyTerms);
+                model.terms[id] = new Term("qvar_" + id, EmptyTerms);
             }
             return model.terms[id];
         }
@@ -582,7 +582,7 @@ namespace AxiomProfiler
                             {
                                 //TODO: too many
                                 var arg = args.First();
-                                t = new Term("free_var_" + arg.id, EmptyTerms);
+                                t = new Term("qvar_" + arg.id, EmptyTerms);
                                 model.terms[arg.id] = t;
                                 model.terms[parseIdentifier(words[1])] = t;
                                 break;
