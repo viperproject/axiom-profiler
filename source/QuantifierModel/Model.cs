@@ -20,6 +20,9 @@ namespace AxiomProfiler.QuantifierModel
         // dict with all terms seen so far.
         public readonly Dictionary<int, Term> terms = new Dictionary<int, Term>();
 
+        // dict with equality explanations to a term's equivalence class' root (in z3)
+        public readonly Dictionary<int, EqualityExplanation> equalityExplanations = new Dictionary<int, EqualityExplanation>();
+
         // dict with all quanitfiers seen so far.
         public readonly Dictionary<string, Quantifier> quantifiers = new Dictionary<string, Quantifier>();
 

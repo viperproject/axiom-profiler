@@ -10,34 +10,57 @@ namespace AxiomProfiler.QuantifierModel
         // Pattern used for this binding
         public readonly Term fullPattern;
 
-        // unmatched blame terms
-        private readonly List<Term> unusedBlameTerms;
+        public readonly Term[] BoundTerms;
+        public readonly Term[] TopLevelTerms;
+        public readonly EqualityExplanation[] EqualityExplanations;
 
-        //additional terms that didn't exist in the log but were used for matchings (parts of the pattern)
-        private readonly List<Term> additionalBlameTerms = new List<Term>();
-
-        // outstanding check candidates
-        // parent term -> subpattern, subterm
-        // if parent is evicted the associated entry will be cleared
-        private readonly Dictionary<Term, List<Tuple<Term, Term>>> outstandingCandidates = new Dictionary<Term, List<Tuple<Term, Term>>>();
-
-        // outstanding checks
-        private readonly Dictionary<Term, List<Term>> outstandingMatches = new Dictionary<Term, List<Term>>();
-
+        private bool processed = false;
         // bindings: freeVariable --> Term
-        public readonly Dictionary<Term, Term> bindings = new Dictionary<Term, Term>();
+        private readonly Dictionary<Term, Term> _bindings = new Dictionary<Term, Term>();
+        public Dictionary<Term, Term> bindings
+        {
+            get
+            {
+                if (!processed) Process();
+                return _bindings;
+            }
+        }
 
         // highlighting info: Term --> List of path constraints
-        public readonly Dictionary<int, List<List<Term>>> matchContext = new Dictionary<int, List<List<Term>>>();
+        private readonly Dictionary<int, List<List<Term>>> _matchContext = new Dictionary<int, List<List<Term>>>();
+        public Dictionary<int, List<List<Term>>> matchContext
+        {
+            get
+            {
+                if (!processed) Process();
+                return _matchContext;
+            }
+        }
 
         // highlighting info for pattern: Term --> List of path constraints
-        public readonly Dictionary<int, List<List<Term>>> patternMatchContext = new Dictionary<int, List<List<Term>>>();
+        private readonly Dictionary<int, List<List<Term>>> _patternMatchContext = new Dictionary<int, List<List<Term>>>();
+        public Dictionary<int, List<List<Term>>> patternMatchContext
+        {
+            get {
+                if (!processed) Process();
+                return _patternMatchContext;
+            }
+        }
 
         // equalities inferred from pattern matching
-        public readonly Dictionary<Term, List<Term>> equalities = new Dictionary<Term, List<Term>>();
+        private readonly Dictionary<Term, List<Term>> _equalities = new Dictionary<Term, List<Term>>();
+        public Dictionary<Term, List<Term>> equalities
+        {
+            get
+            {
+                if (!processed) Process();
+                return _equalities;
+            }
+        }
+
 
         // number of equalities
-        public int numEq;
+        public readonly int numEq;
 
         private List<Term> _BlamedEffectiveTerms = new List<Term>();
         private List<Term> _BoundEffectiveTerms = new List<Term>();
@@ -123,46 +146,44 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        public BindingInfo(Term pattern, ICollection<Term> blameTerms)
+        public BindingInfo(Term pattern, ICollection<Term> bindings, ICollection<Term> topLevelTerms, ICollection<EqualityExplanation> equalityExplanations)
         {
             fullPattern = pattern;
-            unusedBlameTerms = new List<Term>(blameTerms);
+            BoundTerms = bindings.ToArray();
+            TopLevelTerms = topLevelTerms.ToArray();
+            EqualityExplanations = equalityExplanations.ToArray();
+            numEq = EqualityExplanations.Length;
         }
 
         private BindingInfo(BindingInfo other)
         {
-            bindings = new Dictionary<Term, Term>(other.bindings);
-            unusedBlameTerms = new List<Term>(other.unusedBlameTerms);
-            additionalBlameTerms = new List<Term>(other.additionalBlameTerms);
+            processed = other.processed;
+            _bindings = new Dictionary<Term, Term>(other.bindings);
+            BoundTerms = other.BoundTerms;
+            TopLevelTerms = other.TopLevelTerms;
+            EqualityExplanations = other.EqualityExplanations;
             fullPattern = other.fullPattern;
             numEq = other.numEq;
 
             // 'deeper' copy
-            matchContext = new Dictionary<int, List<List<Term>>>();
-            foreach (var context in other.matchContext)
+            _matchContext = new Dictionary<int, List<List<Term>>>();
+            foreach (var context in other._matchContext)
             {
-                matchContext[context.Key] = new List<List<Term>>(context.Value);
+                _matchContext[context.Key] = new List<List<Term>>(context.Value);
             }
 
             // 'deeper' copy
-            patternMatchContext = new Dictionary<int, List<List<Term>>>();
-            foreach (var context in other.patternMatchContext)
+            _patternMatchContext = new Dictionary<int, List<List<Term>>>();
+            foreach (var context in other._patternMatchContext)
             {
-                patternMatchContext[context.Key] = new List<List<Term>>(context.Value);
+                _patternMatchContext[context.Key] = new List<List<Term>>(context.Value);
             }
 
             // 'deeper' copy
-            equalities = new Dictionary<Term, List<Term>>();
-            foreach (var equality in other.equalities)
+            _equalities = new Dictionary<Term, List<Term>>();
+            foreach (var equality in other._equalities)
             {
-                equalities[equality.Key] = new List<Term>(equality.Value);
-            }
-
-            // 'deeper' copy
-            outstandingMatches = new Dictionary<Term, List<Term>>();
-            foreach (var outstandingMatch in other.outstandingMatches)
-            {
-                outstandingMatches[outstandingMatch.Key] = new List<Term>(outstandingMatch.Value);
+                _equalities[equality.Key] = new List<Term>(equality.Value);
             }
         }
 
@@ -171,190 +192,71 @@ namespace AxiomProfiler.QuantifierModel
             return new BindingInfo(this);
         }
 
-        public List<BindingInfo> allNextMatches(Term pattern)
-        {
-            if (pattern.id == -1)
-            {
-                // free var, do not expect to find a blameterm
-                var copy = clone();
-                copy.handleOutstandingMatches(pattern);
-                return new List<BindingInfo> { copy };
-            }
-
-            IEnumerable<Term> possibleMatches = pattern.ContainsFreeVar() ? unusedBlameTerms : unusedBlameTerms.Concat(new Term[] { pattern });
-            return (from blameTerm in possibleMatches
-                    let copy = clone()
-                    where copy.matchBlameTerm(pattern, blameTerm)
-                    select copy)
-                    .ToList();
-        }
-
-        private bool matchBlameTerm(Term pattern, Term matchTerm)
-        {
-            if (!matchCondition(pattern, matchTerm)) return false;
-            if (unusedBlameTerms.Contains(matchTerm))
-            {
-                unusedBlameTerms.Remove(matchTerm);
-            }
-            else
-            {
-                additionalBlameTerms.Add(matchTerm);
-            }
-
-            // add blame term without context
-            // context is provided by previous matches
-            addOutstandingMatch(pattern, matchTerm);
-            handleOutstandingMatches(pattern);
-            collectOutstandingCandidates();
-            return true;
-        }
-
-        private void collectOutstandingCandidates()
-        {
-            foreach (var outstandingMatch in outstandingCandidates
-                .SelectMany(outstandingCandidate => outstandingCandidate.Value))
-            {
-                addOutstandingMatch(outstandingMatch.Item1, outstandingMatch.Item2);
-            }
-            outstandingCandidates.Clear();
-        }
-
-        private void addOutstandingMatch(Term subPattern, Term outstandingCandidate)
-        {
-            if (!outstandingMatches.ContainsKey(subPattern))
-            {
-                outstandingMatches[subPattern] = new List<Term>();
-            }
-            outstandingMatches[subPattern].Add(outstandingCandidate);
-        }
-
-        private void handleOutstandingMatches(Term pattern)
-        {
-            // nothing outstanding
-            if (!outstandingMatches.ContainsKey(pattern)) return;
-
-            foreach (var term in outstandingMatches[pattern])
-            { 
-                handleMatch(pattern, term);
-            }
-            outstandingMatches.Remove(pattern);
-        }
-
-        private void addMatchContext(Term term, List<List<Term>> context)
-        {
-            if (!matchContext.ContainsKey(term.id)) matchContext[term.id] = new List<List<Term>>();
-            matchContext[term.id].AddRange(context);
-        }
-
         private void addPatternMatchContext(Term term, List<List<Term>> context)
         {
             if (!patternMatchContext.ContainsKey(term.id)) patternMatchContext[term.id] = new List<List<Term>>();
             patternMatchContext[term.id].AddRange(context);
         }
 
-        private List<List<Term>> getContext(Term term)
+        private bool AddPatternMatch(Term pattern, Term match, IEnumerable<Term> context)
         {
-            if (!matchContext.ContainsKey(term.id)) matchContext[term.id] = new List<List<Term>>();
-            return matchContext[term.id];
-        }
-
-        private void handleMatch(Term pattern, Term term)
-        {
-            if (bindings.ContainsKey(pattern) && bindings[pattern].id != term.id)
+            _bindings[pattern] = match;
+            if (!_matchContext.TryGetValue(match.id, out var contexts))
             {
-                // already bound to something different!
-                var currBinding = bindings[pattern];
-                evictBinding(currBinding);
-
-                // add equality
-                addEquality(pattern, currBinding);
+                contexts = new List<List<Term>>();
+                _matchContext[match.id] = contexts;
             }
+            contexts.Add(context.ToList());
 
-            bindings[pattern] = term;
-            foreach (var subPatternWithSubTerm in pattern.Args.Zip(term.Args, Tuple.Create))
+            foreach (var submatch in pattern.Args.Zip(match.Args, Tuple.Create))
             {
-                var subPattern = subPatternWithSubTerm.Item1;
-                var subTerm = subPatternWithSubTerm.Item2;
-                var subTermContext = new List<List<Term>>();
-
-                // build context for subterms
-                if (getContext(term).Count == 0)
+                var subpattern = submatch.Item1;
+                var subterm = submatch.Item2;
+                var nextContext = context.Concat(Enumerable.Repeat(match, 1));
+                if (subpattern.id == -1 || (subpattern.Name == subterm.Name && subpattern.Args.Count() == subterm.Args.Count()))
                 {
-                    subTermContext.Add(new List<Term> { term });
+                    if (!AddPatternMatch(subpattern, subterm, nextContext)) return false;
                 }
                 else
                 {
-                    subTermContext.AddRange(getContext(term).Select(history => new List<Term>(history) {term}));
+                    var plausibleEqualities = EqualityExplanations.Where(e => e.source.id == subterm.id && e.target.Name == subpattern.Name && e.target.Args.Count() == subpattern.Args.Count());
+                    foreach (var eq in plausibleEqualities)
+                    {
+                        if (!_equalities.TryGetValue(subpattern, out var eqs))
+                        {
+                            eqs = new List<Term>();
+                            _equalities[subpattern] = eqs;
+                        }
+                        eqs.Add(subterm); //TODO: remove when backtracking
+                        if (!_matchContext.TryGetValue(subterm.id, out contexts))
+                        {
+                            contexts = new List<List<Term>>();
+                            _matchContext[subterm.id] = contexts;
+                        }
+                        contexts.Add(nextContext.ToList());
+                        if (AddPatternMatch(subpattern, eq.target, Enumerable.Empty<Term>())) goto foundMatch;
+                    }
+                    return false;
+                    foundMatch: { }
                 }
-                addOutstandingCandidate(term, subPattern, subTerm);
-                addMatchContext(subTerm, subTermContext);
             }
-        }
-
-        private void evictBinding(Term currBinding)
-        {
-            if (outstandingCandidates.ContainsKey(currBinding))
-            {
-                foreach (var childTerm in outstandingCandidates[currBinding].Select(tpl => tpl.Item2))
-                {
-                    // context of evicted childterms is irrelevant
-                    matchContext.Remove(childTerm.id);
-                }
-                outstandingCandidates.Remove(currBinding);
-            }
-        }
-
-        private void addOutstandingCandidate(Term term, Term subPattern, Term subTerm)
-        {
-            if (!outstandingCandidates.ContainsKey(term)) outstandingCandidates[term] = new List<Tuple<Term, Term>>();
-            outstandingCandidates[term].Add(new Tuple<Term, Term>(subPattern, subTerm));
-        }
-
-        private void addEquality(Term pattern, Term currBinding)
-        {
-            if (!equalities.ContainsKey(pattern)) equalities[pattern] = new List<Term>();
-            equalities[pattern].Add(currBinding);
-            numEq++;
-        }
-
-        private static bool matchCondition(Term pattern, Term term)
-        {
-            // id -1 signifies free variable
-            // every term matches the free variable pattern
-            if (pattern.id == -1) return true;
-            return pattern.Name == term.Name &&
-                   pattern.GenericType == term.GenericType &&
-                   pattern.Args.Length == term.Args.Length;
-        }
-
-        public bool finalize(List<Term> blameTerms, List<Term> boundTerms)
-        {
-            if (unusedBlameTerms.Count != 0 ||
-                bindings.Count != boundTerms.Count + blameTerms.Count + additionalBlameTerms.Distinct().Count()) return false;
-
-            // decouple collections
-            var freeVarsToRebind = bindings.Where(kvPair => kvPair.Key.id == -1).Select(kvPair => kvPair.Key).ToList();
-            if ((from freeVar in freeVarsToRebind
-                let term = bindings[freeVar]
-                where boundTerms.All(bndTerm => bndTerm.id != term.id)
-                where !fixBindingWithEqLookUp(boundTerms, term, freeVar)
-                select freeVar)
-                .Any())
-                return false;
-
-            // declutter equalities
-            // clutter happens if an evictor is evicted by the victim
-            foreach (var eqPatterns in equalities.Keys.ToList())
-            {
-                var matched = bindings[eqPatterns];
-                numEq -= equalities[eqPatterns].RemoveAll(eq => eq.id == matched.id);
-            }
-
-            // only keep top level terms
-            additionalBlameTerms.RemoveAll(t1 => additionalBlameTerms.Any(t2 => t1 != t2 && t2.isSubterm(t1)));
-
-            addPatternPathconditions();
             return true;
+        }
+
+        private void Process()
+        {
+            if (processed) return;
+            processed = true;
+            foreach (var pattern in fullPattern.Args)
+            {
+                var topLevelMatches = TopLevelTerms.Where(t => t.Name == pattern.Name && t.Args.Count() == pattern.Args.Count());
+                foreach (var match in topLevelMatches)
+                {
+                    if (AddPatternMatch(pattern, match, Enumerable.Empty<Term>())) break;
+                }
+            }
+            //TODO: retry if not all terms used
+            addPatternPathconditions();
         }
 
         private void addPatternPathconditions()
@@ -386,72 +288,6 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private bool fixBindingWithEqLookUp(List<Term> boundTerms, Term term, Term freeVar)
-        {
-            var eqFound = false;
-            foreach (var bndTerm in boundTerms.Where(bndTerm => SameEqClass(term, bndTerm)))
-            {
-                addEquality(freeVar, term);
-                bindings[freeVar] = bndTerm;
-                eqFound = true;
-                break;
-            }
-            return eqFound;
-        }
-
-        private static bool SameEqClass(Term t1, Term t2)
-        {
-            var currentGeneration = new HashSet<Term>() { t1 };
-            var nextGeneration = new HashSet<Term>();
-            var eqClass = new HashSet<Term>();
-            var alreadyVisited = new HashSet<Term>();
-            var generations = new List<HashSet<Term>>();
-
-            if (t2.id == -1) return false;
-
-            while (currentGeneration.Any())
-            {
-                eqClass.UnionWith(currentGeneration.SelectMany(t => t.eqClassCache ?? Enumerable.Repeat(t, 1)));
-                foreach(var t in currentGeneration)
-                {
-                    t.eqClassCache = eqClass;
-                }
-                if (eqClass.Contains(t2)) return true;
-
-                foreach (var t in currentGeneration)
-                {
-                    if (t.id == -1) return false;
-                    if (t.id == t2.id)
-                    {
-                        eqClass.Add(t2);
-                        return true;
-                    }
-
-                    foreach (var equality in t.dependentTerms
-                        .Where(dependentTerm => dependentTerm.Name == "=" && !alreadyVisited.Contains(dependentTerm)))
-                    {
-                        alreadyVisited.Add(equality);
-                        foreach (var term in equality.Args)
-                        {
-                            if (alreadyVisited.Count > 10_000) return false;
-                            if (term != t1)
-                            {
-                                nextGeneration.Add(term);
-                            }
-                        }
-                    }
-                }
-
-                generations.Add(currentGeneration);
-                currentGeneration = nextGeneration;
-                nextGeneration = new HashSet<Term>();
-            }
-
-            return generations.Any(generation => generation.Any(t =>
-                t.Name == t2.Name && t.GenericType == t2.GenericType && t.Args.Length == t2.Args.Length &&
-                t.Args.Zip(t2.Args, Tuple.Create).All(argEquality => SameEqClass(argEquality.Item1, argEquality.Item2))));
-        }
-
         public List<Term> getDistinctBlameTerms()
         {
             var blameTerms = bindings
@@ -467,15 +303,6 @@ namespace AxiomProfiler.QuantifierModel
             return bindings
                 .Where(bnd => bnd.Key.id == -1)
                 .ToList();
-        }
-
-        public bool validate()
-        {
-            return !(from equality in equalities
-                     let eqBaseTerm = bindings[equality.Key]
-                     where equality.Value.Any(otherTerm => !SameEqClass(eqBaseTerm, otherTerm))
-                     select equality)
-                     .Any();
         }
     }
 }

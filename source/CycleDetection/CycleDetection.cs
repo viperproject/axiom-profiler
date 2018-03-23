@@ -232,8 +232,7 @@ namespace AxiomProfiler.CycleDetection
 
                 loopInstantiations[j] = loopInstantiations[j].Select(inst =>
                 {
-                    var tmp = new Instantiation();
-                    inst.CopyTo(tmp);
+                    var tmp = inst.Copy();
                     var newBody = GeneralizeBindings(inst.concreteBody, inst.Quant.BodyTerm.Args.Last(), generalizedBindings[inst.Quant.BodyTerm.id]);
                     if (newBody != null)
                     {
@@ -249,7 +248,8 @@ namespace AxiomProfiler.CycleDetection
             }
 
             var iterationFinalTerm = generalizedTerms.Last();
-            MarkGeneralizations(generalizedTerms.First(), wrapBindings.getDistinctBlameTerms().First(t => iterationFinalTerm.isSubterm(t.id)));
+            var test = wrapBindings.getDistinctBlameTerms();
+            MarkGeneralizations(generalizedTerms.First(), test.First(t => iterationFinalTerm.isSubterm(t.id)));
         }
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd)

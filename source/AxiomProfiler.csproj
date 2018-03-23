@@ -92,22 +92,16 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AboutBox.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="AboutBox.cs" />
     <Compile Include="AboutBox.Designer.cs">
       <DependentUpon>AboutBox.cs</DependentUpon>
     </Compile>
     <Compile Include="CycleDetection\CycleDetection.cs" />
-    <Compile Include="EditPrintRuleDialog.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="EditPrintRuleDialog.cs" />
     <Compile Include="EditPrintRuleDialog.Designer.cs">
       <DependentUpon>EditPrintRuleDialog.cs</DependentUpon>
     </Compile>
-    <Compile Include="ColorVisalizationForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="ColorVisalizationForm.cs" />
     <Compile Include="ColorVisalizationForm.designer.cs">
       <DependentUpon>ColorVisalizationForm.cs</DependentUpon>
     </Compile>
@@ -115,40 +109,28 @@
     <Compile Include="DAGView.Designer.cs">
       <DependentUpon>DAGView.cs</DependentUpon>
     </Compile>
-    <Compile Include="HelpWindow.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="HelpWindow.cs" />
     <Compile Include="HelpWindow.Designer.cs">
       <DependentUpon>HelpWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="InstantiationFilter.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="InstantiationFilter.cs" />
     <Compile Include="InstantiationFilter.Designer.cs">
       <DependentUpon>InstantiationFilter.cs</DependentUpon>
     </Compile>
     <Compile Include="Loader.cs" />
-    <Compile Include="LoadingProgressForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="LoadingProgressForm.cs" />
     <Compile Include="LoadingProgressForm.Designer.cs">
       <DependentUpon>LoadingProgressForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="LoadBoogieForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="LoadBoogieForm.cs" />
     <Compile Include="LoadBoogieForm.Designer.cs">
       <DependentUpon>LoadBoogieForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="LoadZ3Form.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="LoadZ3Form.cs" />
     <Compile Include="LoadZ3Form.Designer.cs">
       <DependentUpon>LoadZ3Form.cs</DependentUpon>
     </Compile>
-    <Compile Include="LoadZ3LogForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="LoadZ3LogForm.cs" />
     <Compile Include="LoadZ3LogForm.Designer.cs">
       <DependentUpon>LoadZ3LogForm.cs</DependentUpon>
     </Compile>
@@ -156,6 +138,7 @@
     <Compile Include="Plotting.cs" />
     <Compile Include="PrettyPrinting\InfoPanelContent.cs" />
     <Compile Include="PrettyPrinting\IPrintable.cs" />
+    <Compile Include="QuantifierModel\EqualityExplanation.cs" />
     <Compile Include="QuantifierModel\Common.cs" />
     <Compile Include="QuantifierModel\Conflict.cs" />
     <Compile Include="QuantifierModel\FunApp.cs" />
@@ -169,29 +152,21 @@
     <Compile Include="QuantifierModel\Quantifier.cs" />
     <Compile Include="QuantifierModel\Scope.cs" />
     <Compile Include="QuantifierModel\Term.cs" />
-    <Compile Include="PrintRuleViewer.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="PrintRuleViewer.cs" />
     <Compile Include="PrintRuleViewer.Designer.cs">
       <DependentUpon>PrintRuleViewer.cs</DependentUpon>
     </Compile>
     <Compile Include="PrettyPrinting\PrettyPrinting.cs" />
-    <Compile Include="SearchBox.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="SearchBox.cs" />
     <Compile Include="SearchBox.Designer.cs">
       <DependentUpon>SearchBox.cs</DependentUpon>
     </Compile>
-    <Compile Include="SearchTree.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="SearchTree.cs" />
     <Compile Include="SearchTree.Designer.cs">
       <DependentUpon>SearchTree.cs</DependentUpon>
     </Compile>
     <Compile Include="SuffixTree\SuffixTree.cs" />
-    <Compile Include="AxiomProfiler.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="AxiomProfiler.cs" />
     <Compile Include="AxiomProfiler.Designer.cs">
       <DependentUpon>AxiomProfiler.cs</DependentUpon>
     </Compile>

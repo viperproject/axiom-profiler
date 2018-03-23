@@ -22,7 +22,6 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
-        public ISet<Term> eqClassCache = null;
 
         public Term(string name, Term[] args, int generalizationCounter = -1)
         {

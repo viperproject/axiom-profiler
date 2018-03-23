@@ -10,8 +10,6 @@ namespace AxiomProfiler.QuantifierModel
     {
         public Quantifier Quant;
         public Term concreteBody;
-        public Term[] Bindings;
-        public Term[] Responsible;
         public readonly List<Term> dependentTerms = new List<Term>();
         public int LineNo;
         public double Cost;
@@ -22,23 +20,40 @@ namespace AxiomProfiler.QuantifierModel
         int wdepth = -1;
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
-        private BindingInfo _bindingInfo;
-
-        public BindingInfo bindingInfo
+        public readonly BindingInfo bindingInfo;
+        private Term[] _Responsible = null;
+        public Term[] Responsible
         {
             get
             {
-                if (!didPatternMatch) processPattern();
-                return _bindingInfo;
+                if (_Responsible == null)
+                {
+                    _Responsible = bindingInfo.TopLevelTerms.Concat(bindingInfo.EqualityExplanations.Select(expl => expl.target)).ToArray();
+                }
+                return _Responsible;
             }
         }
 
-        public void CopyTo(Instantiation inst)
+        public Term[] Bindings
         {
-            inst.Quant = Quant;
-            inst.Bindings = (Term[])Bindings.Clone();
-            inst.Responsible = (Term[])Responsible.Clone();
-            inst.concreteBody = new Term(concreteBody);
+            get
+            {
+                return bindingInfo.BoundTerms;
+            }
+        }
+
+        public Instantiation(BindingInfo bindingInfo)
+        {
+            this.bindingInfo = bindingInfo;
+        }
+
+        public Instantiation Copy()
+        {
+            return new Instantiation(bindingInfo)
+            {
+                Quant = Quant,
+                concreteBody = concreteBody
+            };
         }
 
         public int Depth
@@ -135,12 +150,6 @@ namespace AxiomProfiler.QuantifierModel
 
         private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            if (isAmbiguous)
-            {
-                content.switchFormat(PrintConstants.ItalicFont, PrintConstants.warningTextColor);
-                content.Append( "Pattern match is ambiguos. Most likely match presented.\n");
-                content.switchToDefaultFormat();
-            }
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
             content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
@@ -262,86 +271,6 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private void processPattern()
-        {
-            if (didPatternMatch) return;
-            didPatternMatch = true;
-            var bindingCandidates = findAllMatches();
-            switch (bindingCandidates.Count)
-            {
-                case 0:
-                    return;
-                case 1:
-                    _bindingInfo = bindingCandidates[0];
-                    return;
-                default:
-                    _bindingInfo = bindingCandidates.FirstOrDefault(candidate => candidate.validate());
-                    break;
-            }
-            if (_bindingInfo != null) return;
-            isAmbiguous = true;
-            _bindingInfo = bindingCandidates[0];
-        }
-
-        private List<BindingInfo> findAllMatches()
-        {
-            var plausibleMatches = new List<BindingInfo>();
-            foreach (var pattern in Quant.Patterns())
-            {
-                var matches = parallelDescent(pattern);
-                foreach (var match in matches)
-                {
-                    if (match.finalize(Responsible.ToList(), Bindings.ToList())) plausibleMatches.Add(match);
-                }
-            }
-            return plausibleMatches.OrderBy(match => match.numEq).ToList();
-        }
-
-        private IEnumerable<BindingInfo> parallelDescent(Term pattern)
-        {
-            // list with empty binding info to collect all possible matches
-            var plausibleMatches = new List<BindingInfo> {new BindingInfo(pattern, Responsible)};
-            
-            var patternQueue = new Queue<Term>();
-
-            enqueueSubPatterns(pattern, patternQueue);
-
-            while (patternQueue.Count > 0)
-            {
-                var currentPattern = patternQueue.Dequeue();
-                var currMatches = new List<BindingInfo>();
-                foreach (var match in plausibleMatches)
-                {
-                    currMatches.AddRange(match.allNextMatches(currentPattern));
-                }
-                plausibleMatches = currMatches;
-
-                enqueueSubPatterns(currentPattern, patternQueue);
-            }
-
-            return plausibleMatches;
-        }
-
-        private static void enqueueSubPatterns(Term pattern, Queue<Term> patternQueue)
-        {
-            foreach (var arg in pattern.Args)
-            {
-                patternQueue.Enqueue(arg);
-            }
-        }
-
-
-        // The dictionary stores the following information:
-        // The key is a the free variable term.
-        // The value is structured as follows:
-        // It's a tuple with the first item being bound term.
-        // The second item is a list of histories such that occurrences of bound terms in blamed terms,
-        // that were actually bound in that position, can be distinguished from occurrences that were not bound.
-        // A history is represented as a list of terms.
-        // That's why the value type is Tuple<Term, List<List<Term>>>.
-        private bool didPatternMatch;
-        private bool isAmbiguous;
-
         public override void SummaryInfo(InfoPanelContent content)
         {
             content.switchFormat(PrintConstants.TitleFont, PrintConstants.instantiationTitleColor);
@@ -392,11 +321,9 @@ namespace AxiomProfiler.QuantifierModel
         public int DepCount;
         public readonly List<ImportantInstantiation> ResponsibleInsts = new List<ImportantInstantiation>();
 
-        public ImportantInstantiation(Instantiation par)
+        public ImportantInstantiation(Instantiation par) : base(par.bindingInfo)
         {
             Quant = par.Quant;
-            Bindings = par.Bindings;
-            Responsible = par.Responsible;
             LineNo = par.LineNo;
             Cost = par.Cost;
             Z3Generation = par.Z3Generation;

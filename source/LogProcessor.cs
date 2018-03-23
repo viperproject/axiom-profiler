@@ -49,6 +49,8 @@ namespace AxiomProfiler
 
         public readonly Model model = new Model();
 
+        private readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
+
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
             checkToConsider = cons;
@@ -218,12 +220,13 @@ namespace AxiomProfiler
             return key;
         }
 
-        Term[] GetArgs(int off, string[] words)
+        Term[] GetArgs(string[] words, int off, int endExclusive = int.MaxValue)
         {
             if (words.Length <= off)
                 return EmptyTerms;
-            Term[] args = new Term[words.Length - off];
-            for (int i = 0; i < args.Length; ++i)
+            var exploreEnd = Math.Min(words.Length, endExclusive);
+            Term[] args = new Term[exploreEnd - off];
+            for (int i = 0; i + off < exploreEnd; ++i)
                 args[i] = GetTerm(words[i + off]);
             return args;
         }
@@ -506,13 +509,225 @@ namespace AxiomProfiler
             return args;
         }
 
+        private IEnumerable<string> SplitEqualities(string explanation)
+        {
+            var start = 0;
+            var depth = 0;
+            var len = explanation.Length;
+            for (var i = 0; i < len; ++i)
+            {
+                if (explanation[i] == '(')
+                {
+                    if (depth == 0) start = i+1;
+                    ++depth;
+                }
+                else if (explanation[i] == ')')
+                {
+                    --depth;
+                    if (depth == 0) yield return explanation.Substring(start, i - start - 1);
+                    else if (depth < 0) break;
+                }
+            }
+        }
+
+        private BindingInfo GetBindingInfoFromMatch(string[] logInfo, int off, Term pattern, Term[] bindings)
+        {
+            int endIndex = logInfo.Length;
+            int i = off;
+            var topLevelTerms = new List<Term>();
+            var explanations = new List<EqualityExplanation>();
+            while (i < endIndex)
+            {
+                if (logInfo[i][0] == '#')
+                {
+                    topLevelTerms.Add(GetTerm(logInfo[i]));
+                    ++i;
+                }
+                else
+                {
+                    var sourceId = parseIdentifier(logInfo[i].Substring(1));
+                    var targetId = parseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1));
+                    explanations.Add(GetExplanation(sourceId, targetId));
+                    i += 2;
+                }
+            }
+            return new BindingInfo(pattern, bindings, topLevelTerms, explanations);
+        }
+
+        private class ExplanationFinalizer : EqualityExplanationVisitor<EqualityExplanation, LogProcessor>
+        {
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, LogProcessor arg)
+            {
+                var argumentExplanations = target.sourceArgumentEqualities.Select(e => arg.GetExplanation(e.source.id, e.target.id));
+                return new CongruenceExplanation(target.source, target.target, argumentExplanations.ToArray());
+            }
+        }
+
+        private class ExplanationReverser : EqualityExplanationVisitor<EqualityExplanation, object>
+        {
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, object arg)
+            {
+                return new DirectEqualityExplanation(target.target, target.source, target.equality);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                var numEqualities = target.equalities.Length;
+                var reversedChildren = new EqualityExplanation[numEqualities];
+                for (var i = 0; i < numEqualities; ++i)
+                {
+                    reversedChildren[i] = visit(target.equalities[numEqualities - i - 1], arg);
+                }
+                return new TransitiveEqualityExplanation(target.target, target.source, reversedChildren);
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, object arg)
+            {
+                var reversedChildren = new EqualityExplanation[target.sourceArgumentEqualities.Length];
+                foreach (var equality in target.sourceArgumentEqualities)
+                {
+                    for (var newIndex = Array.FindIndex(target.target.Args, t => t.id == equality.target.id); newIndex != -1; newIndex = Array.FindIndex(target.target.Args, newIndex + 1, t => t.id == equality.target.id))
+                    {
+                        if (reversedChildren[newIndex] == null)
+                        {
+                            reversedChildren[newIndex] = visit(equality, arg);
+                            break;
+                        }
+                    }
+                }
+                return new CongruenceExplanation(target.target, target.source, reversedChildren);
+            }
+        }
+
+        private class ExplanationExtractor : EqualityExplanationVisitor<IEnumerable<EqualityExplanation>, object>
+        {
+            public override IEnumerable<EqualityExplanation> Direct(DirectEqualityExplanation target, object arg)
+            {
+                yield return target;
+            }
+
+            public override IEnumerable<EqualityExplanation> Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                return target.equalities;
+            }
+
+            public override IEnumerable<EqualityExplanation> Congruence(CongruenceExplanation target, object arg)
+            {
+                yield return target;
+            }
+        }
+
+        private readonly ExplanationFinalizer explanationFinalizer = new ExplanationFinalizer();
+        private readonly ExplanationReverser explanationReverser = new ExplanationReverser();
+        private readonly ExplanationExtractor explanationExtractor = new ExplanationExtractor();
+
+        private readonly Dictionary<string, EqualityExplanation> equalityExplanationCache = new Dictionary<string, EqualityExplanation>();
+
+        private EqualityExplanation GetExplanation(int sourceId, int targetId)
+        {
+            var key = $"{sourceId}, {targetId}";
+            if (equalityExplanationCache.TryGetValue(key, out var existing)) return existing;
+
+            EqualityExplanation knownExplanation = null;
+            var sourceExplanations = new List<EqualityExplanation>();
+            for (int sourceIterator = sourceId; model.equalityExplanations.TryGetValue(sourceIterator, out var equalityExplanation); sourceIterator = equalityExplanation.target.id)
+            {
+                if (sourceIterator == targetId)
+                {
+                    var targetTerm = model.terms[targetId];
+                    knownExplanation = new TransitiveEqualityExplanation(targetTerm, targetTerm, emptyEqualityExplanation);
+                    break;
+                }
+                if (equalityExplanationCache.TryGetValue($"{sourceIterator}, {targetId}", out knownExplanation)) break;
+                sourceExplanations.Add(equalityExplanation);
+            }
+            var targetExplanations = new List<EqualityExplanation>();
+            if (knownExplanation == null)
+            {
+                for (int targetIterator = targetId; model.equalityExplanations.TryGetValue(targetIterator, out var equalityExplanation); targetIterator = equalityExplanation.target.id)
+                {
+                    if (targetIterator == sourceId)
+                    {
+                        var sourceTerm = model.terms[sourceId];
+                        knownExplanation = new TransitiveEqualityExplanation(sourceTerm, sourceTerm, emptyEqualityExplanation);
+                        break;
+                    }
+                    if (equalityExplanationCache.TryGetValue($"{sourceId}, {targetIterator}", out knownExplanation)) break;
+                    targetExplanations.Add(equalityExplanation);
+                }
+            }
+
+            if (knownExplanation != null)
+            {
+                if (knownExplanation.source.id == sourceId)
+                {
+                    var explanations = explanationExtractor.visit(knownExplanation, null).Concat(targetExplanations.Select(e => explanationReverser.visit(e, null)).Select(e => explanationFinalizer.visit(e, this)).Reverse());
+                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    equalityExplanationCache[key] = explanation;
+                    return explanation;
+                }
+                else
+                {
+                    var explanations = sourceExplanations.Select(e => explanationFinalizer.visit(e, this)).Concat(explanationExtractor.visit(knownExplanation, null));
+                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    equalityExplanationCache[key] = explanation;
+                    return explanation;
+                }
+            }
+
+            sourceExplanations.Reverse();
+            targetExplanations.Reverse();
+
+            var sourceCheck = sourceExplanations.Any() ? sourceExplanations.First().target.id : sourceId;
+            var targetCheck = targetExplanations.Any() ? targetExplanations.First().target.id : targetId;
+            if (sourceCheck != targetCheck) throw new ArgumentException("The terms provided to GetExplanation() were not equal");
+
+            var numSource = sourceExplanations.Count;
+            var numTarget = targetExplanations.Count;
+            if (numSource < numTarget)
+            {
+                sourceExplanations.AddRange(Enumerable.Repeat<EqualityExplanation>(null, numTarget - numSource));
+            }
+            else
+            {
+                targetExplanations.AddRange(Enumerable.Repeat<EqualityExplanation>(null, numSource - numTarget));
+            }
+
+            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1 != null && t.Item1.Equals(t.Item2));
+            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse().Where(e => e != null);
+            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Where(e => e != null).Select(e => explanationReverser.visit(e, null));
+            var explanationPath = relevantSourceExplanations.Concat(relevantTargetExplanations).Select(e => explanationFinalizer.visit(e, this));
+            if (explanationPath.Take(2).Count() == 1)
+            {
+                var explanation = explanationPath.Single();
+                equalityExplanationCache[key] = explanation;
+                return explanation;
+            }
+            else
+            {
+                var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanationPath.ToArray());
+                equalityExplanationCache[key] = explanation;
+                return explanation;
+            }
+        }
+
         private void ParseTraceLine(string line, string[] words)
         {
             switch (words[0])
             {
                 case "[mk-quant]":
                     {
-                        Term[] args = GetArgs(3, words);
+                        Term[] args = GetArgs(words, 3);
                         Term t = new Term("FORALL", args)
                         {
                             id = parseIdentifier(words[1])
@@ -533,7 +748,7 @@ namespace AxiomProfiler
 
                 case "[mk-app]":
                     {
-                        Term[] args = GetArgs(3, words);
+                        Term[] args = GetArgs(words, 3);
 
                         //We are only interested in the result of a proof step (i.e. the last argument)
                         Term t = proofRuleNames.Contains(words[2]) ? new Term(args.Last()) : new Term(words[2], args);
@@ -637,27 +852,60 @@ namespace AxiomProfiler
                     }
                     break;
 
+                case "[eq-expl]":
+                    {
+                        var fromId = parseIdentifier(words[1]);
+                        if (model.equalityExplanations.ContainsKey(fromId)) equalityExplanationCache.Clear();
+                        if (words[2] == "root")
+                        {
+                            model.equalityExplanations.Remove(fromId);
+                            break;
+                        }
+                        var fromTerm = model.terms[fromId];
+                        var toTerm = GetTerm(words.Last());
+                        switch (words[2])
+                        {
+                            case "lit":
+                                model.equalityExplanations[fromId] = new DirectEqualityExplanation(fromTerm, toTerm, GetTerm(words[3]));
+                                break;
+                            case "cg":
+                                var equalitiesRegex = new Regex("\\((#[0-9]+) (#[0-9]+)\\) ");
+                                var matches = equalitiesRegex.Matches(line).Cast<Match>();
+                                if (matches.Any())
+                                {
+                                    var argumentEqualities = matches.Select(match => new TransitiveEqualityExplanation(GetTerm(match.Groups[1].Value), GetTerm(match.Groups[2].Value), emptyEqualityExplanation)).ToArray();
+                                    model.equalityExplanations[fromId] = new CongruenceExplanation(fromTerm, toTerm, argumentEqualities);
+                                }
+                                else
+                                {
+                                    Console.Out.WriteLine($"Congruence equality explanation had unexpected shape (line: {curlineNo})");
+                                    model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                }
+                                break;
+                            case "ax":
+                                model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                break;
+                            default:
+                                Console.Out.WriteLine($"Unexpected equality explanation: {words[2]} (line: {curlineNo})");
+                                model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                break;
+                        }
+                    }
+                    break;
+
                 case "[new-match]":
                     {
                         if (!interestedInCurrentCheck) break;
                         if (words.Length < 3) break;
-                        Instantiation inst = new Instantiation();
-                        Term[] args = GetArgs(3, words);
-                        int firstNull = Array.IndexOf(args, null);
-                        if (firstNull < 0)
+                        var separationIndex = Array.FindIndex(words, el => el == ";");
+                        Term[] args = GetArgs(words, 3, separationIndex);
+                        var quant = model.quantifiers[words[2]];
+                        var pattern = quant.BodyTerm.Args.Single(t => t.Name == "pattern");
+                        var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
+                        Instantiation inst = new Instantiation(bindingInfo)
                         {
-                            inst.Bindings = args;
-                            inst.Responsible = EmptyTerms;
-                        }
-                        else
-                        {
-                            inst.Bindings = new Term[firstNull];
-                            inst.Responsible = new Term[args.Length - firstNull - 1];
-                            Array.Copy(args, 0, inst.Bindings, 0, inst.Bindings.Length);
-                            Array.Copy(args, firstNull + 1, inst.Responsible, 0, inst.Responsible.Length);
-                        }
-
-                        inst.Quant = CreateQuantifier(words[2], words[2]);
+                            Quant = quant
+                        };
                         model.fingerprints[words[1]] = inst;
                     }
                     break;
@@ -673,9 +921,7 @@ namespace AxiomProfiler
                         }
                         if (inst.LineNo != 0)
                         {
-                            var tmp = new Instantiation();
-                            inst.CopyTo(tmp);
-                            inst = tmp;
+                            inst = inst.Copy();
                         }
                         int pos = 2;
                         if (words.Length > pos && words[pos] != ";")
@@ -869,7 +1115,7 @@ namespace AxiomProfiler
                             break;
                         }
                         words = StripGeneration(words, out generation);
-                        Term[] args = GetArgs(3, words);
+                        Term[] args = GetArgs(words, 3);
                         Term t;
                         if (lastInst == null &&
                             model.terms.TryGetValue(parseIdentifier(words[1]), out t) &&
@@ -895,7 +1141,7 @@ namespace AxiomProfiler
                 case "[create]":
                     {
                         if (words.Length < 4) break;
-                        Term[] args = GetArgs(4, words);
+                        Term[] args = GetArgs(words, 4);
                         Term t = new Term(args.Length == 0 ? words[3] : words[3].Substring(1), args);
                         t.Responsible = lastInst;
                         lastInst?.dependentTerms.Add(t);
@@ -903,38 +1149,10 @@ namespace AxiomProfiler
                         t.id = parseIdentifier(words[1]);
                     }
                     break;
-                case "[fingerprint]":
-                    {
-                        if (words.Length < 3) break;
-                        Instantiation inst = new Instantiation();
-                        inst.Responsible = GetArgs(3, words);
-                        model.fingerprints[words[1]] = inst;
-                    }
-                    break;
                 case "[mk_const]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
                 case "[create_ite]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
 
                 case "[done-instantiate-fp]": lastInst = null; break;
-                case "[instantiate-fp]":
-                    {
-                        if (words.Length < 4) break;
-                        Instantiation inst;
-                        if (!model.fingerprints.TryGetValue(words[2], out inst))
-                        {
-                            Console.WriteLine("fingerprint not found {0}", words[0]);
-                            break;
-                        }
-                        if (inst.Quant != null)
-                        {
-                            break;
-                        }
-                        inst.Quant = CreateQuantifier(words[1], words[1]);
-                        AddInstance(inst);
-                        for (int i = 4; i < words.Length; ++i)
-                            words[i] = words[i].Substring(words[i].IndexOf(':') + 1);
-                        inst.Bindings = GetArgs(4, words);
-                    }
-                    break;
                 case "[conflict-resolve]":
                     if (!interestedInCurrentCheck) break;
                     if (skipDecisions) break;
@@ -968,7 +1186,7 @@ namespace AxiomProfiler
                                 int idx = words[i].IndexOf(":");
                                 if (idx > 0) words[i] = words[i].Substring(0, idx);
                             }
-                            lit.Term = new Term(sym, GetArgs(pos, words));
+                            lit.Term = new Term(sym, GetArgs(words, pos));
                         }
                     }
                     break;
@@ -998,6 +1216,7 @@ namespace AxiomProfiler
             {
                 reverseRewrite.Key.reverseRewrite = reverseRewrite.Value;
             }
+
             var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {
                 var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
                 foreach (var quant in group)
@@ -1410,13 +1629,7 @@ namespace AxiomProfiler
 
         private Quantifier CreateQuantifier(string name, string qid)
         {
-            Quantifier quant;
-            if (model.quantifiers.TryGetValue(name, out quant))
-            {
-                return quant;
-            }
-
-            quant = new Quantifier
+            var quant = new Quantifier
             {
                 Qid = qid
             };
