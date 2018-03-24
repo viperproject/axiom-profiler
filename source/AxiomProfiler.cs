@@ -305,7 +305,7 @@ namespace AxiomProfiler
 
             // reset everything
             model = null;
-            Model.MarkerLiteral.Cause = null;
+            Model.MarkerLiteral.Cause = null; //The cause may be a term in the old model, preventing the GC from freeing some resources untill a new cause is set in the new model
             z3AxiomTree.Nodes.Clear();
             toolTipBox.Clear();
             printRuleDict = new PrintRuleDictionary();
@@ -316,8 +316,11 @@ namespace AxiomProfiler
             // clear history
             historyNode.Nodes.Clear();
 
-            dagView.Clear();
+            dagView.Clear(); //The dagView keeps references to the instances represented by visible nodes. Clearing it allows these resources to be freed.
 
+            /* The entire model can be garbage collected now. Most of it will have aged into generation 2 of the garbage collection algorithm by now
+             * which might take a while (~10s) until it is executed regularly. Giving the hint is, therefore, a good idea.
+             */
             GC.Collect(2, GCCollectionMode.Optimized);
         }
 

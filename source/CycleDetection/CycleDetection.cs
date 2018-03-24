@@ -123,14 +123,19 @@ namespace AxiomProfiler.CycleDetection
         private int idCounter = -2;
         private int genCounter = 1;
         private readonly List<Instantiation>[] loopInstantiations;
+
+        /* The generalized versions of the yield terms of the quantifier instantiations in the loop. Since a loop explanation starts and ends
+         * with generalized terms there is one more generalizedTerm than there are quantifiers:
+         * generalizedTerms[0] -loopInstantiations[0].Quant-> generalizedTerms[1] -loopInstantiations[1].Quant-> ... -loopInstantiations[n].Quant-> generalizedTerms[n+1] 
+         */
         public readonly List<Term> generalizedTerms = new List<Term>();
-        private readonly List<Term> genReplacements = new List<Term>();
-        private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>();
-        private readonly Dictionary<int, BindingInfo> generalizedBindings = new Dictionary<int, BindingInfo>();
-        private BindingInfo wrapBindings = null;
-        private HashSet<Term> loopProducedAssocBlameTerms = new HashSet<Term>();
-        private Term[] potGeneralizationDependencies = new Term[0];
-        private Dictionary<Term, Term> genReplacementTermsForNextIteration = new Dictionary<Term, Term>();
+        private readonly List<Term> generalizationTerms = new List<Term>(); //All generalization terms that were used (T_1, T_2, ...)
+        private readonly Dictionary<int, Term> replacementDict = new Dictionary<int, Term>(); //Map from concrete terms to their generalized counterparts. N.b. this includes terms other than T_1, T_2, ... e.g. if only the term id was generalized away.
+        private readonly Dictionary<int, BindingInfo> generalizedBindings = new Dictionary<int, BindingInfo>(); //Map from quantifiers (their body terms) to their generalized binding info
+        private BindingInfo wrapBindings = null; //The binding info used to instantiate the first quantifier of the loop from the result of the last quantifier in the loop
+        private readonly HashSet<Term> loopProducedAssocBlameTerms = new HashSet<Term>(); //blame terms required in addition to the term produced by the previous instantiation that are also produced by the matching loop
+        private Term[] potGeneralizationDependencies = new Term[0]; //Terms that a newly generated generailzation term may depend on. I.e. if the Term T_3(T_1, T_2) is generated the Array conatins T_1 and T_2.
+        private Dictionary<Term, Term> genReplacementTermsForNextIteration = new Dictionary<Term, Term>(); //A map from generalization terms in the first term of the loop explanation (e.g. T_1) to their counterparts in the result of a single matching loop iteration (e.g. plus(T_1, x) if the loop piles up plus terms)
 
         // associated info to generalized blame term 
         // (meaning other generalized blame terms that are not yield terms in the loop)
@@ -152,7 +157,12 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        public bool IsReplaced(int id)
+        /// <summary>
+        /// Indicates wheter a concrete term has been replaced by a generalization (such as T_1) in the loop generalization.
+        /// </summary>
+        /// <param name="id">The id of a concrete term (i.e. a strictly positive integer).</param>
+        /// <returns>True if a generalization occurs instead of this term in the loop generalization at least once. False otherwise.</returns>
+        public bool IsReplacedByGeneralization(int id)
         {
             if (replacementDict.TryGetValue(id, out var replacement))
             {
@@ -181,29 +191,42 @@ namespace AxiomProfiler.CycleDetection
                 var robustIdx = loopInstantiations[i].Count / 2;
                 var parent = loopInstantiations[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
                 var child = loopInstantiations[j][robustIdx];
-                var disitinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
+                var distinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
 
                 Term generalizedYield;
                 if (it == 0)
                 {
-                    var loopResultIndex = Enumerable.Range(0, disitinctBlameTerms.Count).First(y => parent.concreteBody.isSubterm(disitinctBlameTerms[y]));
+                    /* The first term in the matching loop explanation is not produced by a loop instantiation (and may not necessarily
+                     * have been produced by a quantifier that occurs in the loop). We therefore need to extract the terms to run the generalization
+                     * on differently.
+                     * A match may contain several distinct blame terms (that is terms that are not subterms of each other) that are either assembled
+                     * into a new term using equality substitutions and/or that match different parts of a multipattern. We first find one of these that
+                     * can be produced by the last loop instantiation, so we are later able to explain why the loop can start over, and then run the
+                     * gerneralization on these terms. This also has the convenient side-effect of the term only including structure that matches the
+                     * trigger, i.e. any unnecessary higher level structure a term might have is automatically omitted.
+                     */
+                    var loopResultIndex = Enumerable.Range(0, distinctBlameTerms.Count).First(y => parent.concreteBody.isSubterm(distinctBlameTerms[y]));
                     var concreteTerms = loopInstantiations[j].Select(inst => inst.bindingInfo.getDistinctBlameTerms()[loopResultIndex]).Where(t => t != null);
                     generalizedYield = generalizeTerms(concreteTerms, loopInstantiations[j], false, false);
                 }
                 else
                 {
+                    // Here we cann simply use the terms produced by the previous instantiation.
                     generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i, it == loopInstantiations.Length);
                 }
+
+                //This will later be used to find out which quantifier was used to generate this term.
                 generalizedYield.dependentInstantiationsBlame.Add(loopInstantiations[j].First());
+
                 generalizedTerms.Add(generalizedYield);
 
-                potGeneralizationDependencies = genReplacements.Where(repl => repl.Args.Count() == 0)
+                potGeneralizationDependencies = generalizationTerms.Where(repl => repl.Args.Count() == 0)
                     .GroupBy(repl => repl.generalizationCounter).Select(group => group.First()).ToArray();
 
                 // Other prerequisites:
-                var idxList = Enumerable.Range(0, disitinctBlameTerms.Count)
+                var idxList = Enumerable.Range(0, distinctBlameTerms.Count)
                                         .Where(y => {
-                                            var yTerm = disitinctBlameTerms[y];
+                                            var yTerm = distinctBlameTerms[y];
                                             return !parent.concreteBody.isSubterm(yTerm);
                                         })
                                         .ToList();
@@ -254,7 +277,7 @@ namespace AxiomProfiler.CycleDetection
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd)
         {
-            if (genReplacements.Contains(loopStart))
+            if (generalizationTerms.Contains(loopStart))
             {
                 genReplacementTermsForNextIteration[loopStart] = loopEnd;
             }
@@ -276,36 +299,61 @@ namespace AxiomProfiler.CycleDetection
             return generalizeTerms(yieldTerms, childInsts, blameWrapAround, loopWrapAround);
         }
 
+        /// <summary>
+        /// Replaces occurences quantified variables in terms produced by quantifier instantiations with their generalizations.
+        /// When the generalization algorithm is run on the resulting terms it sees the same terms in these locations such that they
+        /// are not generalized away.
+        /// </summary>
+        /// <param name="concrete">The concrete term in which occurences of quantified variables should be replaced.</param>
+        /// <param name="quantifier">The body of the quantifier that produced the concrete term.</param>
+        /// <param name="bindingInfo">The generalized binding info indicating what generalized terms each quantified variable is bound to in the loop explanation.</param>
+        /// <returns>The concrete term updated to use the specified bindings or null if the algorithm failed. The algorithm fails if the
+        /// structue of the concrete term (and the term obtained by reversing z3's rewritings) and the quantifier body do not match.</returns>
         private static Term GeneralizeBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
         {
             if (quantifier.id == -1)
             {
+
+                // We have reached a quantified variable in the quantifier body => replace the concrete term with the term bound to that quantified variable
                 return bindingInfo.bindings[quantifier];
             }
-            Term concreteContinue = concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite : concrete;
+
+            //If the concrete term doesn't structurally match the qantifier reverse any rewritings made by z3
+            var concreteContinue = concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite : concrete;
+
+            //recurse over the arguments
             return GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo);
         }
 
         private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
         {
             if (concrete == null) return null;
-            Term copy = new Term(concrete);
-            if (!quantifier.ContainsFreeVar()) return copy;
+            var copy = new Term(concrete); //do not modify the original term
+            if (!quantifier.ContainsFreeVar()) return copy; //nothing left to replace
             if (concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name)
             {
+                //If the concrete term doesn't structually match the quantifier body we fail. The caller will backtrack if possible.
                 return null;
             }
+
+            //recurse on arguments
             for (int i = 0; i < concrete.Args.Count(); i++)
             {
                 var replacement = GeneralizeBindings(concrete.Args[i], quantifier.Args[i], bindingInfo);
                 if (replacement == null)
                 {
+                    //Failed => backtrack
                     if (ReferenceEquals(concrete, concrete.reverseRewrite))
                     {
+                        //cannot resolve => continue backtracking
                         return null;
                     }
                     else
                     {
+                        /* Try to resolve by reversing the rewriting. We reach this state if the top level structure matches that of the
+                         * quantifier body but some deeper structure doesn't and it is not possible to resolve the issue by locally reversing
+                         * the rewritng of the deeper term.
+                         */
                         return GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo);
                     }
                 }
@@ -326,6 +374,15 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        /// <summary>
+        /// Generalizes the given terms by identifying common sturcture in these terms and introducing generalizations (e.g. T_1) where
+        /// their structure doesn't match.
+        /// </summary>
+        /// <param name="terms">The terms to generalize.</param>
+        /// <param name="highlightInfoInsts">The quantifier instantiations triggered by the provided terms.</param>
+        /// <param name="blameWrapAround">If true, terms[n] triggers highlightInfoInsts[n+1]. If false terms[n] triggers highlightInfoInsts[n].</param>
+        /// <param name="loopWrapAround">Indicates that this is the last step in the generalized matching loop explanation and wrapBindings should be used.</param>
+        /// <returns>A generalization of all terms in terms.</returns>
         private Term generalizeTerms(IEnumerable<Term> terms, List<Instantiation> highlightInfoInsts, bool blameWrapAround, bool loopWrapAround)
         {
             // stacks for breath first traversal of all terms in parallel
@@ -334,7 +391,7 @@ namespace AxiomProfiler.CycleDetection
             // map to 'vote' on generalization
             // also exposes outliers
             // term name + type + #Args -> #votes
-            // last element is id (kept if all terms agree)
+            // last 2 elements are id and generalization counter (kept if all terms agree)
             var candidates = new Dictionary<string, Tuple<int, string, int, int, int>>();
             var concreteHistory = new Stack<Term>();
             var generalizedHistory = new Stack<Term>();
@@ -345,8 +402,10 @@ namespace AxiomProfiler.CycleDetection
             
             if (loopWrapAround)
             {
+                //We need to keep the last binding info (that explains how the loop can start over) seperate since it corresponds to the same quantifier as the first one in the loop.
                 if (wrapBindings == null)
                 {
+                    //We start off from the binding info of a concrete term and update it as generalizations are generated.
                     localBindingInfo = highlightInfoInsts[highlightInfoInsts.Count / 2].bindingInfo.clone();
                     localBindingInfo.matchContext.Clear();
                 }
@@ -358,6 +417,7 @@ namespace AxiomProfiler.CycleDetection
             {
                 if (!generalizedBindings.TryGetValue(highlightInfoInsts[highlightInfoInsts.Count / 2].Quant.BodyTerm.id, out localBindingInfo))
                 {
+                    //We start off from the binding info of a concrete term and update it as generalizations are generated.
                     localBindingInfo = highlightInfoInsts[highlightInfoInsts.Count / 2].bindingInfo.clone();
                     localBindingInfo.matchContext.Clear();
                 }
@@ -409,6 +469,10 @@ namespace AxiomProfiler.CycleDetection
                     var boundTo = boundIn.bindingInfo.bindings.Keys.FirstOrDefault(k => boundIn.bindingInfo.bindings[k].id == currentTerm.id);
                     if (boundTo != null && localBindingInfo.bindings[boundTo].id < -1)
                     {
+                        /* The term was bound to a quantified variable and was already encountered and generalized in this term,
+                         * i.e. the same quantified variable occurs multiple times in the quantifer body. If this is the case
+                         * for all concrete terms we reuse the exisiting generalization.
+                         */
                         collectCandidateTerm(localBindingInfo.bindings[boundTo], candidates);
                     }
                     else
@@ -419,7 +483,7 @@ namespace AxiomProfiler.CycleDetection
 
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory);
 
-                // check for blame / binding info
+                // Update binding info with generalized term if necessary.
                 if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var bindingKey))
                 {
                     var concreteId = todoStacks[idx].Peek().id;
@@ -464,6 +528,8 @@ namespace AxiomProfiler.CycleDetection
         private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out Term boundTo)
         {
             boundTo = null;
+
+            //We try to find a binding in the concrete case and assume that it should also be extend to the generalized case
             var childIdx = childInsts.Count / 2;
             var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
             var checkInst = childInsts[childIdx];
@@ -480,20 +546,23 @@ namespace AxiomProfiler.CycleDetection
 
         private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped)
         {
+            //We try to find an equality that was used in the concrete case and assume that it should also be extended to the generalized case
             var childIdx = childInsts.Count / 2;
             var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
             var checkInst = childInsts[childIdx];
-            Term term = null;
             foreach (var equality in checkInst.bindingInfo.equalities)
             {
-                term = equality.Value.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
-                if (term != null) break;
+                var term = equality.Value.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
+                if (term != null)
+                {
+                    var constraints = checkInst.bindingInfo.matchContext[term.id];
+                    if (constraintsSat(concreteHistory.Reverse().ToList(), constraints))
+                    {
+                        return true;
+                    }
+                }
             }
-
-            if (term == null) return false;
-
-            var constraints = checkInst.bindingInfo.matchContext[term.id];
-            return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+            return false;
         }
 
         private bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints)
@@ -590,11 +659,11 @@ namespace AxiomProfiler.CycleDetection
         {
             if (TryGetExistingReplacement(todoStacks, out var existingReplacement))
             {
-                genReplacements.Add(existingReplacement);
+                generalizationTerms.Add(existingReplacement);
                 return existingReplacement;
             }
             var t = new Term("T", potGeneralizationDependencies, genCounter) { id = idCounter };
-            genReplacements.Add(t);
+            generalizationTerms.Add(t);
             idCounter--;
             genCounter++;
             
@@ -625,10 +694,13 @@ namespace AxiomProfiler.CycleDetection
             {
                 var oldTuple = candidates[key];
                 candidates[key] = new Tuple<int, string, int, int, int>
-                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5 == currentTerm.generalizationCounter ? oldTuple.Item5 : -1);
+                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5 == currentTerm.generalizationCounter ? oldTuple.Item5 : -1); //-1 indicates disagreement on id / generalization counter
             }
         }
 
+        /// <summary>
+        /// Highlights structure that was added by a single iteration of the matching loop in the last term of the loop explanation by printing it in italic.
+        /// </summary>
         private void HighlightNewTerms(Term newTerm, Term referenceTerm, PrettyPrintFormat format)
         {
             if (newTerm.id < 0 && !referenceTerm.isSubterm(newTerm.id))
@@ -644,10 +716,16 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        /// <summary>
+        /// Highlight subterms of a generalized term in accordance with the generalized binding infos.
+        /// </summary>
         public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, bool last)
         {
-            var onlyOne = !genReplacements.Where(gen => gen.Args.Count() == 0 && gen.generalizationCounter >= 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
-            var allGeneralizations = last ? genReplacements.Concat(genReplacementTermsForNextIteration.Values) : genReplacements;
+            //If only a single generalization term (T_1) exists we print it without the subscript.
+            var onlyOne = !generalizationTerms.Where(gen => gen.Args.Count() == 0 && gen.generalizationCounter >= 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
+
+            //Print generalizations and terms that correspond to generalizations when wrapping around the loop in the correct color
+            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Values) : generalizationTerms;
             foreach (var term in allGeneralizations)
             {
                 var rule = format.getPrintRule(term);
@@ -664,6 +742,7 @@ namespace AxiomProfiler.CycleDetection
                 format.addTemporaryRule(term.id.ToString(), rule);
             }
 
+            //highlight remaining terms using the generalized binding info. Note that these highlightings may override the highlightings for generalizations in some cases.
             var bindingInfo = last ? wrapBindings : generalizedBindings[generalizedTerm.dependentInstantiationsBlame.First().Quant.BodyTerm.id];
             foreach (var term in bindingInfo.bindings.Values)
             {
@@ -698,6 +777,10 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        /// <summary>
+        /// Prints a section indicating what the generalization terms (T_1, T_2, ...) when starting the next loop iteration correspond to in terms
+        /// of the result of the previous loop iteration.
+        /// </summary>
         public void PrintGeneralizationsForNextIteration(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.switchToDefaultFormat();

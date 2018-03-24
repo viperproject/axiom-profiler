@@ -131,7 +131,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             foreach (var term in potGens)
             {
-                if (term is Term && generalization.IsReplaced(term.id))
+                if (term is Term && generalization.IsReplacedByGeneralization(term.id))
                 {
                     term.highlightTemporarily(format, PrintConstants.generalizationColor);
                 }

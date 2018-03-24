@@ -370,6 +370,8 @@ namespace AxiomProfiler
                     .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
 
                 pathInstantiations.Add(current);
+
+                //make sure that all instantiations causing this path are visible and can be explored by the user
                 foreach (var responsibleInst in current.ResponsibleInstantiations)
                 {
                     if (!pathInstantiations.Contains(responsibleInst))
@@ -490,8 +492,15 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Assigns a score to instantiation paths based on the predicted likelyhood that it conatins a matching loop.
+        /// </summary>
+        /// <returns>Higher values indicate a higher likelyhood of the path containing a matching loop.</returns>
+        /// <remarks>All constants were determined experimentally.</remarks>
         private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
+            //There may be some "outiers" before or after a matching loop.
+            //We first identify quantifiers that occur at most 0.3 times as often as the most common quantifier in the path...
             var statistics = instantiationPath.Statistics();
             var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * 0.3, 1);
             var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
@@ -500,6 +509,7 @@ namespace AxiomProfiler
                 eliminatableQuantifiers.Add(quant);
             }
 
+            //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
             var instantiations = instantiationPath.getInstantiations().Select(inst => Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern)).ToArray();
             var maxStartIndex = 0;
             var maxLength = 0;
@@ -538,6 +548,7 @@ namespace AxiomProfiler
                 lastMaxStartIndex = curStartIndex;
             }
 
+            //...and eliminate the prefix/postfix of that subsequence
             var remainingStart = eliminatePrefix ? maxStartIndex : 0;
             var remainingLength = (eliminatePostfix ? lastMaxStartIndex + maxLength : instantiations.Count()) - remainingStart;
             var remainingInstantiations = instantiationPath.getInstantiations().ToList().GetRange(remainingStart, remainingLength);
@@ -550,13 +561,15 @@ namespace AxiomProfiler
                 remainingPath.append(inst);
             }
 
+            /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
+             * which is an approximation for the number of repetitions of a matching loop occuring in that path.
+             */
             return 1.0 * remainingPath.Length() / remainingPath.Statistics().Count();
         }
 
         private static InstantiationPath BestDownPath(Node node)
         {
-            var orderedPaths = AllDownPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).ToList();
-            return orderedPaths.First();
+            return AllDownPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
         }
 
         private static InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
