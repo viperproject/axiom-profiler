@@ -207,18 +207,22 @@ namespace AxiomProfiler.QuantifierModel
                     equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumber));
                     var numberingString = $"({termNumber}) ";
                     ++termNumber;
+                    content.switchToDefaultFormat();
                     content.Append(numberingString);
-                    effectiveTerm.PrettyPrint(content, format, numberingString.Length);
                     var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
                     foreach (var term in equality.Value)
                     {
+                        term.PrettyPrint(content, format, numberingString.Length);
                         content.switchToDefaultFormat();
                         content.Append($"\n{indentString}=\n{indentString}");
-                        term.PrettyPrint(content, format, numberingString.Length);
                     }
+                    effectiveTerm.PrettyPrint(content, format, numberingString.Length);
+
                     content.Append("\n\n");
                 }
                 format.printContextSensitive = true;
+
+                bindingInfo.PrintEqualityExplanations(content, format, equalityNumberings);
 
                 bindingInfo.PrintEqualitySubstitution(content, format, termNumberings, equalityNumberings);
             }

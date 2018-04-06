@@ -202,6 +202,7 @@ namespace AxiomProfiler.QuantifierModel
                         content.Append($"\n{indentString}=\n{indentString}");
                         term.PrettyPrint(content, format, numberingString.Length);
                     }
+                    content.switchToDefaultFormat();
                     content.Append("\n\n");
                 }
 
@@ -238,8 +239,8 @@ namespace AxiomProfiler.QuantifierModel
                 termNumberings.Add(Tuple.Create(distinctBlameTerm, termNumbering));
                 ++termNumbering;
                 distinctBlameTerm.PrettyPrint(content, format, numberingString.Length);
-                content.Append("\n\n");
                 content.switchToDefaultFormat();
+                content.Append("\n\n");
             }
 
             if (current.bindingInfo.equalities.Count > 0)
@@ -265,6 +266,7 @@ namespace AxiomProfiler.QuantifierModel
                         content.Append($"\n{indentString}=\n{indentString}");
                         term.PrettyPrint(content, format, numberingString.Length);
                     }
+                    content.switchToDefaultFormat();
                     content.Append("\n\n");
                 }
                 format.printContextSensitive = true;
@@ -402,9 +404,10 @@ namespace AxiomProfiler.QuantifierModel
             alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
             var numberingString = $"({termNumbering}) ";
+            content.switchToDefaultFormat();
             content.Append(numberingString);
             term.PrettyPrint(content, format, numberingString.Length);
-            content.Append("\n");
+            content.Append('\n');
 
             termNumberings.Add(Tuple.Create(term, termNumbering));
             ++termNumbering;
@@ -510,6 +513,7 @@ namespace AxiomProfiler.QuantifierModel
                         equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
                         numberingString = $"({termNumbering}) ";
                         ++termNumbering;
+                        content.switchToDefaultFormat();
                         content.Append(numberingString);
                         effectiveTerm.PrettyPrint(content, format, numberingString.Length);
                         var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
@@ -545,7 +549,8 @@ namespace AxiomProfiler.QuantifierModel
                             content.Append($"\n{indentString}=\n{indentString}");
                             t.PrettyPrint(content, format, numberingString.Length);
                         }
-                        content.Append("\n");
+                        content.switchToDefaultFormat();
+                        content.Append('\n');
                     }
                 }
                 format.printContextSensitive = true;

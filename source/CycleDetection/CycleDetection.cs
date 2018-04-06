@@ -639,7 +639,7 @@ namespace AxiomProfiler.CycleDetection
                 for (int i = 0; i < newTerm.Args.Length; ++i)
                 {
                     var subterm = newTerm.Args[i];
-                    HighlightNewTerms(subterm, referenceTerm, format.nextDepth(newTerm, i));
+                    HighlightNewTerms(subterm, referenceTerm, format.NextTermPrintingDepth(newTerm, i));
                 }
             }
         }

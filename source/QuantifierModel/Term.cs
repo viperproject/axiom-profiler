@@ -18,7 +18,6 @@ namespace AxiomProfiler.QuantifierModel
         public readonly List<Term> dependentTerms = new List<Term>();
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
-        private static string indentDiff = "¦ ";
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
@@ -168,24 +167,20 @@ namespace AxiomProfiler.QuantifierModel
         {
             content.Append(Name);
             if (format.showType) content.Append(GenericType);
-            if (format.showTermId) content.Append("[" + id + "]");
+            if (format.showTermId) content.Append("[" + (id > 0 ? id.ToString() : "g" + id) + "]");
         }
 
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int indent = 0)
         {
-            Stack<Color> indentStack;
+            var indentColors = Enumerable.Empty<Color>();
             if (indent >= 2)
             {
-                var colors = Enumerable.Repeat(PrintConstants.defaultTextColor, 1);
-                colors = colors.Concat(Enumerable.Repeat(Color.Transparent, indent - 2));
-                indentStack = new Stack<Color>(colors);
+                indentColors = indentColors.Concat(Enumerable.Repeat(PrintConstants.defaultTextColor, 1));
+                indentColors = indentColors.Concat(Enumerable.Repeat(Color.Transparent, indent - 2));
             }
-            else
-            {
-                indentStack = new Stack<Color>();
-            }
+            indentColors = indentColors.Concat(Enumerable.Repeat(PrintConstants.defaultTextColor, format.CurrentEqualityExplanationPrintingDepth));
                 
-            PrettyPrint(content, indentStack, format);
+            PrettyPrint(content, new Stack<Color>(indentColors), format);
         }
 
         private bool PrettyPrint(InfoPanelContent content, Stack<Color> indentFormats, PrettyPrintFormat format)
@@ -200,7 +195,7 @@ namespace AxiomProfiler.QuantifierModel
             content.switchFormat(printRule.font ?? PrintConstants.DefaultFont, printRule.color);
 
             // check for cutoff
-            if (format.maxDepth == 1)
+            if (format.MaxTermPrintingDepth == 1)
             {
                 if (ContainsGeneralization())
                 {
@@ -225,7 +220,7 @@ namespace AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(content, indentFormats, format.nextDepth(this, i))
+                    isMultiline = t.PrettyPrint(content, indentFormats, format.NextTermPrintingDepth(this, i))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
@@ -310,7 +305,7 @@ namespace AxiomProfiler.QuantifierModel
                 // add the indents
                 foreach (var color in indentColors)
                 {
-                    content.Insert(breakIndices[i] + offset, color == Color.Transparent ? " " : indentDiff, PrintConstants.DefaultFont, color);
+                    content.Insert(breakIndices[i] + offset, color == Color.Transparent ? " " : PrintConstants.indentDiff, PrintConstants.DefaultFont, color);
                     offset += content.Length - oldLength;
                     oldLength = content.Length;
                 }

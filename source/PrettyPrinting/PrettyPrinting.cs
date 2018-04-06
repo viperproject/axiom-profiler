@@ -28,6 +28,9 @@ namespace AxiomProfiler.PrettyPrinting
         public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
         public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
 
+        //strings
+        public static readonly string indentDiff = "¦ ";
+
         private PrintConstants() {}
     }
 
@@ -269,7 +272,9 @@ namespace AxiomProfiler.PrettyPrinting
     public class PrettyPrintFormat
     {
         public int maxWidth;
-        public int maxDepth;
+        public int MaxTermPrintingDepth;
+        public int MaxEqualityExplanationPrintingDepth;
+        public int CurrentEqualityExplanationPrintingDepth = 0;
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
@@ -279,12 +284,14 @@ namespace AxiomProfiler.PrettyPrinting
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
         public bool printContextSensitive = true;
 
-        public PrettyPrintFormat nextDepth(Term parent, int childNo)
+        public PrettyPrintFormat NextTermPrintingDepth(Term parent, int childNo)
         {
             var nextFormat = new PrettyPrintFormat
             {
                 maxWidth = maxWidth,
-                maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
+                MaxTermPrintingDepth = MaxTermPrintingDepth == 0 ? 0 : MaxTermPrintingDepth - 1,
+                MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
+                CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth,
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
@@ -297,12 +304,31 @@ namespace AxiomProfiler.PrettyPrinting
             return nextFormat;
         }
 
+        public PrettyPrintFormat NextEqualityExplanationPrintingDepth()
+        {
+            var nextFormat = new PrettyPrintFormat
+            {
+                maxWidth = maxWidth,
+                MaxTermPrintingDepth = MaxTermPrintingDepth,
+                MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
+                CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth + 1,
+                showTermId = showTermId,
+                showType = showType,
+                rewritingEnabled = rewritingEnabled,
+                printRuleDict = printRuleDict,
+                childIndex = childIndex
+            };
+            nextFormat.printContextSensitive = printContextSensitive;
+            return nextFormat;
+        }
+
         public static PrettyPrintFormat DefaultPrettyPrintFormat()
         {
             return new PrettyPrintFormat
             {
                 maxWidth = 80,
-                maxDepth = 0,
+                MaxTermPrintingDepth = 0,
+                MaxEqualityExplanationPrintingDepth = 3, //TODO: change here
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,

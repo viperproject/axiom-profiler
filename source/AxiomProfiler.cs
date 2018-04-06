@@ -636,7 +636,8 @@ namespace AxiomProfiler
                 showType = showTypesCB.Checked,
                 showTermId = showTermIdCB.Checked,
                 maxWidth = (int)maxTermWidthUD.Value,
-                maxDepth = (int)maxTermDepthUD.Value,
+                MaxTermPrintingDepth = (int)maxTermDepthUD.Value,
+                MaxEqualityExplanationPrintingDepth = 3, //TODO: change here
                 rewritingEnabled = enableRewritingCB.Checked,
                 printRuleDict = printRuleDict.clone()
             };
