@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //
 // Copyright (C) Microsoft Corporation.  All Rights Reserved.
 //
@@ -37,10 +37,10 @@ namespace AxiomProfiler
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
 
         //TODO: estimate capacity based on file size
-        private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000);
-        private readonly Dictionary<Term, HashSet<Term>> proofStepClosuresReverse = new Dictionary<Term, HashSet<Term>>(300_000);
-        private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000);
-        private readonly Dictionary<Term, HashSet<Term>> reverseRewriteClusureReverse = new Dictionary<Term, HashSet<Term>>(40_000);
+        private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
+        private readonly Dictionary<Term, HashSet<Term>> proofStepClosuresReverse = new Dictionary<Term, HashSet<Term>>(300_000); //inverse for more efficient updates
+        private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000); //keeps track of term rewritings by z3
+        private readonly Dictionary<Term, HashSet<Term>> reverseRewriteClusureReverse = new Dictionary<Term, HashSet<Term>>(40_000); //inverse for more efficient updates
         private static readonly String[] proofRuleNames =
             { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
             "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
@@ -957,7 +957,7 @@ namespace AxiomProfiler
                         {
                             long id = GetId(words[pos]);
                             var t = model.terms[(int)id];
-                            Term quantImpliesBody = /*model.terms[(int)id];*/ GetOrId(proofStepClosures, model.terms[(int) id]);
+                            Term quantImpliesBody = GetOrId(proofStepClosures, model.terms[(int) id]);
 
                             if (quantImpliesBody.Name == "or")
                             {
@@ -1241,11 +1241,13 @@ namespace AxiomProfiler
 
         public void Finish()
         {
+            //add reverse rewrites to terms
             foreach (var reverseRewrite in reverseRewriteClosure)
             {
                 reverseRewrite.Key.reverseRewrite = reverseRewrite.Value;
             }
 
+            //unify quantifiers with the same name and body
             var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {
                 var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
                 foreach (var quant in group)
@@ -1279,6 +1281,7 @@ namespace AxiomProfiler
                 model.quantifiers.Add("#" + quant.BodyTerm.id, quant);
             }
 
+            //code used to test several heuristics for choosing a path to try to find a matching loop on
             /*var random = new Random();
             Console.Out.WriteLine("start");
             foreach (var i in new int[] { 30715 })//Enumerable.Range(0, 100))

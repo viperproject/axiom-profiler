@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using AxiomProfiler.CycleDetection;
@@ -131,7 +131,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             foreach (var term in potGens)
             {
-                if (term is Term && generalization.IsReplaced(term.id))
+                if (term is Term && generalization.IsReplacedByGeneralization(term.id))
                 {
                     term.highlightTemporarily(format, PrintConstants.generalizationColor);
                 }
@@ -244,7 +244,6 @@ namespace AxiomProfiler.QuantifierModel
             }
 
             if (current.bindingInfo.equalities.Count > 0)
-            {
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
@@ -252,6 +251,7 @@ namespace AxiomProfiler.QuantifierModel
                 var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 format.printContextSensitive = false;
                 foreach (var equality in current.bindingInfo.equalities)
+                {
                 {
                     var effectiveTerm = current.bindingInfo.bindings[equality.Key];
                     equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
@@ -419,8 +419,8 @@ namespace AxiomProfiler.QuantifierModel
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nTerms for the Next Iteration:\n\n");
                 content.switchToDefaultFormat();
-                generalizationState.PrintGeneralizationsForNextIteration(content, format);
-
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nBindings to Start Next Iteration:\n\n");
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nBindings to Start Next Iteration:\n\n");
                 content.switchToDefaultFormat();
@@ -492,12 +492,12 @@ namespace AxiomProfiler.QuantifierModel
                         content.Append("\n");
                     }
                 }
-            }
-
             if (bindingInfo.equalities.Count > 0)
             {
                 var equalitySetLookup = bindingInfo.equalities.ToLookup(eq => eq.Key.ContainsGeneralization() || eq.Value.Any(t => t.ContainsGeneralization()));
 
+                format.printContextSensitive = false;
+                var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 format.printContextSensitive = false;
                 var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 if (equalitySetLookup[true].Any())
@@ -569,20 +569,20 @@ namespace AxiomProfiler.QuantifierModel
                                 effectiveTerm.PrettyPrint(content, format, numberingString.Length);
                             }
                             content.switchToDefaultFormat();
-                            content.Append('\n');
-                        }
-                    }
                 }
                 format.printContextSensitive = true;
 
                 bindingInfo.PrintEqualitySubstitution(content, format, termNumberings, equalityNumberings);
-            }
-
+                format.printContextSensitive = true;
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nBinding information:");
-            content.switchToDefaultFormat();
-
+            }
             foreach (var bindings in bindingInfo.getBindingsToFreeVars())
+            {
+                content.Append("\n\n");
+                content.Append(bindings.Key.Name).Append(" was bound to:\n");
+                bindings.Value.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
             {
                 content.Append("\n\n");
                 content.Append(bindings.Key.Name).Append(" was bound to:\n");

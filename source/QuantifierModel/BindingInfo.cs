@@ -1,4 +1,4 @@
-﻿using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.PrettyPrinting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -100,6 +100,9 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// Constructs a concrete term exacly matching the pattern by applying equality substituations.
+        /// </summary>
         private Term EffectiveBlameTermForPatternTerm(Term patternTerm)
         {
             var boundTerm = bindings[patternTerm];
@@ -116,6 +119,9 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
+        /// <summary>
+        /// Prints a section explaining the equality substitutions necessary to obtain a term matching the trigger.
+        /// </summary>
         public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings, IEnumerable<Tuple<IEnumerable<Term>, int>> equalityNumberings)
         {
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
