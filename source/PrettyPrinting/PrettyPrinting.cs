@@ -275,6 +275,7 @@ namespace AxiomProfiler.PrettyPrinting
         public int MaxTermPrintingDepth;
         public int MaxEqualityExplanationPrintingDepth;
         public int CurrentEqualityExplanationPrintingDepth = 0;
+        public bool ShowEqualityExplanations;
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
@@ -292,6 +293,7 @@ namespace AxiomProfiler.PrettyPrinting
                 MaxTermPrintingDepth = MaxTermPrintingDepth == 0 ? 0 : MaxTermPrintingDepth - 1,
                 MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
                 CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth,
+                ShowEqualityExplanations = ShowEqualityExplanations,
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
@@ -312,6 +314,7 @@ namespace AxiomProfiler.PrettyPrinting
                 MaxTermPrintingDepth = MaxTermPrintingDepth,
                 MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
                 CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth + 1,
+                ShowEqualityExplanations = ShowEqualityExplanations,
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
@@ -328,7 +331,8 @@ namespace AxiomProfiler.PrettyPrinting
             {
                 maxWidth = 80,
                 MaxTermPrintingDepth = 0,
-                MaxEqualityExplanationPrintingDepth = 3, //TODO: change here
+                MaxEqualityExplanationPrintingDepth = 3,
+                ShowEqualityExplanations = true,
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,

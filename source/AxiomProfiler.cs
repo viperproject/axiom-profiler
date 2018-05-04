@@ -637,7 +637,8 @@ namespace AxiomProfiler
                 showTermId = showTermIdCB.Checked,
                 maxWidth = (int)maxTermWidthUD.Value,
                 MaxTermPrintingDepth = (int)maxTermDepthUD.Value,
-                MaxEqualityExplanationPrintingDepth = 3, //TODO: change here
+                MaxEqualityExplanationPrintingDepth = (int)congruenceDepthUD.Value,
+                ShowEqualityExplanations = showEqualityExplanationsCheckBox.Checked,
                 rewritingEnabled = enableRewritingCB.Checked,
                 printRuleDict = printRuleDict.clone()
             };
@@ -800,6 +801,16 @@ namespace AxiomProfiler
         private void z3AxiomTree_Leave(object sender, EventArgs e)
         {
             z3AxiomTree.SelectedNode = null;
+        }
+
+        private void congruenceDepthUD_ValueChanged(object sender, EventArgs e)
+        {
+            SetInfoPanel(currentInfoPanelPrintable);
+        }
+
+        private void showEqualityExplanationsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            SetInfoPanel(currentInfoPanelPrintable);
         }
     }
 }

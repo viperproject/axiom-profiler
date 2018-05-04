@@ -230,6 +230,9 @@ namespace AxiomProfiler.CycleDetection
                     assocGenBlameTerm[generalizedYield].Add(otherGenTerm);
                 }
 
+                //generalize equality explanations
+                generalizeEqualityExplanations(j, it == loopInstantiations.Length);
+
                 loopInstantiations[j] = loopInstantiations[j].Select(inst =>
                 {
                     var tmp = inst.Copy();
@@ -248,8 +251,7 @@ namespace AxiomProfiler.CycleDetection
             }
 
             var iterationFinalTerm = generalizedTerms.Last();
-            var test = wrapBindings.getDistinctBlameTerms();
-            MarkGeneralizations(generalizedTerms.First(), test.First(t => iterationFinalTerm.isSubterm(t.id)));
+            MarkGeneralizations(generalizedTerms.First(), wrapBindings.getDistinctBlameTerms().First(t => iterationFinalTerm.isSubterm(t.id)));
         }
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd)
@@ -265,6 +267,518 @@ namespace AxiomProfiler.CycleDetection
                     MarkGeneralizations(loopStart.Args[i], loopEnd.Args[i]);
                 }
             }
+        }
+
+        private void generalizeEqualityExplanations(int instIndex, bool loopWrapAround)
+        {
+            var insts = loopInstantiations[instIndex];
+            var equalityExplanations = insts.First().bindingInfo.EqualityExplanations.Select(ee => new List<EqualityExplanation>() { ee }).ToArray();
+            foreach (var inst in insts.Skip(1))
+            {
+                foreach (var listAndElement in equalityExplanations.Zip(inst.bindingInfo.EqualityExplanations, Tuple.Create))
+                {
+                    listAndElement.Item1.Add(listAndElement.Item2);
+                }
+            }
+
+            BindingInfo generalizedBindingInfo;
+            if (loopWrapAround)
+            {
+                generalizedBindingInfo = wrapBindings;
+            }
+            else
+            {
+                generalizedBindingInfo = generalizedBindings[insts[insts.Count / 2].Quant.BodyTerm.id];
+            }
+
+            var safeIndex = insts.Count / 2;
+            var recursionPointFinder = new RecursionPointFinder();
+            var candidates = new List<List<EqualityExplanation[]>>();
+            for (var generation = 0; generation <= safeIndex; ++generation)
+            {
+                var generationSlice = loopInstantiations.Select(quantInstantiations => quantInstantiations[generation].bindingInfo.EqualityExplanations);
+                if (generation == safeIndex)
+                {
+                    generationSlice = generationSlice.Take(instIndex);
+                }
+                candidates.Add(generationSlice.ToList());
+            }
+            candidates.Reverse();
+            generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
+                recursionPointFinder.visit(list[safeIndex], Tuple.Create(new List<int>(), candidates));
+
+                var validationFilter = ValidateRecursionPoints(recursionPointFinder.recursionPoints, list);
+                var validExplanations = list.Zip(validationFilter, Tuple.Create).Where(filter => filter.Item2).Select(filter => filter.Item1);
+                //TODO: warn if very few remain
+                var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPointFinder.recursionPoints, validExplanations);
+
+                recursionPointFinder.recursionPoints.Clear();
+
+                var reversed = explanationsWithoutRecursion.Reverse();
+                return reversed.Aggregate(EqualityExplanationGeneralizer);
+            }).ToArray();
+        }
+
+        private class RecursionPointFinder: EqualityExplanationVisitor<object, Tuple<List<int>, List<List<EqualityExplanation[]>>>>
+        {
+            public Dictionary<List<int>, Tuple<int, int, int>> recursionPoints = new Dictionary<List<int>, Tuple<int, int, int>>();
+
+            private static Tuple<int, int, int> FindRecursionPoint(EqualityExplanation explanation, List<List<EqualityExplanation[]>> candidates)
+            {
+                for (var generation = 0; generation < candidates.Count; ++generation)
+                {
+                    var generationCandidates = candidates[generation];
+                    for (var quantifier = 0; quantifier < generationCandidates.Count; ++quantifier)
+                    {
+                        var quantifierCandidates = generationCandidates[quantifier];
+                        for (var equality = 0; equality < quantifierCandidates.Length; ++equality)
+                        {
+                            var equalityCandidate = quantifierCandidates[equality];
+
+                            /* Since the candidates were produced by instantiations that (dirctly or indirectly) caused the current instantiation
+                             * their scope and therefore all their equality explanations must still be valid. We can, therefore, omit some of the
+                             * checks usually performed by the Equals() method.
+                             */
+                            if (equalityCandidate.source.id == explanation.source.id && equalityCandidate.target.id == explanation.target.id)
+                            {
+                                return new Tuple<int, int, int>(generation, quantifier, equality);
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            private static Tuple<int, int, int> FindRecursionPointInTransitiveExplanation(TransitiveEqualityExplanation explanation, int strictlyStartingAtIndex, List<List<EqualityExplanation[]>> candidates, out int length)
+            {
+                length = 0;
+                var relevantEqualities = explanation.equalities.Skip(strictlyStartingAtIndex).Select((ee, index) => Tuple.Create(ee, index + 1));
+                if (!relevantEqualities.Any()) return null;
+                var startId = relevantEqualities.First().Item1.source.id;
+                var longestGen = 0;
+                var longestQuant = 0;
+                var longestEq = 0;
+
+                for (var generation = 0; generation < candidates.Count; ++generation)
+                {
+                    var generationCandidates = candidates[generation];
+                    for (var quantifier = 0; quantifier < generationCandidates.Count; ++quantifier)
+                    {
+                        var quantifierCandidates = generationCandidates[quantifier];
+                        for (var equality = 0; equality < quantifierCandidates.Length; ++equality)
+                        {
+                            var equalityCandidate = quantifierCandidates[equality];
+                            if (equalityCandidate.source.id == startId)
+                            {
+                                var candidateLength = relevantEqualities.FirstOrDefault(explanationLengthPair => explanationLengthPair.Item1.target.id == equalityCandidate.target.id).Item2;
+                                if (candidateLength > length)
+                                {
+                                    length = candidateLength;
+                                    longestGen = generation;
+                                    longestQuant = quantifier;
+                                    longestEq = equality;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (length == 0)
+                {
+                    return null;
+                }
+                else
+                {
+                    return Tuple.Create(longestGen, longestQuant, longestEq);
+                }
+            }
+
+            public override object Direct(DirectEqualityExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
+            {
+                return null;
+            }
+
+            public override object Transitive(TransitiveEqualityExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
+            {
+                var path = arg.Item1;
+                var candidates = arg.Item2;
+                var recursionPoint = FindRecursionPoint(target, candidates);
+                if (recursionPoint == null)
+                {
+                    var stepSize = 1;
+                    for (var i = 0; i < target.equalities.Count(); i += stepSize)
+                    {
+                        var internalRecursionPoint = FindRecursionPointInTransitiveExplanation(target, i, candidates, out stepSize);
+                        if (internalRecursionPoint == null)
+                        {
+                            stepSize = 1;
+                            var newPath = new List<int>(path) { i };
+                            visit(target.equalities[i], Tuple.Create(newPath, candidates));
+                        }
+                        else
+                        {
+                            var pathForInternalRecursionPoint = new List<int>(path) { i, -stepSize };
+                            recursionPoints.Add(pathForInternalRecursionPoint, internalRecursionPoint);
+                        }
+                    }
+                }
+                else
+                {
+                    recursionPoints.Add(path, recursionPoint);
+                }
+                return null;
+            }
+
+            public override object Congruence(CongruenceExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
+            {
+                var path = arg.Item1;
+                var candidates = arg.Item2;
+                var recursionPoint = FindRecursionPoint(target, candidates);
+                if (recursionPoint == null)
+                {
+                    for (var i = 0; i < target.sourceArgumentEqualities.Count(); ++i)
+                    {
+                        var newPath = new List<int>(path) { i };
+                        visit(target.sourceArgumentEqualities[i], Tuple.Create(newPath, candidates));
+                    }
+                }
+                else
+                {
+                    recursionPoints.Add(path, recursionPoint);
+                }
+                return null;
+            }
+
+            public override object RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        private class RecursionPointVerifier: EqualityExplanationVisitor<bool, Tuple<IEnumerable<int>, EqualityExplanation>>
+        {
+            public static readonly RecursionPointVerifier singleton = new RecursionPointVerifier();
+
+            public override bool Direct(DirectEqualityExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
+            {
+                var path = arg.Item1;
+                var explanation = arg.Item2;
+                return !path.Any() && target.source.id == explanation.source.id && target.target.id == explanation.target.id;
+            }
+            
+            public override bool Transitive(TransitiveEqualityExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
+            {
+                var path = arg.Item1;
+                var explanation = arg.Item2;
+                var indicator = path.Take(3).Count();
+                if (indicator == 0)
+                {
+                    return target.source.id == explanation.source.id && target.target.id == explanation.target.id;
+                }
+                else if (indicator == 2 && path.ElementAt(1) < 0)
+                {
+                    var startIndex = path.ElementAt(0);
+                    var endIndex = startIndex - path.ElementAt(1) - 1;
+                    if (endIndex < target.equalities.Length)
+                    {
+                        return target.equalities[startIndex].source.id == explanation.source.id && target.equalities[endIndex].target.id == explanation.target.id;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    var nextArg = Tuple.Create(path.Skip(1), explanation);
+                    var index = path.First();
+                    if (index < target.equalities.Length)
+                    {
+                        return visit(target.equalities[index], nextArg);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            public override bool Congruence(CongruenceExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
+            {
+                var path = arg.Item1;
+                var explanation = arg.Item2;
+                if (path.Any())
+                {
+                    var nextArg = Tuple.Create(path.Skip(1), explanation);
+                    var index = path.First();
+                    if (index < target.sourceArgumentEqualities.Length)
+                    {
+                        return visit(target.sourceArgumentEqualities[index], nextArg);
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return target.source.id == explanation.source.id && target.target.id == explanation.target.id;
+                }
+            }
+
+            public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        private bool[] ValidateRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, List<EqualityExplanation> equalityExplanations)
+        {
+            var recursionPointVerifier = RecursionPointVerifier.singleton;
+            var returnValue = Enumerable.Repeat(true, equalityExplanations.Count).ToArray();
+
+            foreach (var recursionPoint in recursionPoints)
+            {
+                var path = recursionPoint.Key;
+                var recursionOffset = recursionPoint.Value;
+                var generationOffset = recursionOffset.Item1;
+                var quantifer = recursionOffset.Item2;
+                var equality = recursionOffset.Item3;
+
+                for (int i = 0; i < generationOffset; ++i) returnValue[i] = false;
+
+                for (int i = generationOffset; i < equalityExplanations.Count; ++i)
+                {
+                    var explanation = equalityExplanations[i];
+                    var recursionTarget = loopInstantiations[quantifer][i - generationOffset].bindingInfo.EqualityExplanations[equality];
+                    var arg = Tuple.Create<IEnumerable<int>, EqualityExplanation>(path, recursionTarget);
+                    if (!recursionPointVerifier.visit(explanation, arg))
+                    {
+                        returnValue[i] = false;
+                    }
+                }
+            }
+            return returnValue;
+        }
+
+        private class RecursionPointGeneralizer: EqualityExplanationVisitor<EqualityExplanation, Tuple<IEnumerable<int>, Tuple<int, int>>>
+        {
+            public static readonly RecursionPointGeneralizer singleton = new RecursionPointGeneralizer();
+
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            {
+                var recursionPoint = arg.Item2;
+                return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            {
+                var path = arg.Item1;
+                var indicator = path.Take(3).Count();
+                if (indicator == 0)
+                {
+                    var recursionPoint = arg.Item2;
+                    return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
+                }
+                else if (indicator == 2 && path.ElementAt(1) < 0)
+                {
+                    var startIndex = path.ElementAt(0);
+                    var length = -path.ElementAt(1);
+                    var endIndex = startIndex + length - 1;
+                    var recursionPoint = arg.Item2;
+
+                    var newLength = target.equalities.Length - length + 1;
+                    var newEqualities = new EqualityExplanation[newLength];
+                    Array.Copy(target.equalities, newEqualities, startIndex);
+                    newEqualities[startIndex] = new RecursiveReferenceEqualityExplanation(target.equalities[startIndex].source, target.equalities[endIndex].target, recursionPoint.Item1, recursionPoint.Item2);
+                    Array.Copy(target.equalities, endIndex + 1, newEqualities, startIndex + 1, newLength - startIndex - 1);
+
+                    return new TransitiveEqualityExplanation(target.source, target.target, newEqualities);
+                }
+                else
+                {
+                    var index = path.First();
+                    var nextPath = path.Skip(1);
+                    var nextArg = Tuple.Create(nextPath, arg.Item2);
+
+                    var newEqualities = new EqualityExplanation[target.equalities.Length];
+                    Array.Copy(target.equalities, newEqualities, target.equalities.Length);
+                    newEqualities[index] = visit(target.equalities[index], nextArg);
+
+                    return new TransitiveEqualityExplanation(target.source, target.target, newEqualities);
+                }
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            {
+                var path = arg.Item1;
+                if (path.Any())
+                {
+                    var index = path.First();
+                    var nextPath = path.Skip(1);
+                    var nextArg = Tuple.Create(nextPath, arg.Item2);
+
+                    var newEqualities = new EqualityExplanation[target.sourceArgumentEqualities.Length];
+                    Array.Copy(target.sourceArgumentEqualities, newEqualities, target.sourceArgumentEqualities.Length);
+                    newEqualities[index] = visit(target.sourceArgumentEqualities[index], nextArg);
+
+                    return new CongruenceExplanation(target.source, target.target, newEqualities);
+                }
+                else
+                {
+                    var recursionPoint = arg.Item2;
+                    return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
+                }
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        private static IEnumerable<EqualityExplanation> GeneralizeAtRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, IEnumerable<EqualityExplanation> equalityExplanations)
+        {
+            var recursionPointGeneralizer = RecursionPointGeneralizer.singleton;
+            var currentGeneralizations = equalityExplanations.Reverse().ToArray();
+
+            /* Generalizing transitive equality explanations may change the number of child explanations. In particular multiple explanations may be combined into
+             * a single recursive reference. Since this changes the indices of all explanations that come afterward we need to make sure that we already generalized
+             * all of those explanations so we don't use invalid indices later on. Ordering the paths in reverse alphabetical order achieves just that.
+             */
+            var alphabeticalComparer = Comparer<List<int>>.Create((x, y) => {
+                foreach (var pair in x.Zip(y, Tuple.Create))
+                {
+                    var result = Comparer<int>.Default.Compare(pair.Item1, pair.Item2);
+                    if (result != 0) return result;
+                }
+                return Comparer<int>.Default.Compare(x.Count, y.Count);
+            });
+            foreach (var recursionPoint in recursionPoints.OrderByDescending(kv => kv.Key, alphabeticalComparer))
+            {
+                var recursionInfo = Tuple.Create(recursionPoint.Value.Item2 + recursionPoint.Value.Item3, recursionPoint.Value.Item1);
+                for (int i = 0; i < currentGeneralizations.Length; ++i)
+                {
+                    currentGeneralizations[i] = recursionPointGeneralizer.visit(currentGeneralizations[i], Tuple.Create<IEnumerable<int>, Tuple<int, int>>(recursionPoint.Key, recursionInfo));
+                }
+            }
+            return currentGeneralizations;
+        }
+
+        private class NonRecursiveEqualityExplanationGeneralizer: EqualityExplanationVisitor<EqualityExplanation, Tuple<GeneralizationState, EqualityExplanation>>
+        {
+            public static readonly NonRecursiveEqualityExplanationGeneralizer singleton = new NonRecursiveEqualityExplanationGeneralizer();
+            private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
+
+            private static Term GetGeneralizedTerm(Term gen, Term other, GeneralizationState genState)
+            {
+                var t1 = gen;
+                var t2 = other;
+                if (t1.id != t2.id)
+                {
+                    if (t1.id >= 0 && genState.replacementDict.TryGetValue(t1.id, out var generalization))
+                    {
+                        t1 = generalization;
+                    }
+                    if (genState.replacementDict.TryGetValue(t2.id, out generalization))
+                    {
+                        t2 = generalization;
+                    }
+                    //TODO: use new generalization, reference correct iteration
+                    if (t2.id < 0) return t2;
+                    if (t1.id != t2.id)
+                    {
+                        t1 = new Term("generalization", new Term[0])
+                        {
+                            id = -123
+                        };
+                    }
+                }
+                return t1;
+            }
+
+            private static EqualityExplanation DefaultGeneralization(EqualityExplanation target, EqualityExplanation other, GeneralizationState genState)
+            {
+                var sourceTerm = GetGeneralizedTerm(target.source, other.source, genState);
+                var targetTerm = GetGeneralizedTerm(target.target, other.target, genState);
+                return new TransitiveEqualityExplanation(sourceTerm, targetTerm, emptyEqualityExplanations);
+            }
+
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation> arg)
+            {
+                var genState = arg.Item1;
+                var other = arg.Item2;
+                if  (other.GetType() != typeof(DirectEqualityExplanation))
+                {
+                    return DefaultGeneralization(target, other, genState);
+                }
+
+                var otherDirect = (DirectEqualityExplanation) other;
+                var sourceTerm = GetGeneralizedTerm(target.source, otherDirect.source, genState);
+                var targetTerm = GetGeneralizedTerm(target.target, otherDirect.target, genState);
+                var eqTerm = GetGeneralizedTerm(target.equality, otherDirect.equality, genState);
+                return new DirectEqualityExplanation(sourceTerm, targetTerm, eqTerm);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation> arg)
+            {
+                var genState = arg.Item1;
+                var other = arg.Item2;
+                if (other.GetType() != typeof(TransitiveEqualityExplanation))
+                {
+                    return DefaultGeneralization(target, other, genState);
+                }
+
+                var otherTransitive = (TransitiveEqualityExplanation) other;
+                if (target.equalities.Length != otherTransitive.equalities.Length)
+                {
+                    return DefaultGeneralization(target, other, genState);
+                }
+
+                var sourceTerm = GetGeneralizedTerm(target.source, otherTransitive.source, genState);
+                var targetTerm = GetGeneralizedTerm(target.target, otherTransitive.target, genState);
+                var equalities = target.equalities.Zip(otherTransitive.equalities, (gen, cur) =>
+                {
+                    var nextArg = Tuple.Create(genState, cur);
+                    return visit(gen, nextArg);
+                }).ToArray();
+                return new TransitiveEqualityExplanation(sourceTerm, targetTerm, equalities);
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, Tuple<GeneralizationState, EqualityExplanation> arg)
+            {
+                var genState = arg.Item1;
+                var other = arg.Item2;
+                if (other.GetType() != typeof(CongruenceExplanation))
+                {
+                    return DefaultGeneralization(target, other, genState);
+                }
+
+                var otherCongruence = (CongruenceExplanation)other;
+                if (target.sourceArgumentEqualities.Length != otherCongruence.sourceArgumentEqualities.Length)
+                {
+                    return DefaultGeneralization(target, other, genState);
+                }
+
+                var sourceTerm = GetGeneralizedTerm(target.source, otherCongruence.source, genState);
+                var targetTerm = GetGeneralizedTerm(target.target, otherCongruence.target, genState);
+                var equalities = target.sourceArgumentEqualities.Zip(otherCongruence.sourceArgumentEqualities, (gen, cur) =>
+                {
+                    var nextArg = Tuple.Create(genState, cur);
+                    return visit(gen, nextArg);
+                }).ToArray();
+                return new CongruenceExplanation(sourceTerm, targetTerm, equalities);
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation> arg)
+            {
+                // Because of the validation phase these should always match.
+                return target;
+            }
+        }
+
+        private EqualityExplanation EqualityExplanationGeneralizer(EqualityExplanation partiallyGeneralized, EqualityExplanation concrete)
+        {
+            return NonRecursiveEqualityExplanationGeneralizer.singleton.visit(partiallyGeneralized, Tuple.Create(this, concrete));
         }
 
         private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool blameWrapAround, bool loopWrapAround)
@@ -665,6 +1179,10 @@ namespace AxiomProfiler.CycleDetection
             }
 
             var bindingInfo = last ? wrapBindings : generalizedBindings[generalizedTerm.dependentInstantiationsBlame.First().Quant.BodyTerm.id];
+            foreach (var term in bindingInfo.equalities.SelectMany(kv1 => kv1.Value))
+            {
+                term.highlightTemporarily(format, PrintConstants.equalityColor);
+            }
             foreach (var term in bindingInfo.bindings.Values)
             {
                 if (bindingInfo.matchContext.TryGetValue(term.id, out var context))
@@ -686,10 +1204,6 @@ namespace AxiomProfiler.CycleDetection
                 {
                     term.highlightTemporarily(format, PrintConstants.bindColor);
                 }
-            }
-            foreach (var term in bindingInfo.equalities.SelectMany(kv1 => kv1.Value))
-            {
-                term.highlightTemporarily(format, PrintConstants.equalityColor);
             }
 
             if (last)

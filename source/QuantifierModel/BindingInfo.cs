@@ -12,7 +12,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public readonly Term[] BoundTerms;
         public readonly Term[] TopLevelTerms;
-        public readonly EqualityExplanation[] EqualityExplanations;
+        public EqualityExplanation[] EqualityExplanations;
 
         private bool processed = false;
         // bindings: freeVariable --> Term
@@ -116,28 +116,6 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
-        public void PrintEqualityExplanations(InfoPanelContent content, PrettyPrintFormat format, List<Tuple<IEnumerable<Term>, int>> equalityNumberings)
-        {
-            var wasContextSensitive = format.printContextSensitive;
-            format.printContextSensitive = false;
-
-            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-            content.Append("\nEquality explanations:\n\n");
-            content.switchToDefaultFormat();
-
-            foreach (var numbering in equalityNumberings)
-            {
-                var explanations = EqualityExplanations.Where(ee => numbering.Item1.Contains(ee.source) && numbering.Item1.Contains(ee.target));
-                foreach (var explanation in explanations)
-                {
-                    explanation.PrettyPrint(content, format, numbering.Item2);
-                    content.Append("\n\n");
-                }
-            }
-
-            format.printContextSensitive = wasContextSensitive;
-        }
-
         public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings, IEnumerable<Tuple<IEnumerable<Term>, int>> equalityNumberings)
         {
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -220,8 +198,29 @@ namespace AxiomProfiler.QuantifierModel
             _patternMatchContext[term.id].AddRange(context);
         }
 
-        private bool AddPatternMatch(Term pattern, Term match, IEnumerable<Term> context)
+        private bool AddPatternMatch(Term pattern, Term match, Term usedEquality, IEnumerable<Term> context, IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch)
         {
+            var origBindings = new Dictionary<Term, Term>(_bindings);
+            var origEqualities = new Dictionary<Term, List<Term>>(_equalities);
+            var origMatchContext = new Dictionary<int, List<List<Term>>>(_matchContext);
+
+            if (usedEquality != null)
+            {
+                if (!_equalities.TryGetValue(pattern, out var eqs))
+                {
+                    eqs = new List<Term>();
+                    _equalities[pattern] = eqs;
+                }
+                eqs.Add(usedEquality);
+                if (!_matchContext.TryGetValue(usedEquality.id, out var eqContexts))
+                {
+                    eqContexts = new List<List<Term>>();
+                    _matchContext[usedEquality.id] = eqContexts;
+                }
+                eqContexts.Add(context.ToList());
+                context = Enumerable.Empty<Term>();
+            }
+
             _bindings[pattern] = match;
             if (!_matchContext.TryGetValue(match.id, out var contexts))
             {
@@ -230,46 +229,86 @@ namespace AxiomProfiler.QuantifierModel
             }
             contexts.Add(context.ToList());
 
-            foreach (var submatch in pattern.Args.Zip(match.Args, Tuple.Create))
+            var nextContext = context.Concat(Enumerable.Repeat(match, 1));
+            var nextMatches = pattern.Args.Zip(match.Args, (p, m) => Tuple.Create(p, m, nextContext)).Concat(toMatch);
+            if (DoNextMatch(nextMatches))
             {
-                var origBindings = new Dictionary<Term, Term>(_bindings);
-                var origEqualities = new Dictionary<Term, List<Term>>(_equalities);
-                var origMatchContext = new Dictionary<int, List<List<Term>>>(_matchContext);
+                return true;
+            }
+            else
+            {
+                _bindings = origBindings;
+                _equalities = origEqualities;
+                _matchContext = origMatchContext;
+                return false;
+            }
+        }
 
-                var subpattern = submatch.Item1;
-                var subterm = submatch.Item2;
-                var nextContext = context.Concat(Enumerable.Repeat(match, 1));
-                if (subpattern.id == -1 || (subpattern.Name == subterm.Name && subpattern.Args.Count() == subterm.Args.Count()))
+        private bool DoNextMatch(IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch)
+        {
+            if (!toMatch.Any())
+            {
+                return IsValid();
+            }
+
+            var match = toMatch.First();
+            var nextMatches = toMatch.Skip(1);
+            var patternTerm = match.Item1;
+            var matchedTerm = match.Item2;
+            var context = match.Item3;
+
+            if (patternTerm.id == -1)
+            {
+                if (_bindings.TryGetValue(patternTerm, out var existingBinding))
                 {
-                    if (!AddPatternMatch(subpattern, subterm, nextContext)) return false;
+                    Term equality = null;
+                    if (existingBinding.id != matchedTerm.id)
+                    {
+                        if (EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == existingBinding.id))
+                        {
+                            equality = matchedTerm;
+                            matchedTerm = existingBinding;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    return AddPatternMatch(patternTerm, matchedTerm, equality, context, nextMatches);
                 }
                 else
                 {
-                    var plausibleEqualities = EqualityExplanations.Where(e => e.source.id == subterm.id && e.target.Name == subpattern.Name && e.target.Args.Count() == subpattern.Args.Count());
-                    foreach (var eq in plausibleEqualities)
+                    if (AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches))
                     {
-                        if (!_equalities.TryGetValue(subpattern, out var eqs))
-                        {
-                            eqs = new List<Term>();
-                            _equalities[subpattern] = eqs;
-                        }
-                        eqs.Add(subterm);
-                        if (!_matchContext.TryGetValue(subterm.id, out contexts))
-                        {
-                            contexts = new List<List<Term>>();
-                            _matchContext[subterm.id] = contexts;
-                        }
-                        contexts.Add(nextContext.ToList());
-                        if (AddPatternMatch(subpattern, eq.target, Enumerable.Empty<Term>())) goto foundMatch;
+                        return true;
                     }
-                    _bindings = origBindings;
-                    _equalities = origEqualities;
-                    _matchContext = origMatchContext;
+                    var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id);
+                    foreach (var equalityExplanation in feasibleEqualities)
+                    {
+                        if (AddPatternMatch(patternTerm, equalityExplanation.target, matchedTerm, context, nextMatches))
+                        {
+                            return true;
+                        }
+                    }
                     return false;
-                    foundMatch: { }
                 }
             }
-            return true;
+            else
+            {
+                if (patternTerm.Name == matchedTerm.Name && patternTerm.Args.Count() == matchedTerm.Args.Count() && AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches))
+                {
+                    return true;
+                }
+                var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id && ee.target.Name == patternTerm.Name && ee.target.Args.Count() == patternTerm.Args.Count());
+                foreach (var equalityExplanation in feasibleEqualities)
+                {
+                    if (AddPatternMatch(patternTerm, equalityExplanation.target, matchedTerm, context, nextMatches))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
         private bool IsValid()
@@ -311,18 +350,13 @@ namespace AxiomProfiler.QuantifierModel
             processed = true;
             foreach (var pattern in fullPattern.Args)
             {
+                //TODO: IsValid() won't work for multipatterns
                 var topLevelMatches = TopLevelTerms.Where(t => t.Name == pattern.Name && t.Args.Count() == pattern.Args.Count());
                 foreach (var match in topLevelMatches)
                 {
-                    if (AddPatternMatch(pattern, match, Enumerable.Empty<Term>()))
+                    if (AddPatternMatch(pattern, match, null, Enumerable.Empty<Term>(), Enumerable.Empty<Tuple<Term, Term, IEnumerable<Term>>>()))
                     {
-                        if (IsValid()) break;
-                        else
-                        {
-                            _bindings.Clear();
-                            _equalities.Clear();
-                            _matchContext.Clear();
-                        }
+                        break;
                     }
                 }
             }

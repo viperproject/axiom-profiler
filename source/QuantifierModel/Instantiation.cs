@@ -8,6 +8,40 @@ namespace AxiomProfiler.QuantifierModel
 {
     public class Instantiation : Common
     {
+        private class DirectEqualityCollector : EqualityExplanationVisitor<IEnumerable<Term>, object>
+        {
+            public override IEnumerable<Term> Direct(DirectEqualityExplanation target, object arg)
+            {
+                yield return target.equality;
+            }
+
+            public override IEnumerable<Term> Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                var result = Enumerable.Empty<Term>();
+                foreach (var eq in target.equalities)
+                {
+                    result = result.Concat(visit(eq, arg));
+                }
+                return result;
+            }
+
+            public override IEnumerable<Term> Congruence(CongruenceExplanation target, object arg)
+            {
+                var result = Enumerable.Empty<Term>();
+                foreach (var eq in target.sourceArgumentEqualities)
+                {
+                    result = result.Concat(visit(eq, arg));
+                }
+                return result;
+            }
+
+            public override IEnumerable<Term> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+        private static readonly DirectEqualityCollector directEqualityCollector = new DirectEqualityCollector();
+
         public Quantifier Quant;
         public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
@@ -28,7 +62,10 @@ namespace AxiomProfiler.QuantifierModel
             {
                 if (_Responsible == null)
                 {
-                    _Responsible = bindingInfo.TopLevelTerms.Concat(bindingInfo.EqualityExplanations.Select(expl => expl.target)).ToArray();
+                    _Responsible = bindingInfo.TopLevelTerms
+                        .Concat(bindingInfo.EqualityExplanations.Select(expl => expl.target))
+                        //.Concat(bindingInfo.EqualityExplanations.SelectMany(expl => directEqualityCollector.visit(expl, null)))
+                        .ToArray();
                 }
                 return _Responsible;
             }
@@ -179,9 +216,9 @@ namespace AxiomProfiler.QuantifierModel
             var termNumberings = new List<Tuple<Term, int>>();
 
             var blameTerms = bindingInfo.getDistinctBlameTerms();
-            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)))
-                .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Contains(req))
-                .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req));
+            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)));
+                //.Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Contains(req))
+                //.Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req));
             foreach (var t in distinctBlameTerms)
             {
                 var numberingString = $"({termNumber}) ";
@@ -204,25 +241,31 @@ namespace AxiomProfiler.QuantifierModel
                 foreach (var equality in bindingInfo.equalities)
                 {
                     var effectiveTerm = bindingInfo.bindings[equality.Key];
-                    equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumber));
-                    var numberingString = $"({termNumber}) ";
-                    ++termNumber;
-                    content.switchToDefaultFormat();
-                    content.Append(numberingString);
-                    var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
                     foreach (var term in equality.Value)
                     {
-                        term.PrettyPrint(content, format, numberingString.Length);
-                        content.switchToDefaultFormat();
-                        content.Append($"\n{indentString}=\n{indentString}");
+                        equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));
+                        if (format.ShowEqualityExplanations)
+                        {
+                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                            explanation.PrettyPrint(content, format, termNumber);
+                            ++termNumber;
+                        }
+                        else
+                        {
+                            var numberingString = $"({termNumber}) ";
+                            ++termNumber;
+                            content.switchToDefaultFormat();
+                            content.Append(numberingString);
+                            var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
+                            term.PrettyPrint(content, format, numberingString.Length);
+                            content.switchToDefaultFormat();
+                            content.Append($"\n{indentString}= (explanation omitted)\n{indentString}");
+                            effectiveTerm.PrettyPrint(content, format, numberingString.Length);
+                        }
+                        content.Append("\n\n");
                     }
-                    effectiveTerm.PrettyPrint(content, format, numberingString.Length);
-
-                    content.Append("\n\n");
                 }
                 format.printContextSensitive = true;
-
-                bindingInfo.PrintEqualityExplanations(content, format, equalityNumberings);
 
                 bindingInfo.PrintEqualitySubstitution(content, format, termNumberings, equalityNumberings);
             }
@@ -256,6 +299,13 @@ namespace AxiomProfiler.QuantifierModel
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
             if (bindingInfo == null) return;
+
+            // highlight replaced, equal terms as well
+            foreach (var eqTerm in bindingInfo.equalities.SelectMany(kv => kv.Value))
+            {
+                eqTerm.highlightTemporarily(format, PrintConstants.equalityColor, bindingInfo.matchContext[eqTerm.id]);
+            }
+
             bindingInfo.fullPattern.highlightTemporarily(format, PrintConstants.patternMatchColor);
             foreach (var binding in bindingInfo.bindings)
             {
@@ -266,12 +316,6 @@ namespace AxiomProfiler.QuantifierModel
 
                 patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
                 term.highlightTemporarily(format, color, bindingInfo.matchContext[term.id]);
-            }
-
-            // highlight replaced, equal terms as well
-            foreach (var eqTerm in bindingInfo.equalities.SelectMany(kv => kv.Value))
-            {
-                eqTerm.highlightTemporarily(format, PrintConstants.equalityColor, bindingInfo.matchContext[eqTerm.id]);
             }
         }
 

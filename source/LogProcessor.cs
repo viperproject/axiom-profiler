@@ -206,10 +206,6 @@ namespace AxiomProfiler
         {
             if (key == ";") return null;
             int id = parseIdentifier(RemoveParen(key));
-            if (!model.terms.ContainsKey(id))
-            {
-                model.terms[id] = new Term("qvar_" + id, EmptyTerms);
-            }
             return model.terms[id];
         }
 
@@ -535,7 +531,8 @@ namespace AxiomProfiler
             int endIndex = logInfo.Length;
             int i = off;
             var topLevelTerms = new List<Term>();
-            var explanations = new List<EqualityExplanation>();
+            var explanations = bindings.Select(b => GetExplanationToRoot(b.id)).ToList();
+            var bindingsRoots = explanations.Select(e => e.target).ToArray();
             while (i < endIndex)
             {
                 if (logInfo[i][0] == '#')
@@ -551,7 +548,7 @@ namespace AxiomProfiler
                     i += 2;
                 }
             }
-            return new BindingInfo(pattern, bindings, topLevelTerms, explanations);
+            return new BindingInfo(pattern, bindingsRoots, topLevelTerms, explanations);
         }
 
         private class ExplanationFinalizer : EqualityExplanationVisitor<EqualityExplanation, LogProcessor>
@@ -570,6 +567,11 @@ namespace AxiomProfiler
             {
                 var argumentExplanations = target.sourceArgumentEqualities.Select(e => arg.GetExplanation(e.source.id, e.target.id));
                 return new CongruenceExplanation(target.source, target.target, argumentExplanations.ToArray());
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, LogProcessor arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
             }
         }
 
@@ -607,6 +609,11 @@ namespace AxiomProfiler
                 }
                 return new CongruenceExplanation(target.target, target.source, reversedChildren);
             }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
         }
 
         private class ExplanationExtractor : EqualityExplanationVisitor<IEnumerable<EqualityExplanation>, object>
@@ -625,6 +632,11 @@ namespace AxiomProfiler
             {
                 yield return target;
             }
+
+            public override IEnumerable<EqualityExplanation> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
         }
 
         private readonly ExplanationFinalizer explanationFinalizer = new ExplanationFinalizer();
@@ -632,6 +644,24 @@ namespace AxiomProfiler
         private readonly ExplanationExtractor explanationExtractor = new ExplanationExtractor();
 
         private readonly Dictionary<string, EqualityExplanation> equalityExplanationCache = new Dictionary<string, EqualityExplanation>();
+
+        private EqualityExplanation GetExplanationToRoot(int id)
+        {
+            var explanations = new List<EqualityExplanation>();
+            int it;
+            for (it = id; model.equalityExplanations.TryGetValue(it, out var explanation); it = explanation.target.id)
+            {
+                explanations.Add(explanation);
+            }
+            if (explanations.Count() == 1)
+            {
+                return explanations.Single();
+            }
+            else
+            {
+                return new TransitiveEqualityExplanation(model.terms[id], model.terms[it], explanations.Select(ee => explanationFinalizer.visit(ee, this)).ToArray());
+            }
+        }
 
         private EqualityExplanation GetExplanation(int sourceId, int targetId)
         {
@@ -746,6 +776,13 @@ namespace AxiomProfiler
                     }
                     break;
 
+                case "[mk-var]":
+                    {
+                        var id = parseIdentifier(words[1]);
+                        model.terms[id] = new Term("qvar_" + id, EmptyTerms);
+                    }
+                    break;
+
                 case "[mk-app]":
                     {
                         Term[] args = GetArgs(words, 3);
@@ -792,15 +829,6 @@ namespace AxiomProfiler
                                         reverseRewriteClosure[pathBeginning] = from;
                                     }
                                 }
-                            }
-                            else if ((words[2] == "refl" && args.First().Name == "iff") || (words[2] == "asserted" && args.First().id < 25))
-                            {
-                                //TODO: too many
-                                var arg = args.First();
-                                t = new Term("qvar_" + arg.id, EmptyTerms);
-                                model.terms[arg.id] = t;
-                                model.terms[parseIdentifier(words[1])] = t;
-                                break;
                             }
 
                             var prerequisiteClosure = new HashSet<Term>(args);
@@ -898,9 +926,10 @@ namespace AxiomProfiler
                         if (!interestedInCurrentCheck) break;
                         if (words.Length < 3) break;
                         var separationIndex = Array.FindIndex(words, el => el == ";");
-                        Term[] args = GetArgs(words, 3, separationIndex);
+                        Term[] args = GetArgs(words, 4, separationIndex);
                         var quant = model.quantifiers[words[2]];
-                        var pattern = quant.BodyTerm.Args.Single(t => t.Name == "pattern");
+                        var pattern = GetTerm(words[3]);
+                        if (pattern.Name != "pattern") throw new InvalidOperationException($"Expected pattern but found {pattern}.");
                         var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
                         Instantiation inst = new Instantiation(bindingInfo)
                         {

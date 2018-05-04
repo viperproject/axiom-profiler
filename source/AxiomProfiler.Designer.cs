@@ -51,7 +51,9 @@ namespace AxiomProfiler
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.toolsPanel = new System.Windows.Forms.Panel();
+            this.congruenceDepthUD = new System.Windows.Forms.NumericUpDown();
             this.rewritingRulesButton = new System.Windows.Forms.Button();
+            this.congruenceDepthLabel = new System.Windows.Forms.Label();
             this.enableRewritingCB = new System.Windows.Forms.CheckBox();
             this.showTermIdCB = new System.Windows.Forms.CheckBox();
             this.showTypesCB = new System.Windows.Forms.CheckBox();
@@ -59,6 +61,7 @@ namespace AxiomProfiler
             this.maxTermDepthLabel = new System.Windows.Forms.Label();
             this.maxTermWidthUD = new System.Windows.Forms.NumericUpDown();
             this.widthLabel = new System.Windows.Forms.Label();
+            this.showEqualityExplanationsCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.SuspendLayout();
@@ -68,6 +71,7 @@ namespace AxiomProfiler
             this.splitContainer2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.toolsPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.congruenceDepthUD)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).BeginInit();
             this.SuspendLayout();
@@ -278,7 +282,10 @@ namespace AxiomProfiler
             // 
             this.toolsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolsPanel.Controls.Add(this.showEqualityExplanationsCheckBox);
+            this.toolsPanel.Controls.Add(this.congruenceDepthUD);
             this.toolsPanel.Controls.Add(this.rewritingRulesButton);
+            this.toolsPanel.Controls.Add(this.congruenceDepthLabel);
             this.toolsPanel.Controls.Add(this.enableRewritingCB);
             this.toolsPanel.Controls.Add(this.showTermIdCB);
             this.toolsPanel.Controls.Add(this.showTypesCB);
@@ -291,22 +298,49 @@ namespace AxiomProfiler
             this.toolsPanel.Size = new System.Drawing.Size(1184, 25);
             this.toolsPanel.TabIndex = 7;
             // 
+            // congruenceDepthUD
+            // 
+            this.congruenceDepthUD.Location = new System.Drawing.Point(500, 3);
+            this.congruenceDepthUD.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.congruenceDepthUD.Name = "congruenceDepthUD";
+            this.congruenceDepthUD.Size = new System.Drawing.Size(50, 20);
+            this.congruenceDepthUD.TabIndex = 9;
+            this.congruenceDepthUD.Value = new decimal(new int[] {
+            3,
+            0,
+            0,
+            0});
+            this.congruenceDepthUD.ValueChanged += new System.EventHandler(this.congruenceDepthUD_ValueChanged);
+            // 
             // rewritingRulesButton
             // 
-            this.rewritingRulesButton.Location = new System.Drawing.Point(679, 1);
+            this.rewritingRulesButton.Location = new System.Drawing.Point(1088, 1);
             this.rewritingRulesButton.Name = "rewritingRulesButton";
-            this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
+            this.rewritingRulesButton.Size = new System.Drawing.Size(93, 23);
             this.rewritingRulesButton.TabIndex = 7;
             this.rewritingRulesButton.Text = "Printing Rules";
             this.rewritingRulesButton.UseVisualStyleBackColor = true;
             this.rewritingRulesButton.Click += new System.EventHandler(this.rewritingRulesButton_Click);
+            // 
+            // congruenceDepthLabel
+            // 
+            this.congruenceDepthLabel.AutoSize = true;
+            this.congruenceDepthLabel.Location = new System.Drawing.Point(313, 6);
+            this.congruenceDepthLabel.Name = "congruenceDepthLabel";
+            this.congruenceDepthLabel.Size = new System.Drawing.Size(181, 13);
+            this.congruenceDepthLabel.TabIndex = 8;
+            this.congruenceDepthLabel.Text = "Max Congruence Explanation Depth:";
             // 
             // enableRewritingCB
             // 
             this.enableRewritingCB.AutoSize = true;
             this.enableRewritingCB.Checked = true;
             this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.enableRewritingCB.Location = new System.Drawing.Point(538, 4);
+            this.enableRewritingCB.Location = new System.Drawing.Point(947, 5);
             this.enableRewritingCB.Name = "enableRewritingCB";
             this.enableRewritingCB.Size = new System.Drawing.Size(135, 17);
             this.enableRewritingCB.TabIndex = 6;
@@ -319,7 +353,7 @@ namespace AxiomProfiler
             this.showTermIdCB.AutoSize = true;
             this.showTermIdCB.Checked = true;
             this.showTermIdCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showTermIdCB.Location = new System.Drawing.Point(404, 4);
+            this.showTermIdCB.Location = new System.Drawing.Point(651, 5);
             this.showTermIdCB.Name = "showTermIdCB";
             this.showTermIdCB.Size = new System.Drawing.Size(128, 17);
             this.showTermIdCB.TabIndex = 5;
@@ -332,7 +366,7 @@ namespace AxiomProfiler
             this.showTypesCB.AutoSize = true;
             this.showTypesCB.Checked = true;
             this.showTypesCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showTypesCB.Location = new System.Drawing.Point(313, 4);
+            this.showTypesCB.Location = new System.Drawing.Point(560, 5);
             this.showTypesCB.Name = "showTypesCB";
             this.showTypesCB.Size = new System.Drawing.Size(85, 17);
             this.showTypesCB.TabIndex = 4;
@@ -394,6 +428,19 @@ namespace AxiomProfiler
             this.widthLabel.TabIndex = 0;
             this.widthLabel.Text = "Max Term Width:";
             // 
+            // showEqualityExplanationsCheckBox
+            // 
+            this.showEqualityExplanationsCheckBox.AutoSize = true;
+            this.showEqualityExplanationsCheckBox.Checked = true;
+            this.showEqualityExplanationsCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.showEqualityExplanationsCheckBox.Location = new System.Drawing.Point(785, 5);
+            this.showEqualityExplanationsCheckBox.Name = "showEqualityExplanationsCheckBox";
+            this.showEqualityExplanationsCheckBox.Size = new System.Drawing.Size(156, 17);
+            this.showEqualityExplanationsCheckBox.TabIndex = 10;
+            this.showEqualityExplanationsCheckBox.Text = "Show Equality Explanations";
+            this.showEqualityExplanationsCheckBox.UseVisualStyleBackColor = true;
+            this.showEqualityExplanationsCheckBox.CheckedChanged += new System.EventHandler(this.showEqualityExplanationsCheckBox_CheckedChanged);
+            // 
             // AxiomProfiler
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -416,6 +463,7 @@ namespace AxiomProfiler
             this.menuStrip1.PerformLayout();
             this.toolsPanel.ResumeLayout(false);
             this.toolsPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.congruenceDepthUD)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).EndInit();
             this.ResumeLayout(false);
@@ -455,6 +503,9 @@ namespace AxiomProfiler
         private System.Windows.Forms.Label maxTermDepthLabel;
         private System.Windows.Forms.CheckBox enableRewritingCB;
         private System.Windows.Forms.Button rewritingRulesButton;
+        private System.Windows.Forms.NumericUpDown congruenceDepthUD;
+        private System.Windows.Forms.Label congruenceDepthLabel;
+        private System.Windows.Forms.CheckBox showEqualityExplanationsCheckBox;
     }
 }
 
