@@ -175,36 +175,44 @@ namespace AxiomProfiler
             int lineNo = 0;
             int oldperc = 0;
             processor.model.LogFileName = logFile;
-            using (var rd = File.OpenText(logFile))
+            try
             {
-                string l;
-                while ((l = rd.ReadLine()) != null && !isCancelled)
+                using (var rd = File.OpenText(logFile))
                 {
-                    try
+                    string l;
+                    while ((l = rd.ReadLine()) != null && !isCancelled)
                     {
-                        processor.ParseSingleLine(l);
-                    }
-                    catch (LogProcessor.OldLogFormatException)
-                    {
-                        System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to z3 when generating logs.", "Invalid Log File");
-                        isCancelled = true;
-                        return;
-                    }
-                    curPos += l.Length + 2;
+                        try
+                        {
+                            processor.ParseSingleLine(l);
+                        }
+                        catch (LogProcessor.OldLogFormatException)
+                        {
+                            System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to z3 when generating logs.", "Invalid Log File");
+                            isCancelled = true;
+                            return;
+                        }
+                        curPos += l.Length + 2;
 
-                    if (fi.Length == 0) continue;
+                        if (fi.Length == 0) continue;
 
-                    lineNo++;
-                    int perc = (int)(curPos * 999 / fi.Length);
-                    if (oldperc != perc)
-                    {
-                        statusUpdate(perc, 2);
-                        oldperc = perc;
+                        lineNo++;
+                        int perc = (int)(curPos * 999 / fi.Length);
+                        if (oldperc != perc)
+                        {
+                            statusUpdate(perc, 2);
+                            oldperc = perc;
+                        }
                     }
+                    processor.Finish();
+                    processor.ComputeCost();
+                    processor.model.BuildInstantiationDAG();
                 }
-                processor.Finish();
-                processor.ComputeCost();
-                processor.model.BuildInstantiationDAG();
+            }
+            catch (FileNotFoundException)
+            {
+                System.Windows.Forms.MessageBox.Show("The provided file path was invalid.", "File Not Found");
+                isCancelled = true;
             }
             statusUpdate(1000, 2);
         }

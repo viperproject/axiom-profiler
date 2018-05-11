@@ -492,6 +492,10 @@ namespace AxiomProfiler
             }
         }
 
+        // These factors were determined experimentally
+        private static readonly double outlierThreshold = 0.3;
+        private static readonly double incomingEdgePenalizationFactor = 0.5;
+
         /// <summary>
         /// Assigns a score to instantiation paths based on the predicted likelyhood that it conatins a matching loop.
         /// </summary>
@@ -500,9 +504,9 @@ namespace AxiomProfiler
         private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
             //There may be some "outiers" before or after a matching loop.
-            //We first identify quantifiers that occur at most 0.3 times as often as the most common quantifier in the path...
+            //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
             var statistics = instantiationPath.Statistics();
-            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * 0.3, 1);
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
             var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
             foreach (var quant in statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1))
             {
@@ -561,10 +565,20 @@ namespace AxiomProfiler
                 remainingPath.append(inst);
             }
 
+            /* We count the number of incoming edges (responsible instantiations that are not part of the path) and penalize them.
+             * This ensures that we choose the best path. E.g. in the triangular case (A -> B, A -> C, B -> C) we want to choose A -> B -> C
+             * and not A -> B which would have an incoming edge (B -> C).
+             */
+            var numberIncomingEdges = 0;
+            foreach (var inst in remainingInstantiations)
+            {
+                numberIncomingEdges += inst.ResponsibleInstantiations.Where(i => !instantiationPath.getInstantiations().Contains(i)).Count();
+            }
+
             /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
              * which is an approximation for the number of repetitions of a matching loop occuring in that path.
              */
-            return 1.0 * remainingPath.Length() / remainingPath.Statistics().Count();
+            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.Statistics().Count();
         }
 
         private static InstantiationPath BestDownPath(Node node)
