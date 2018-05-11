@@ -401,7 +401,6 @@ namespace AxiomProfiler.QuantifierModel
         public List<Term> getDistinctBlameTerms()
         {
             var blameTerms = bindings
-                .Where(bnd => bnd.Key.id != -1)
                 .Select(bnd => bnd.Value);
             return blameTerms
                 .Where(t1 => blameTerms.All(t2 => t2 == t1 || !t2.isSubterm(t1)))
