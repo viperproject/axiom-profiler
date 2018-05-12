@@ -342,7 +342,9 @@ namespace AxiomProfiler.CycleDetection
                 recursionPointFinder.recursionPoints.Clear();
 
                 var reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create).Reverse();
-                return reversed.Skip(1).Aggregate(reversed.First().Item1, EqualityExplanationGeneralizer);
+                var restult = reversed.Skip(1).Aggregate(reversed.First().Item1, EqualityExplanationGeneralizer);
+                NonRecursiveEqualityExplanationGeneralizer.singleton.Reset();
+                return restult;
             }).ToArray();
         }
 
@@ -701,37 +703,88 @@ namespace AxiomProfiler.CycleDetection
         {
             public static readonly NonRecursiveEqualityExplanationGeneralizer singleton = new NonRecursiveEqualityExplanationGeneralizer();
             private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
+            private static readonly Term[] emptyTerms = new Term[0];
+            private readonly HashSet<Term> locallyProducedGeneralizations = new HashSet<Term>();
 
-            private static Term GetGeneralizedTerm(Term gen, Term other, GeneralizationState genState, int iteration)
+            public void Reset()
             {
+                locallyProducedGeneralizations.Clear();
+            }
+
+            private Term GetGeneralizedTerm(Term gen, Term other, GeneralizationState genState, int iteration)
+            {
+                if (locallyProducedGeneralizations.Contains(gen) && (gen.generalizationCounter >= 0 || (gen.Name == other.Name && gen.Args.Length == other.Args.Length)))
+                {
+                    genState.replacementDict[Tuple.Create(iteration, other.id)] = gen;
+                    return gen;
+                }
+
                 var t1 = gen;
                 var t2 = other;
                 if (t1.id != t2.id)
                 {
-                    if (genState.replacementDict.TryGetValue(Tuple.Create(iteration, t2.id), out var generalization))
+                    int offset;
+                    for (offset = 0; offset <= iteration && t1.id != t2.id; ++offset)
                     {
-                        t2 = generalization;
-                    }
-                    if (t1.id >= 0)
-                    {
-                        if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 > iteration && kv.Value.id == t2.id))
+                        if (genState.replacementDict.TryGetValue(Tuple.Create(iteration - offset, t2.id), out var generalization))
                         {
-                            t1 = t2;
+                            t2 = generalization;
+                        }
+                        if (t1.id >= 0)
+                        {
+                            if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 > iteration - offset && kv.Value.id == t2.id))
+                            {
+                                t1 = t2;
+                            }
                         }
                     }
-                    //TODO: use new generalization, reference correct iteration
+
                     if (t1.id != t2.id)
                     {
-                        t1 = new Term("generalization", new Term[0])
+                        Term newGen;
+                        if (t1.Name == t2.Name && t1.Args.Length == t2.Args.Length)
                         {
-                            id = -123
-                        };
+                            var generalizedArgs = t1.Args.Zip(t2.Args, (a1, a2) => GetGeneralizedTerm(a1, a2, genState, iteration)).ToArray();
+                            newGen = new Term(t1.Name, generalizedArgs) { id = genState.idCounter };
+                            --genState.idCounter;
+                        }
+                        else
+                        {
+                            newGen = new Term("T", emptyTerms, genState.genCounter) { id = genState.idCounter };
+                            ++genState.genCounter;
+                            --genState.idCounter;
+                        }
+
+                        locallyProducedGeneralizations.Add(newGen);
+
+                        genState.replacementDict[Tuple.Create(iteration, other.id)] = newGen;
+                        if (gen.id < 0)
+                        {
+                            var existingEntries = genState.replacementDict.Where(kv => kv.Key.Item1 > iteration && kv.Value.id == gen.id).ToList();
+                            foreach (var entry in existingEntries)
+                            {
+                                genState.replacementDict[entry.Key] = newGen;
+                            }
+                        }
+                        else
+                        {
+                            for (var i = iteration; i < genState.loopInstantiations[0].Count(); ++i)
+                            {
+                                genState.replacementDict[Tuple.Create(i, other.id)] = newGen;
+                            }
+                        }
+
+                        return newGen;
+                    }
+                    else if (offset > 0 && t1.iterationOffset == 0)
+                    {
+                        t1 = new Term(t1) { iterationOffset = offset };
                     }
                 }
                 return t1;
             }
 
-            private static EqualityExplanation DefaultGeneralization(EqualityExplanation target, EqualityExplanation other, GeneralizationState genState, int iteration)
+            private EqualityExplanation DefaultGeneralization(EqualityExplanation target, EqualityExplanation other, GeneralizationState genState, int iteration)
             {
                 var sourceTerm = GetGeneralizedTerm(target.source, other.source, genState, iteration);
                 var targetTerm = GetGeneralizedTerm(target.target, other.target, genState, iteration);
@@ -1054,7 +1107,7 @@ namespace AxiomProfiler.CycleDetection
                 generalizedHistory.Push(currTerm);
                 concreteHistory.Push(todoStacks[idx].Peek());
                 // push children if applicable
-                if (currTerm.Args.Length > 0)
+                if (currTerm.Args.Length > 0 && currTerm.generalizationCounter < 0)
                 {
                     pushSubterms(todoStacks);
                 }
@@ -1137,7 +1190,10 @@ namespace AxiomProfiler.CycleDetection
                 if (newTerm)
                 {
                     existingGenTerm = new Term(existingGenTerm);
-                    for (var i = 0; i < existingGenTerm.Args.Length; ++i) existingGenTerm.Args[i] = null;
+                    if (existingGenTerm.generalizationCounter < 0)
+                    {
+                        for (var i = 0; i < existingGenTerm.Args.Length; ++i) existingGenTerm.Args[i] = null;
+                    }
                 }
                 return newTerm;
             }
@@ -1162,7 +1218,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                     else
                     {
-                        currTerm = new Term(value.Item2, new Term[value.Item3]) { id = idCounter };
+                        currTerm = new Term(value.Item2, new Term[value.Item3], value.Item5) { id = idCounter };
                         idCounter--;
                     }
                 }
@@ -1170,6 +1226,11 @@ namespace AxiomProfiler.CycleDetection
                 {
                     //agree on id
                     currTerm = new Term(value.Item2, new Term[value.Item3], value.Item5) { id = value.Item4 };
+                }
+
+                if (value.Item5 >= 0)
+                {
+                    Array.Copy(todoStacks[0].Peek().Args, currTerm.Args, value.Item3);
                 }
             }
             else
@@ -1240,11 +1301,12 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
+        private static readonly Term nonGenTerm = new Term("", new Term[0], -1);
+
         private void collectCandidateTerm(Term currentTerm, BindingInfo bindingInfo, int iteration, Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates)
         {
-            var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length;
+            var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length + "_" + currentTerm.generalizationCounter;
 
-            var nonGenTerm = new Term("", new Term[0], -1);
             var existingReplacements = bindingInfo.bindings.Where(kv => kv.Value.id == currentTerm.id)
                 .SelectMany(kv => bindingInfo.equalities.TryGetValue(kv.Key, out var eqs) ? eqs : Enumerable.Empty<Term>())
                 .Select(t => replacementDict.TryGetValue(Tuple.Create(iteration, t.id), out var gen) ? gen : nonGenTerm);
@@ -1263,7 +1325,7 @@ namespace AxiomProfiler.CycleDetection
             {
                 var oldTuple = candidates[key];
                 candidates[key] = new Tuple<int, string, int, int, int, Term>
-                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5 == currentTerm.generalizationCounter ? oldTuple.Item5 : -1,
+                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5,
                     oldTuple.Item6 != null && oldTuple.Item6.id == generalization.id ? oldTuple.Item6 : null); //-1 indicates disagreement on id / generalization counter
             }
         }
@@ -1302,12 +1364,14 @@ namespace AxiomProfiler.CycleDetection
                 rule.color = PrintConstants.generalizationColor;
                 if (term.Args.Count() == 0)
                 {
-                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}]" : "");
+                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
+                        (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}]" : "");
                     rule.suffix = "";
                 }
                 else
                 {
-                    rule.prefix = term.Name + (term.generalizationCounter < 0 ? (format.showTermId ? $"[g{-term.id}]" : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter)) + "(";
+                    rule.prefix = term.Name + (term.generalizationCounter < 0 ? (format.showTermId ? (term.iterationOffset > 0 ? "_-" +
+                        term.iterationOffset : "") + $"[g{-term.id}]" : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(";
                 }
                 format.addTemporaryRule(term.id.ToString(), rule);
             }

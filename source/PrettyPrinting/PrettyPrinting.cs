@@ -164,6 +164,7 @@ namespace AxiomProfiler.PrettyPrinting
             var prefix = t.Name +
                 (format.showType ? t.GenericType : "") +
                 (t.generalizationCounter >= 0 ? "_" + t.generalizationCounter : "") +
+                (t.iterationOffset > 0 ? "_-" + t.iterationOffset : "") +
                 (format.showTermId && t.id != -1 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + "]" : "") +
                 "(";
             return new PrintRule
@@ -331,7 +332,7 @@ namespace AxiomProfiler.PrettyPrinting
             {
                 maxWidth = 80,
                 MaxTermPrintingDepth = 0,
-                MaxEqualityExplanationPrintingDepth = 3,
+                MaxEqualityExplanationPrintingDepth = 1,
                 ShowEqualityExplanations = true,
                 showTermId = true,
                 showType = true,

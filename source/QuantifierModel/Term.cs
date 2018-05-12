@@ -21,6 +21,7 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
+        public int iterationOffset = 0;
 
         public Term(string name, Term[] args, int generalizationCounter = -1)
         {
@@ -68,6 +69,7 @@ namespace AxiomProfiler.QuantifierModel
                 reverseRewrite = t.reverseRewrite;
             }
             generalizationCounter = t.generalizationCounter;
+            iterationOffset = t.iterationOffset;
         }
 
         public bool ContainsFreeVar()
@@ -167,7 +169,8 @@ namespace AxiomProfiler.QuantifierModel
         {
             content.Append(Name);
             if (format.showType) content.Append(GenericType);
-            if (format.showTermId) content.Append("[" + (id > 0 ? id.ToString() : "g" + id) + "]");
+            if (iterationOffset > 0) content.Append("_-" + iterationOffset);
+            if (format.showTermId) content.Append("[" + (id > 0 ? id.ToString() : "g" + -id) + "]");
         }
 
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int indent = 0)
