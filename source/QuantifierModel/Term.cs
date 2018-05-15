@@ -52,10 +52,10 @@ namespace AxiomProfiler.QuantifierModel
             size += 1;
         }
 
-        public Term(Term t)
+        public Term(Term t, Term[] newArgs = null)
         {
             Name = t.Name;
-            Args = (Term[]) t.Args.Clone();
+            Args = newArgs ?? (Term[]) t.Args.Clone();
             Responsible = t.Responsible;
             id = t.id;
             size = t.size;

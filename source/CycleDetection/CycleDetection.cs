@@ -130,7 +130,7 @@ namespace AxiomProfiler.CycleDetection
          */
         public readonly List<Term> generalizedTerms = new List<Term>();
         private readonly List<Term> generalizationTerms = new List<Term>(); //All generalization terms that were used (T_1, T_2, ...)
-        private readonly Dictionary<Tuple<int, int>, Term> replacementDict = new Dictionary<Tuple<int, int>, Term>(); //Map from concrete terms to their generalized counterparts. N.b. this includes terms other than T_1, T_2, ... e.g. if only the term id was generalized away.
+        private readonly Dictionary<Tuple<int, int>, List<Term>> replacementDict = new Dictionary<Tuple<int, int>, List<Term>>(); //Map from concrete terms to their generalized counterparts. N.b. this includes terms other than T_1, T_2, ... e.g. if only the term id was generalized away.
         private readonly Dictionary<int, BindingInfo> generalizedBindings = new Dictionary<int, BindingInfo>(); //Map from quantifiers (their body terms) to their generalized binding info
         private BindingInfo wrapBindings = null; //The binding info used to instantiate the first quantifier of the loop from the result of the last quantifier in the loop
         private readonly HashSet<Term> loopProducedAssocBlameTerms = new HashSet<Term>(); //blame terms required in addition to the term produced by the previous instantiation that are also produced by the matching loop
@@ -164,7 +164,7 @@ namespace AxiomProfiler.CycleDetection
         /// <returns>True if a generalization occurs instead of this term in the loop generalization at least once. False otherwise.</returns>
         public bool IsReplacedByGeneralization(int id)
         {
-            return replacementDict.Any(kv => kv.Key.Item2 == id && kv.Value.generalizationCounter >= 0);
+            return replacementDict.Any(kv => kv.Key.Item2 == id && kv.Value.Any(gen => gen.generalizationCounter >= 0));
         }
 
         public bool IsProducedByLoop(Term term)
@@ -711,11 +711,24 @@ namespace AxiomProfiler.CycleDetection
                 locallyProducedGeneralizations.Clear();
             }
 
+            private static Term CopyTermAndSetIterationOffset(Term t, int offset)
+            {
+                if (t.id >= 0) return t;
+                var newArgs = t.Args.Select(a => CopyTermAndSetIterationOffset(a, offset)).ToArray();
+                return new Term(t, newArgs) { iterationOffset = offset };
+            }
+
             private Term GetGeneralizedTerm(Term gen, Term other, GeneralizationState genState, int iteration)
             {
                 if (locallyProducedGeneralizations.Contains(gen) && (gen.generalizationCounter >= 0 || (gen.Name == other.Name && gen.Args.Length == other.Args.Length)))
                 {
-                    genState.replacementDict[Tuple.Create(iteration, other.id)] = gen;
+                    var key = Tuple.Create(iteration, other.id);
+                    if (!genState.replacementDict.TryGetValue(key, out var generalizations))
+                    {
+                        generalizations = new List<Term>();
+                        genState.replacementDict[key] = generalizations;
+                    }
+                    generalizations.Add(gen);
                     return gen;
                 }
 
@@ -726,20 +739,37 @@ namespace AxiomProfiler.CycleDetection
                     int offset;
                     for (offset = 0; offset <= iteration && t1.id != t2.id; ++offset)
                     {
-                        if (genState.replacementDict.TryGetValue(Tuple.Create(iteration - offset, t2.id), out var generalization))
+                        var possibleGeneralizations = Enumerable.Repeat(t2, 1);
+                        if (genState.replacementDict.TryGetValue(Tuple.Create(iteration - offset, t2.id), out var generalizations))
                         {
-                            t2 = generalization;
+                            possibleGeneralizations = possibleGeneralizations.Concat(generalizations);
                         }
-                        if (t1.id >= 0)
+                        foreach (var generalization in possibleGeneralizations)
                         {
-                            if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 > iteration - offset && kv.Value.id == t2.id))
+                            if (t1.id >= 0)
                             {
-                                t1 = t2;
+                                if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 > iteration - offset && kv.Value.Any(g => g.id == generalization.id)))
+                                {
+                                    t1 = generalization;
+                                    t2 = generalization;
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                // within a single iteration replacementDict is injective => we get the correct concrete terms
+                                var alternativePreviousGeneralizations = genState.replacementDict.Where(kv => kv.Key.Item1 > iteration - offset && kv.Value.Any(t => t.id == t1.id)).Select(kv => kv.Value);
+                                if (alternativePreviousGeneralizations.All(alts => alts.Any(t => t.id == generalization.id)))
+                                {
+                                    t1 = generalization;
+                                    t2 = generalization;
+                                    break;
+                                }
                             }
                         }
                     }
 
-                    if (t1.id != t2.id)
+                    if (t1.id != t2.id || (offset != t1.iterationOffset + 1 && t1.iterationOffset != 0))
                     {
                         Term newGen;
                         if (t1.Name == t2.Name && t1.Args.Length == t2.Args.Length)
@@ -757,28 +787,40 @@ namespace AxiomProfiler.CycleDetection
 
                         locallyProducedGeneralizations.Add(newGen);
 
-                        genState.replacementDict[Tuple.Create(iteration, other.id)] = newGen;
+                        var key = Tuple.Create(iteration, other.id);
+                        if (!genState.replacementDict.TryGetValue(key, out var gens))
+                        {
+                            gens = new List<Term>();
+                            genState.replacementDict[key] = gens;
+                        }
+                        gens.Add(newGen);
                         if (gen.id < 0)
                         {
-                            var existingEntries = genState.replacementDict.Where(kv => kv.Key.Item1 > iteration && kv.Value.id == gen.id).ToList();
+                            var existingEntries = genState.replacementDict.Where(kv => kv.Key.Item1 > iteration && kv.Value.Any(t => t.id == gen.id)).ToList();
                             foreach (var entry in existingEntries)
                             {
-                                genState.replacementDict[entry.Key] = newGen;
+                                genState.replacementDict[entry.Key].Add(newGen);
                             }
                         }
                         else
                         {
                             for (var i = iteration; i < genState.loopInstantiations[0].Count(); ++i)
                             {
-                                genState.replacementDict[Tuple.Create(i, other.id)] = newGen;
+                                key = Tuple.Create(i, other.id);
+                                if (!genState.replacementDict.TryGetValue(key, out gens))
+                                {
+                                    gens = new List<Term>();
+                                    genState.replacementDict[key] = gens;
+                                }
+                                gens.Add(newGen);
                             }
                         }
 
                         return newGen;
                     }
-                    else if (offset > 0 && t1.iterationOffset == 0)
+                    else if (offset > 1 && t1.iterationOffset == 0)
                     {
-                        t1 = new Term(t1) { iterationOffset = offset };
+                        t1 = CopyTermAndSetIterationOffset(t1, offset-1);
                     }
                 }
                 return t1;
@@ -1172,35 +1214,33 @@ namespace AxiomProfiler.CycleDetection
             existingGenTerm = null;
 
             var guardTerm = todoStacks[0].Peek();
-            var newTerm = true;
 
-            if (replacementDict.TryGetValue(Tuple.Create(0, guardTerm.id), out existingGenTerm))
+            if (replacementDict.TryGetValue(Tuple.Create(0, guardTerm.id), out var existingGenTermList))
             {
+                var existingGenTerms = new HashSet<Term>(existingGenTermList);
                 // can only reuse existing term if ALL replaced terms agree on the same generalization.
                 for (var i = 1; i < todoStacks.Length; i++)
                 {
-                    if (!replacementDict.TryGetValue(Tuple.Create(i, todoStacks[i].Peek().id), out var nextGenTerm))
+                    if (!replacementDict.TryGetValue(Tuple.Create(i, todoStacks[i].Peek().id), out var nextGenTerms))
                     {
                         // this generalization is incomplete
-                        newTerm = false;
+                        existingGenTerms.Clear();
                         break;
                     }
-                    newTerm = newTerm && existingGenTerm == nextGenTerm;
+                    existingGenTerms.IntersectWith(nextGenTerms);
                 }
-                if (newTerm)
+                if (existingGenTerms.Any())
                 {
-                    existingGenTerm = new Term(existingGenTerm);
-                    if (existingGenTerm.generalizationCounter < 0)
+                    var chosenTerm = existingGenTerms.FirstOrDefault(t => t.generalizationCounter < 0) ?? existingGenTerms.First();
+                    existingGenTerm = new Term(chosenTerm);
+                    if (existingGenTerm.generalizationCounter < 0 && existingGenTerm.generalizationCounter < 0)
                     {
                         for (var i = 0; i < existingGenTerm.Args.Length; ++i) existingGenTerm.Args[i] = null;
                     }
+                    return true;
                 }
-                return newTerm;
             }
-            else
-            {
-                return false;
-            }
+            return false;
         }
 
         private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory)
@@ -1255,7 +1295,13 @@ namespace AxiomProfiler.CycleDetection
             for (var i = 0; i < todoStacks.Length; ++i)
             {
                 var stack = todoStacks[i];
-                replacementDict[Tuple.Create(i, stack.Peek().id)] = currTerm;
+                var key = Tuple.Create(i, stack.Peek().id);
+                if (!replacementDict.TryGetValue(key, out var generalizations))
+                {
+                    generalizations = new List<Term>();
+                    replacementDict[key] = generalizations;
+                }
+                generalizations.Add(currTerm);
             }
 
             addToGeneralizedTerm(generalizedHistory, currTerm);
@@ -1276,7 +1322,7 @@ namespace AxiomProfiler.CycleDetection
 
         private Term getGeneralizedTerm(Stack<Term>[] todoStacks)
         {
-            if (TryGetExistingReplacement(todoStacks, out var existingReplacement))
+            if (TryGetExistingReplacement(todoStacks, out var existingReplacement) && existingReplacement.generalizationCounter < 0)
             {
                 generalizationTerms.Add(existingReplacement);
                 return existingReplacement;
@@ -1301,7 +1347,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private static readonly Term nonGenTerm = new Term("", new Term[0], -1);
+        private static readonly IEnumerable<Term> nonGenTerm = Enumerable.Repeat(new Term("", new Term[0], -1), 1);
 
         private void collectCandidateTerm(Term currentTerm, BindingInfo bindingInfo, int iteration, Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates)
         {
@@ -1309,7 +1355,8 @@ namespace AxiomProfiler.CycleDetection
 
             var existingReplacements = bindingInfo.bindings.Where(kv => kv.Value.id == currentTerm.id)
                 .SelectMany(kv => bindingInfo.equalities.TryGetValue(kv.Key, out var eqs) ? eqs : Enumerable.Empty<Term>())
-                .Select(t => replacementDict.TryGetValue(Tuple.Create(iteration, t.id), out var gen) ? gen : nonGenTerm);
+                .SelectMany(t => replacementDict.TryGetValue(Tuple.Create(iteration, t.id), out var gen) ? gen : nonGenTerm);
+            //TODO: track all
             var generalization = existingReplacements.FirstOrDefault();
             if (generalization == null || generalization.generalizationCounter < 0 || existingReplacements.Any(t => generalization.generalizationCounter != t.generalizationCounter))
             {
