@@ -392,7 +392,7 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         private static int printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
-            GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations, Term term, Instantiation instantiation, bool first, bool last, int termNumber)
+            GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations, Term term, Instantiation instantiation, bool first, bool last, int termNumberOffset)
         {
             var termNumberings = new List<Tuple<Term, int>>();
             generalizationState.tmpHighlightGeneralizedTerm(format, term, last);
@@ -403,6 +403,10 @@ namespace AxiomProfiler.QuantifierModel
             PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
             alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
+            var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
+            
+            var topLevelTerm = bindingInfo.getDistinctBlameTerms().First(t => term.isSubterm(t.id));
+            var termNumber = termNumberOffset + bindingInfo.GetTermNumber(topLevelTerm);
             var numberingString = $"({termNumber}) ";
             content.switchToDefaultFormat();
             content.Append(numberingString);
@@ -410,9 +414,6 @@ namespace AxiomProfiler.QuantifierModel
             content.Append('\n');
 
             termNumberings.Add(Tuple.Create(term, termNumber));
-            ++termNumber;
-
-            var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
 
             if (last)
             {
@@ -433,18 +434,22 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append("\n\n");
                 }
 
-                return termNumber;
+                return termNumberOffset + bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed();
             }
+
+            var numberOfGeneralizedTerms = 1;
 
             if (generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements))
             {
+                numberOfGeneralizedTerms += otherRequirements.Count;
+
                 foreach (var req in otherRequirements)
                 {
                     generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
                 }
 
                 var constantTermsLookup = otherRequirements
-                    .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Contains(req))
+                    .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id))
                     .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req))
                     .ToLookup(t => t.ContainsGeneralization());
                 var setTems = constantTermsLookup[true];
@@ -458,10 +463,10 @@ namespace AxiomProfiler.QuantifierModel
 
                     foreach (var req in constantTerms)
                     {
+                        termNumber = termNumberOffset + bindingInfo.GetTermNumber(req);
                         numberingString = $"({termNumber}) ";
                         content.Append($"\n\n{numberingString}");
                         termNumberings.Add(Tuple.Create(req, termNumber));
-                        ++termNumber;
 
                         req.PrettyPrint(content, format, numberingString.Length);
                     }
@@ -483,10 +488,10 @@ namespace AxiomProfiler.QuantifierModel
                         alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
                         content.switchToDefaultFormat();
+                        termNumber = termNumberOffset + bindingInfo.GetTermNumber(req);
                         numberingString = $"({termNumber}) ";
                         content.Append(numberingString);
                         termNumberings.Add(Tuple.Create(req, termNumber));
-                        ++termNumber;
 
                         req.PrettyPrint(content, format, numberingString.Length);
                         content.Append("\n");
@@ -512,17 +517,16 @@ namespace AxiomProfiler.QuantifierModel
                         foreach (var t in equality.Value)
                         {
                             content.Append('\n');
+                            termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
                             equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { t, effectiveTerm }, termNumber));
                             if (format.ShowEqualityExplanations)
                             {
-                                var explanation = bindingInfo.EqualityExplanations.Single(ee => (ee.source.id == t.id || ee.source.id == -123) && (ee.target.id == effectiveTerm.id || ee.target.id == -123));
+                                var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
                                 explanation.PrettyPrint(content, format, termNumber);
-                                ++termNumber;
                             }
                             else
                             {
                                 numberingString = $"({termNumber}) ";
-                                ++termNumber;
                                 content.switchToDefaultFormat();
                                 content.Append(numberingString);
                                 var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
@@ -549,17 +553,16 @@ namespace AxiomProfiler.QuantifierModel
                         foreach (var t in equality.Value)
                         {
                             content.Append('\n');
+                            termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
                             equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { t, effectiveTerm }, termNumber));
                             if (format.ShowEqualityExplanations)
                             {
                                 var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
                                 explanation.PrettyPrint(content, format, termNumber);
-                                ++termNumber;
                             }
                             else
                             {
                                 numberingString = $"({termNumber}) ";
-                                ++termNumber;
                                 content.switchToDefaultFormat();
                                 content.Append(numberingString);
                                 var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
@@ -592,7 +595,7 @@ namespace AxiomProfiler.QuantifierModel
 
             content.Append("\n");
 
-            return termNumber;
+            return termNumberOffset + bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed();
         }
 
         private void printPreamble(InfoPanelContent content, bool withGen)

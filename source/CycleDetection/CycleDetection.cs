@@ -671,7 +671,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private static IEnumerable<EqualityExplanation> GeneralizeAtRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, IEnumerable<EqualityExplanation> equalityExplanations)
+        private IEnumerable<EqualityExplanation> GeneralizeAtRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, IEnumerable<EqualityExplanation> equalityExplanations)
         {
             var recursionPointGeneralizer = RecursionPointGeneralizer.singleton;
             var currentGeneralizations = equalityExplanations.ToArray();
@@ -688,9 +688,19 @@ namespace AxiomProfiler.CycleDetection
                 }
                 return Comparer<int>.Default.Compare(x.Count, y.Count);
             });
+
+            var safeIndex = loopInstantiations[0].Count / 2;
             foreach (var recursionPoint in recursionPoints.OrderByDescending(kv => kv.Key, alphabeticalComparer))
             {
-                var recursionInfo = Tuple.Create(recursionPoint.Value.Item2 + recursionPoint.Value.Item3, recursionPoint.Value.Item1);
+                var recursionTargetIterationOffset = recursionPoint.Value.Item1;
+                var recursionTargetQuantifier = recursionPoint.Value.Item2;
+                var recursionTargetEqualityIndex = recursionPoint.Value.Item3;
+                
+                var numberingOffset = loopInstantiations.Take(recursionTargetQuantifier).Sum(instantiations => instantiations[safeIndex].bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed()) + 1;
+                var numberOfGeneralizedBlameTerms = assocGenBlameTerm[generalizedTerms[recursionTargetQuantifier]].Count + 1;
+                var equalityNumber = numberingOffset + numberOfGeneralizedBlameTerms + recursionTargetEqualityIndex;
+
+                var recursionInfo = Tuple.Create(equalityNumber, recursionTargetIterationOffset);
                 for (int i = 0; i < currentGeneralizations.Length; ++i)
                 {
                     currentGeneralizations[i] = recursionPointGeneralizer.visit(currentGeneralizations[i], Tuple.Create<IEnumerable<int>, Tuple<int, int>>(recursionPoint.Key, recursionInfo));

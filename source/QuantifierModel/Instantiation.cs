@@ -123,7 +123,6 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-
         public override string ToString()
         {
             string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
@@ -211,20 +210,19 @@ namespace AxiomProfiler.QuantifierModel
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Blamed Terms:\n\n");
             content.switchToDefaultFormat();
-
-            var termNumber = 1;
+            
             var termNumberings = new List<Tuple<Term, int>>();
 
             var blameTerms = bindingInfo.getDistinctBlameTerms();
-            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)));
-                //.Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Contains(req))
-                //.Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req));
+            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)))
+                .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id))
+                .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req));
             foreach (var t in distinctBlameTerms)
             {
+                var termNumber = bindingInfo.GetTermNumber(t) + 1;
                 var numberingString = $"({termNumber}) ";
                 content.Append($"\n{numberingString}");
                 termNumberings.Add(Tuple.Create(t, termNumber));
-                ++termNumber;
                 t.PrettyPrint(content, format, numberingString.Length);
                 content.switchToDefaultFormat();
                 content.Append("\n\n");
@@ -232,6 +230,8 @@ namespace AxiomProfiler.QuantifierModel
 
             if (bindingInfo.equalities.Count > 0)
             {
+                var numberOfTopLevelTerms = bindingInfo.getDistinctBlameTerms().Count;
+
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
@@ -243,17 +243,16 @@ namespace AxiomProfiler.QuantifierModel
                     var effectiveTerm = bindingInfo.bindings[equality.Key];
                     foreach (var term in equality.Value)
                     {
+                        var termNumber = numberOfTopLevelTerms + bindingInfo.GetEqualityNumber(term, effectiveTerm) + 1;
                         equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));
                         if (format.ShowEqualityExplanations)
                         {
                             var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
                             explanation.PrettyPrint(content, format, termNumber);
-                            ++termNumber;
                         }
                         else
                         {
                             var numberingString = $"({termNumber}) ";
-                            ++termNumber;
                             content.switchToDefaultFormat();
                             content.Append(numberingString);
                             var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";

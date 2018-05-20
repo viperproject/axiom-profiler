@@ -119,6 +119,31 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
+        public int GetTermNumber(Term term)
+        {
+            var index = getDistinctBlameTerms().IndexOf(term);
+            if (index == -1)
+            {
+                throw new ArgumentException("The specified Term was not a top level blame term for this instantiation.");
+            }
+            return index;
+        }
+
+        public int GetEqualityNumber(Term source, Term target)
+        {
+            var index = Array.FindIndex(EqualityExplanations, ee => ee.source.id == source.id && ee.target.id == target.id);
+            if (index == -1)
+            {
+                throw new ArgumentException("The argument was not an equality used by this instantiation.");
+            }
+            return index;
+        }
+
+        public int GetNumberOfTermAndEqualityNumberingsUsed()
+        {
+            return getDistinctBlameTerms().Count + EqualityExplanations.Length;
+        }
+
         /// <summary>
         /// Prints a section explaining the equality substitutions necessary to obtain a term matching the trigger.
         /// </summary>
@@ -401,7 +426,7 @@ namespace AxiomProfiler.QuantifierModel
         public List<Term> getDistinctBlameTerms()
         {
             var blameTerms = bindings
-                .Select(bnd => bnd.Value);
+                .Select(bnd => bnd.Value).Distinct();
             return blameTerms
                 .Where(t1 => blameTerms.All(t2 => t2 == t1 || !t2.isSubterm(t1)))
                 .ToList();
