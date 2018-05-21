@@ -285,6 +285,113 @@ namespace AxiomProfiler.QuantifierModel
             return termNumbering;
         }
 
+        private class EqualityExplanationShiftCollector: EqualityExplanationVisitor<int, object>
+        {
+            public static readonly EqualityExplanationShiftCollector singleton = new EqualityExplanationShiftCollector();
+
+            private static int CombineShifts(int s1, int s2)
+            {
+                if (s1 == 0) return s2;
+                if (s2 == 0) return s1;
+                if (s1 == s2) return s1;
+                return -1;
+            }
+
+            public override int Direct(DirectEqualityExplanation target, object arg)
+            {
+                var shift = target.source.iterationOffset;
+                shift = CombineShifts(shift, target.target.iterationOffset);
+                shift = CombineShifts(shift, target.equality.iterationOffset);
+
+                return shift;
+            }
+
+            public override int Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                var shift = target.source.iterationOffset;
+                shift = CombineShifts(shift, target.target.iterationOffset);
+                foreach (var equalityExplanation in target.equalities)
+                {
+                    shift = CombineShifts(shift, visit(equalityExplanation, arg));
+                    if (shift == -1) break;
+                }
+
+                return shift;
+            }
+
+            public override int Congruence(CongruenceExplanation target, object arg)
+            {
+                var shift = target.source.iterationOffset;
+                shift = CombineShifts(shift, target.target.iterationOffset);
+                foreach (var equalityExplanation in target.sourceArgumentEqualities)
+                {
+                    shift = CombineShifts(shift, visit(equalityExplanation, arg));
+                    if (shift == -1) break;
+                }
+
+                return shift;
+            }
+
+            public override int RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                var shift = target.source.iterationOffset;
+                shift = CombineShifts(shift, target.target.iterationOffset);
+                shift = CombineShifts(shift, target.GenerationOffset);
+
+                return shift;
+            }
+        }
+
+        private class EqualityExplanationShifter: EqualityExplanationVisitor<EqualityExplanation, int>
+        {
+            public static readonly EqualityExplanationShifter singleton = new EqualityExplanationShifter();
+
+            private static Term MakePrime(Term t)
+            {
+                if (t.id >= 0) return t;
+                var newArgs = t.Args.Select(a => MakePrime(a)).ToArray();
+                return new Term(t, newArgs) { isPrime = true };
+            }
+
+            private static Term RemoveIterationOffset(Term t)
+            {
+                if (t.iterationOffset == 0) return t;
+                var newArgs = t.Args.Select(a => RemoveIterationOffset(a)).ToArray();
+                return new Term(t, newArgs) { iterationOffset = 0 };
+            }
+
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, int arg)
+            {
+                var newSource = target.source.iterationOffset == 0 ? MakePrime(target.source) : RemoveIterationOffset(target.source);
+                var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
+                var newEquality = target.equality.iterationOffset == 0 ? MakePrime(target.equality) : RemoveIterationOffset(target.equality);
+                return new DirectEqualityExplanation(newSource, newTarget, newEquality);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, int arg)
+            {
+                var newSource = target.source.iterationOffset == 0 ? MakePrime(target.source) : RemoveIterationOffset(target.source);
+                var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
+                var newEqualities = target.equalities.Select(ee => visit(ee, arg)).ToArray();
+                return new TransitiveEqualityExplanation(newSource, newTarget, newEqualities);
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, int arg)
+            {
+                var newSource = target.source.iterationOffset == 0 ? MakePrime(target.source) : RemoveIterationOffset(target.source);
+                var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
+                var newEqualities = target.sourceArgumentEqualities.Select(ee => visit(ee, arg)).ToArray();
+                return new CongruenceExplanation(newSource, newTarget, newEqualities);
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, int arg)
+            {
+                var newSource = target.source.iterationOffset == 0 ? MakePrime(target.source) : RemoveIterationOffset(target.source);
+                var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
+                return new RecursiveReferenceEqualityExplanation(newSource, newTarget, target.EqualityNumber, 0, target.GenerationOffset == 0);
+            }
+        }
+
         private void printCycleInfo(InfoPanelContent content, PrettyPrintFormat format)
         {
             if (!hasCycle()) return;
@@ -316,8 +423,9 @@ namespace AxiomProfiler.QuantifierModel
             
             var alreadyIntroducedGeneralizations = new HashSet<int>();
 
+            var recursiveEqualityExplanations = new List<Tuple<int, EqualityExplanation>>();
             var termNumbering = 1;
-            termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, generalizedTerms.First(), insts.Current, true, false, termNumbering);
+            termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, generalizedTerms.First(), insts.Current, true, false, termNumbering, recursiveEqualityExplanations);
 
             var count = 1;
             var loopYields = generalizedTerms.GetRange(1, generalizedTerms.Count - 1);
@@ -339,9 +447,51 @@ namespace AxiomProfiler.QuantifierModel
 
                 insts.MoveNext();
                 format.restoreAllOriginalRules();
-                termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, term, insts.Current, false, count == loopYields.Count, termNumbering);
+                termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, term, insts.Current, false, count == loopYields.Count, termNumbering, recursiveEqualityExplanations);
                 count++;
             }
+
+            if (recursiveEqualityExplanations.Any())
+            {
+                format.restoreAllOriginalRules();
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\n\nEqualities for Next Iteration(s):\n\n");
+
+                var offsetGroups = recursiveEqualityExplanations.GroupBy(ee => EqualityExplanationShiftCollector.singleton.visit(ee.Item2, null)).OrderBy(group => group.Key).AsEnumerable();
+                var nonGeneralizedEqualities = Enumerable.Empty<int>();
+                if (offsetGroups.First().Key == -1)
+                {
+                    nonGeneralizedEqualities = offsetGroups.First().Select(tuple => tuple.Item1);
+                    offsetGroups = offsetGroups.Skip(1);
+                }
+
+                foreach (var group in offsetGroups)
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append($"In {group.Key} Iteration(s) the Following Equalities Will Be Used:\n\n");
+
+                    foreach (var equalityExplanation in group)
+                    {
+                        var equalityNumber = equalityExplanation.Item1;
+                        var shiftedEqualityExplanation = EqualityExplanationShifter.singleton.visit(equalityExplanation.Item2, group.Key);
+                        content.switchToDefaultFormat();
+                        var numberingString = $"({equalityNumber}') ";
+                        content.Append(numberingString);
+                        shiftedEqualityExplanation.source.PrettyPrint(content, format, numberingString.Length);
+                        EqualityExplanationPrinter.singleton.visit(shiftedEqualityExplanation, Tuple.Create(content, format, false, numberingString.Length));
+                        content.Append("\n\n");
+                    }
+                }
+
+                if (nonGeneralizedEqualities.Any())
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("The Following Equalities Reference Several Iterations and Could Not Be Generalized:\n\n");
+                    content.switchToDefaultFormat();
+                    content.Append(String.Join(", ", nonGeneralizedEqualities.Select(e => $"({e})")));
+                }
+            }
+
             format.restoreAllOriginalRules();
             content.Append("\n\n");
         }
@@ -391,8 +541,33 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static int printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format,
-            GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations, Term term, Instantiation instantiation, bool first, bool last, int termNumberOffset)
+        private class EqualityExplanationIsRecursiveVisitor: EqualityExplanationVisitor<bool, object>
+        {
+            public static readonly EqualityExplanationIsRecursiveVisitor singleton = new EqualityExplanationIsRecursiveVisitor();
+
+            public override bool Direct(DirectEqualityExplanation target, object arg)
+            {
+                return false;
+            }
+
+            public override bool Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                return target.equalities.Any(e => visit(e, arg));
+            }
+
+            public override bool Congruence(CongruenceExplanation target, object arg)
+            {
+                return target.sourceArgumentEqualities.Any(e => visit(e, arg));
+            }
+
+            public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                return true;
+            }
+        }
+
+        private static int printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format, GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations,
+            Term term, Instantiation instantiation, bool first, bool last, int termNumberOffset, List<Tuple<int, EqualityExplanation>> recursiveEqualityExplanations)
         {
             var termNumberings = new List<Tuple<Term, int>>();
             generalizationState.tmpHighlightGeneralizedTerm(format, term, last);
@@ -519,9 +694,16 @@ namespace AxiomProfiler.QuantifierModel
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
                             equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { t, effectiveTerm }, termNumber));
-                            if (format.ShowEqualityExplanations)
+
+                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                            var isRecursive = EqualityExplanationIsRecursiveVisitor.singleton.visit(explanation, null);
+                            if (isRecursive)
                             {
-                                var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                                recursiveEqualityExplanations.Add(Tuple.Create(termNumber, explanation));
+                            }
+
+                            if (format.ShowEqualityExplanations && !isRecursive)
+                            {
                                 explanation.PrettyPrint(content, format, termNumber);
                             }
                             else
@@ -555,9 +737,17 @@ namespace AxiomProfiler.QuantifierModel
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
                             equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { t, effectiveTerm }, termNumber));
-                            if (format.ShowEqualityExplanations)
+
+                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                            var isRecursive = EqualityExplanationIsRecursiveVisitor.singleton.visit(explanation, null);
+                            if (isRecursive)
                             {
-                                var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                                recursiveEqualityExplanations.Add(Tuple.Create(termNumber, explanation));
+                            }
+
+
+                            if (format.ShowEqualityExplanations && !isRecursive)
+                            {
                                 explanation.PrettyPrint(content, format, termNumber);
                             }
                             else

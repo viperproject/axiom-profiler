@@ -22,6 +22,7 @@ namespace AxiomProfiler.QuantifierModel
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
         public int iterationOffset = 0;
+        public bool isPrime = false;
 
         public Term(string name, Term[] args, int generalizationCounter = -1)
         {
@@ -170,7 +171,7 @@ namespace AxiomProfiler.QuantifierModel
             content.Append(Name);
             if (format.showType) content.Append(GenericType);
             if (iterationOffset > 0) content.Append("_-" + iterationOffset);
-            if (format.showTermId) content.Append("[" + (id > 0 ? id.ToString() : "g" + -id) + "]");
+            if (format.showTermId) content.Append("[" + (id >= 0 ? id.ToString() : "g" + -id) + (isPrime ? "'" : "") + "]");
         }
 
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int indent = 0)

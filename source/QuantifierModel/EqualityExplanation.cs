@@ -211,11 +211,13 @@ namespace AxiomProfiler.QuantifierModel
     {
         public readonly int EqualityNumber;
         public readonly int GenerationOffset;
+        public readonly bool isPrime;
 
-        public RecursiveReferenceEqualityExplanation(Term source, Term target, int EqualityNumber, int GenerationOffset): base(source, target)
+        public RecursiveReferenceEqualityExplanation(Term source, Term target, int EqualityNumber, int GenerationOffset, bool isPrime = false): base(source, target)
         {
             this.EqualityNumber = EqualityNumber;
             this.GenerationOffset = GenerationOffset;
+            this.isPrime = isPrime;
         }
 
         protected internal override R Accept<R, A>(EqualityExplanationVisitor<R, A> visitor, A arg)

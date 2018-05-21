@@ -1421,14 +1421,14 @@ namespace AxiomProfiler.CycleDetection
                 rule.color = PrintConstants.generalizationColor;
                 if (term.Args.Count() == 0)
                 {
-                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
-                        (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}]" : "");
+                    rule.prefix = term.Name + (onlyOne || term.generalizationCounter < 0 ? "" : (term.isPrime ? "'" : "") + "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
+                        (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}{(term.isPrime ? "'" : "")}]" : "");
                     rule.suffix = "";
                 }
                 else
                 {
                     rule.prefix = term.Name + (term.generalizationCounter < 0 ? (format.showTermId ? (term.iterationOffset > 0 ? "_-" +
-                        term.iterationOffset : "") + $"[g{-term.id}]" : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(";
+                        term.iterationOffset : "") + $"[g{-term.id}{(term.isPrime ? "'" : "")}]" : "") : (term.isPrime ? "'" : "") + "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(";
                 }
                 format.addTemporaryRule(term.id.ToString(), rule);
             }
