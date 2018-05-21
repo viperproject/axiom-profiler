@@ -263,15 +263,15 @@ namespace AxiomProfiler.QuantifierModel
                 case PrintRule.ParenthesesSetting.Precedence:
                     if (format.history.Count == 0) return false;
                     if (parentRule.precedence < rule.precedence) return false;
-                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.suffix))
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix(false)))
                     { return false; }
-                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.infix) &&
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.infix(false)) &&
                         format.childIndex == 0)
                     { return false; }
-                    if (!string.IsNullOrWhiteSpace(parentRule.infix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.suffix) &&
+                    if (!string.IsNullOrWhiteSpace(parentRule.infix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix(false)) &&
                         format.childIndex == format.history.Last().Args.Length - 1)
                     { return false; }
                     return format.history.Last().Name != Name || !rule.associative;
@@ -316,39 +316,41 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void addPrefix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addPrefix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.Append(rule.prefix);
-            if (!string.IsNullOrWhiteSpace(rule.prefix) &&
+            var prefix = rule.prefix(isPrime);
+            content.Append(prefix);
+            if (!string.IsNullOrWhiteSpace(prefix) &&
                 rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(content.Length);
             }
         }
 
-        private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
             content.switchFormat(PrintConstants.DefaultFont, rule.color);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
             }
-            content.Append(rule.infix);
+            content.Append(rule.infix(isPrime));
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(content.Length);
             }
         }
 
-        private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
+            var suffix = rule.suffix(isPrime);
             content.switchFormat(rule.font ?? PrintConstants.DefaultFont, rule.color);
-            if (!string.IsNullOrWhiteSpace(rule.suffix) &&
+            if (!string.IsNullOrWhiteSpace(suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
             }
-            content.Append(rule.suffix);
+            content.Append(suffix);
         }
 
         private bool printChildren(PrettyPrintFormat format, PrintRule rule)

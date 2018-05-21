@@ -453,7 +453,6 @@ namespace AxiomProfiler.QuantifierModel
 
             if (recursiveEqualityExplanations.Any())
             {
-                format.restoreAllOriginalRules();
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nEqualities for Next Iteration(s):\n\n");
 

@@ -139,9 +139,9 @@ namespace AxiomProfiler.PrettyPrinting
 
     public class PrintRule
     {
-        public string prefix;
-        public string infix;
-        public string suffix;
+        public Func<bool, string> prefix;
+        public Func<bool, string> infix;
+        public Func<bool, string> suffix;
         public Color color;
         public Font font;
         public bool printChildren;
@@ -161,17 +161,17 @@ namespace AxiomProfiler.PrettyPrinting
 
         public static PrintRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
-            var prefix = t.Name +
+            var prefix = new Func<bool, string>(isPrime => t.Name +
                 (format.showType ? t.GenericType : "") +
-                (t.generalizationCounter >= 0 ? (t.isPrime ? "'" : "") + "_" + t.generalizationCounter : "") +
+                (t.generalizationCounter >= 0 ? (isPrime ? "'" : "") + "_" + t.generalizationCounter : "") +
                 (t.iterationOffset > 0 ? "_-" + t.iterationOffset : "") +
-                (format.showTermId && t.generalizationCounter < 0 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (t.isPrime ? "'" : "") + "]" : "") +
-                "(";
+                (format.showTermId && t.generalizationCounter < 0 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (isPrime ? "'" : "") + "]" : "") +
+                "(");
             return new PrintRule
             {
                 prefix = prefix,
-                infix = ", ",
-                suffix = ")",
+                infix = new Func<bool, string>(_ => ", "),
+                suffix = new Func<bool, string>(_ => ")"),
                 color = PrintConstants.defaultTermColor,
                 printChildren = true,
                 associative = false,

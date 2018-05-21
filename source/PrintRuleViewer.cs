@@ -46,21 +46,21 @@ namespace AxiomProfiler
 
             var prefixItem = new ListViewItem.ListViewSubItem
             {
-                Text = rule.prefix,
+                Text = rule.prefix(false),
                 ForeColor = rule.color
             };
             item.SubItems.Add(prefixItem);
 
             var infixItem = new ListViewItem.ListViewSubItem
             {
-                Text = rule.infix,
+                Text = rule.infix(false),
                 ForeColor = rule.color
             };
             item.SubItems.Add(infixItem);
 
             var suffixItem = new ListViewItem.ListViewSubItem
             {
-                Text = rule.suffix,
+                Text = rule.suffix(false),
                 ForeColor = rule.color
             };
             item.SubItems.Add(suffixItem);
@@ -212,9 +212,9 @@ namespace AxiomProfiler
 
                 printRuleDict.addRule(lines[0], new PrintRule
                 {
-                    prefix = lines[1],
-                    infix = lines[2],
-                    suffix = lines[3],
+                    prefix = new Func<bool, string>(_ => lines[1]),
+                    infix = new Func<bool, string>(_ => lines[2]),
+                    suffix = new Func<bool, string>(_ => lines[3]),
                     color = Color.FromArgb(colorArgb),
                     printChildren = printChildren,
                     prefixLineBreak = prefixLinebreaks,
