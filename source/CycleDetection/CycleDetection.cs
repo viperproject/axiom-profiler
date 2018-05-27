@@ -861,6 +861,41 @@ namespace AxiomProfiler.CycleDetection
                 return new TransitiveEqualityExplanation(sourceTerm, targetTerm, emptyEqualityExplanations);
             }
 
+            private EqualityExplanation GeneralizeDirect(Term newSource, Term newTarget, DirectEqualityExplanation generalized, DirectEqualityExplanation other, GeneralizationState genState, int iteration)
+            {
+                var steps = new List<EqualityExplanation>();
+
+                var eqTerm = GetGeneralizedTerm(generalized.equality, other.equality, genState, iteration);
+                var sourceTerm = GetGeneralizedTerm(newSource, other.source, genState, iteration);
+
+                if (sourceTerm.iterationOffset != eqTerm.iterationOffset)
+                {
+                    var originalSourceTerm = GetGeneralizedTerm(generalized.source, other.source, genState, iteration - eqTerm.iterationOffset);
+                    originalSourceTerm = CopyTermAndSetIterationOffset(originalSourceTerm, originalSourceTerm.iterationOffset + eqTerm.iterationOffset);
+                    steps.Add(new TransitiveEqualityExplanation(sourceTerm, originalSourceTerm, emptyEqualityExplanations));
+                    sourceTerm = originalSourceTerm;
+                }
+
+                var targetTerm = GetGeneralizedTerm(generalized.target, other.target, genState, iteration - eqTerm.iterationOffset);
+                targetTerm = CopyTermAndSetIterationOffset(targetTerm, targetTerm.iterationOffset + eqTerm.iterationOffset);
+                steps.Add(new DirectEqualityExplanation(sourceTerm, targetTerm, eqTerm));
+
+                var newTargetTerm = GetGeneralizedTerm(newTarget, other.target, genState, iteration);
+                if (targetTerm.id != newTargetTerm.id)
+                {
+                    steps.Add(new TransitiveEqualityExplanation(targetTerm, newTargetTerm, emptyEqualityExplanations));
+                }
+
+                if (steps.Count == 1)
+                {
+                    return steps.First();
+                }
+                else
+                {
+                    return new TransitiveEqualityExplanation(steps.First().source, steps.Last().target, steps.ToArray());
+                }
+            }
+
             public override EqualityExplanation Direct(DirectEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation, int> arg)
             {
                 var genState = arg.Item1;
@@ -872,10 +907,7 @@ namespace AxiomProfiler.CycleDetection
                 }
 
                 var otherDirect = (DirectEqualityExplanation) other;
-                var sourceTerm = GetGeneralizedTerm(target.source, otherDirect.source, genState, iteration);
-                var targetTerm = GetGeneralizedTerm(target.target, otherDirect.target, genState, iteration);
-                var eqTerm = GetGeneralizedTerm(target.equality, otherDirect.equality, genState, iteration);
-                return new DirectEqualityExplanation(sourceTerm, targetTerm, eqTerm);
+                return GeneralizeDirect(target.source, target.target, target, otherDirect, genState, iteration);
             }
 
             public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation, int> arg)
@@ -885,6 +917,28 @@ namespace AxiomProfiler.CycleDetection
                 var iteration = arg.Item3;
                 if (other.GetType() != typeof(TransitiveEqualityExplanation))
                 {
+                    if (target.equalities.Length > 1 && target.equalities.Length <= 3)
+                    {
+                        if (other.GetType() == typeof(DirectEqualityExplanation))
+                        {
+                            var otherDirect = (DirectEqualityExplanation) other;
+                            var generalizedIndex = Array.FindIndex(target.equalities, ee => ee.GetType() == typeof(DirectEqualityExplanation));
+                            var generalized = (DirectEqualityExplanation) target.equalities[generalizedIndex];
+                            var newSource = generalizedIndex == 1 ? target.equalities[0].source : generalized.source;
+                            var newTarget = generalizedIndex + 1 < target.equalities.Length ? target.equalities[generalizedIndex + 1].target : generalized.target;
+                            return GeneralizeDirect(newSource, newTarget, generalized, otherDirect, genState, iteration);
+                        }
+                        else if (other.GetType() == typeof(RecursiveReferenceEqualityExplanation))
+                        {
+                            var otherRecursive = (RecursiveReferenceEqualityExplanation) other;
+                            var generalizedIndex = Array.FindIndex(target.equalities, ee => ee.GetType() == typeof(RecursiveReferenceEqualityExplanation));
+                            var generalized = (RecursiveReferenceEqualityExplanation) target.equalities[generalizedIndex];
+                            var newSource = generalizedIndex == 1 ? target.equalities[0].source : generalized.source;
+                            var newTarget = generalizedIndex + 1 < target.equalities.Length ? target.equalities[generalizedIndex + 1].target : generalized.target;
+                            return GeneralizeRecursive(newSource, newTarget, generalized, otherRecursive, genState, iteration);
+                        }
+                    }
+
                     return DefaultGeneralization(target, other, genState, iteration);
                 }
 
@@ -951,6 +1005,40 @@ namespace AxiomProfiler.CycleDetection
                 return new TheoryEqualityExplanation(sourceTerm, targetTerm, target.TheoryName);
             }
 
+            private EqualityExplanation GeneralizeRecursive(Term newSource, Term newTarget, RecursiveReferenceEqualityExplanation generalized, RecursiveReferenceEqualityExplanation other, GeneralizationState genState, int iteration)
+            {
+                var steps = new List<EqualityExplanation>();
+                var generalizedSource = GetGeneralizedTerm(newSource, other.source, genState, iteration);
+
+                if (generalizedSource.iterationOffset != generalized.GenerationOffset)
+                {
+                    var originalSource = GetGeneralizedTerm(generalized.source, other.source, genState, iteration - generalized.GenerationOffset);
+                    originalSource = CopyTermAndSetIterationOffset(originalSource, originalSource.iterationOffset + generalized.GenerationOffset);
+                    steps.Add(new TransitiveEqualityExplanation(generalizedSource, originalSource, emptyEqualityExplanations));
+                    generalizedSource = originalSource;
+                }
+
+                var generalizedTarget = GetGeneralizedTerm(generalized.target, other.target, genState, iteration - generalized.GenerationOffset);
+                generalizedTarget = CopyTermAndSetIterationOffset(generalizedTarget, generalizedTarget.iterationOffset + generalized.GenerationOffset);
+
+                steps.Add(new RecursiveReferenceEqualityExplanation(generalizedSource, generalizedTarget, generalized.EqualityNumber, generalized.GenerationOffset));
+
+                var newTargetTerm = GetGeneralizedTerm(newTarget, other.target, genState, iteration);
+                if (generalizedTarget.id != newTargetTerm.id)
+                {
+                    steps.Add(new TransitiveEqualityExplanation(generalizedTarget, newTargetTerm, emptyEqualityExplanations));
+                }
+
+                if (steps.Count == 1)
+                {
+                    return steps.First();
+                }
+                else
+                {
+                    return new TransitiveEqualityExplanation(steps.First().source, steps.Last().target, steps.ToArray());
+                }
+            }
+
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation, int> arg)
             {
                 var genState = arg.Item1;
@@ -958,10 +1046,7 @@ namespace AxiomProfiler.CycleDetection
                 var other = (RecursiveReferenceEqualityExplanation) arg.Item2;
                 var iteration = arg.Item3;
 
-                var generalizedSource = GetGeneralizedTerm(target.source, other.source, genState, iteration);
-                var generalizedTarget = GetGeneralizedTerm(target.target, other.target, genState, iteration);
-
-                return new RecursiveReferenceEqualityExplanation(generalizedSource, generalizedTarget, target.EqualityNumber, target.GenerationOffset);
+                return GeneralizeRecursive(target.source, target.target, target, other, genState, iteration);
             }
         }
 
