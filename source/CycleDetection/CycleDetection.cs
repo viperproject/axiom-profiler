@@ -477,6 +477,11 @@ namespace AxiomProfiler.CycleDetection
                 return null;
             }
 
+            public override object Theory(TheoryEqualityExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
+            {
+                return null;
+            }
+
             public override object RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<List<int>, List<List<EqualityExplanation[]>>> arg)
             {
                 throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
@@ -552,6 +557,13 @@ namespace AxiomProfiler.CycleDetection
                 {
                     return target.source.id == explanation.source.id && target.target.id == explanation.target.id;
                 }
+            }
+
+            public override bool Theory(TheoryEqualityExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
+            {
+                var path = arg.Item1;
+                var explanation = arg.Item2;
+                return !path.Any() && target.source.id == explanation.source.id && target.target.id == explanation.target.id;
             }
 
             public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, EqualityExplanation> arg)
@@ -663,6 +675,12 @@ namespace AxiomProfiler.CycleDetection
                     var recursionPoint = arg.Item2;
                     return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
                 }
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            {
+                var recursionPoint = arg.Item2;
+                return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
             }
 
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
@@ -910,6 +928,27 @@ namespace AxiomProfiler.CycleDetection
                     return visit(gen, nextArg);
                 }).ToArray();
                 return new CongruenceExplanation(sourceTerm, targetTerm, equalities);
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation, int> arg)
+            {
+                var genState = arg.Item1;
+                var other = arg.Item2;
+                var iteration = arg.Item3;
+                if (other.GetType() != typeof(TheoryEqualityExplanation))
+                {
+                    return DefaultGeneralization(target, other, genState, iteration);
+                }
+
+                var otherTheoryExplanation = (TheoryEqualityExplanation)other;
+                if (otherTheoryExplanation.TheoryName != target.TheoryName)
+                {
+                    return DefaultGeneralization(target, other, genState, iteration);
+                }
+
+                var sourceTerm = GetGeneralizedTerm(target.source, otherTheoryExplanation.source, genState, iteration);
+                var targetTerm = GetGeneralizedTerm(target.target, otherTheoryExplanation.target, genState, iteration);
+                return new TheoryEqualityExplanation(sourceTerm, targetTerm, target.TheoryName);
             }
 
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<GeneralizationState, EqualityExplanation, int> arg)

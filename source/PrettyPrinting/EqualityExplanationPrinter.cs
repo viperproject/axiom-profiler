@@ -117,6 +117,27 @@ namespace AxiomProfiler.PrettyPrinting
             return null;
         }
 
+        public override object Theory(TheoryEqualityExplanation target, Tuple<InfoPanelContent, PrettyPrintFormat, bool, int> arg)
+        {
+            var content = arg.Item1;
+            var format = arg.Item2;
+            var shouldPrintSource = arg.Item3;
+            var indent = arg.Item4;
+
+            var indentString = getIndentString(format, indent);
+
+            if (shouldPrintSource)
+            {
+                content.Append(indentString);
+                target.source.PrettyPrint(content, format, indent);
+            }
+            content.switchToDefaultFormat();
+            content.Append($"\n{indentString}= ({target.TheoryName} theory)\n{indentString}");
+            target.target.PrettyPrint(content, format, indent);
+
+            return null;
+        }
+
         public override object RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<InfoPanelContent, PrettyPrintFormat, bool, int> arg)
         {
             var content = arg.Item1;

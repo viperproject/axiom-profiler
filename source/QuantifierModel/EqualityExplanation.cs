@@ -207,6 +207,49 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    public class TheoryEqualityExplanation: EqualityExplanation
+    {
+        public readonly string TheoryName;
+
+        public TheoryEqualityExplanation(Term source, Term target, string theoryName): base(source, target)
+        {
+            TheoryName = theoryName;
+        }
+
+        protected internal override R Accept<R, A>(EqualityExplanationVisitor<R, A> visitor, A arg)
+        {
+            return visitor.Theory(this, arg);
+        }
+
+        // override object.Equals
+        public override bool Equals(object obj)
+        {
+            //       
+            // See the full list of guidelines at
+            //   http://go.microsoft.com/fwlink/?LinkID=85237  
+            // and also the guidance for operator== at
+            //   http://go.microsoft.com/fwlink/?LinkId=85238
+            //
+
+            if (obj == null || GetType() != obj.GetType())
+            {
+                return false;
+            }
+
+            var other = (TheoryEqualityExplanation) obj;
+
+            if (other.TheoryName != TheoryName) return false;
+
+            return base.Equals(obj);
+        }
+
+        // override object.GetHashCode
+        public override int GetHashCode()
+        {
+            return source.GetHashCode();
+        }
+    }
+
     public class RecursiveReferenceEqualityExplanation: EqualityExplanation
     {
         public readonly int EqualityNumber;
@@ -266,6 +309,8 @@ namespace AxiomProfiler.QuantifierModel
         public abstract R Transitive(TransitiveEqualityExplanation target, A arg);
 
         public abstract R Congruence(CongruenceExplanation target, A arg);
+
+        public abstract R Theory(TheoryEqualityExplanation target, A arg);
 
         public abstract R RecursiveReference(RecursiveReferenceEqualityExplanation target, A arg);
     }

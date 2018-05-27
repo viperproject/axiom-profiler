@@ -332,6 +332,11 @@ namespace AxiomProfiler.QuantifierModel
                 return shift;
             }
 
+            public override int Theory(TheoryEqualityExplanation target, object arg)
+            {
+                return CombineShifts(target.source.iterationOffset, target.target.iterationOffset);
+            }
+
             public override int RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
             {
                 var shift = target.source.iterationOffset;
@@ -382,6 +387,13 @@ namespace AxiomProfiler.QuantifierModel
                 var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
                 var newEqualities = target.sourceArgumentEqualities.Select(ee => visit(ee, arg)).ToArray();
                 return new CongruenceExplanation(newSource, newTarget, newEqualities);
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, int arg)
+            {
+                var newSource = target.source.iterationOffset == 0 ? MakePrime(target.source) : RemoveIterationOffset(target.source);
+                var newTarget = target.target.iterationOffset == 0 ? MakePrime(target.target) : RemoveIterationOffset(target.target);
+                return new TheoryEqualityExplanation(newSource, newTarget, target.TheoryName);
             }
 
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, int arg)
@@ -557,6 +569,11 @@ namespace AxiomProfiler.QuantifierModel
             public override bool Congruence(CongruenceExplanation target, object arg)
             {
                 return target.sourceArgumentEqualities.Any(e => visit(e, arg));
+            }
+
+            public override bool Theory(TheoryEqualityExplanation target, object arg)
+            {
+                return false;
             }
 
             public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)

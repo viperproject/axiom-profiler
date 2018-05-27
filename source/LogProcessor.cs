@@ -569,6 +569,11 @@ namespace AxiomProfiler
                 return new CongruenceExplanation(target.source, target.target, argumentExplanations.ToArray());
             }
 
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, LogProcessor arg)
             {
                 throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
@@ -610,6 +615,11 @@ namespace AxiomProfiler
                 return new CongruenceExplanation(target.target, target.source, reversedChildren);
             }
 
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, object arg)
+            {
+                return new TheoryEqualityExplanation(target.target, target.source, target.TheoryName);
+            }
+
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
             {
                 throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
@@ -629,6 +639,11 @@ namespace AxiomProfiler
             }
 
             public override IEnumerable<EqualityExplanation> Congruence(CongruenceExplanation target, object arg)
+            {
+                yield return target;
+            }
+
+            public override IEnumerable<EqualityExplanation> Theory(TheoryEqualityExplanation target, object arg)
             {
                 yield return target;
             }
@@ -912,6 +927,9 @@ namespace AxiomProfiler
                                 break;
                             case "ax":
                                 model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                break;
+                            case "th":
+                                model.equalityExplanations[fromId] = new TheoryEqualityExplanation(fromTerm, toTerm, words[3]);
                                 break;
                             default:
                                 Console.Out.WriteLine($"Unexpected equality explanation: {words[2]} (line: {curlineNo})");

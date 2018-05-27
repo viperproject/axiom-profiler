@@ -8,40 +8,6 @@ namespace AxiomProfiler.QuantifierModel
 {
     public class Instantiation : Common
     {
-        private class DirectEqualityCollector : EqualityExplanationVisitor<IEnumerable<Term>, object>
-        {
-            public override IEnumerable<Term> Direct(DirectEqualityExplanation target, object arg)
-            {
-                yield return target.equality;
-            }
-
-            public override IEnumerable<Term> Transitive(TransitiveEqualityExplanation target, object arg)
-            {
-                var result = Enumerable.Empty<Term>();
-                foreach (var eq in target.equalities)
-                {
-                    result = result.Concat(visit(eq, arg));
-                }
-                return result;
-            }
-
-            public override IEnumerable<Term> Congruence(CongruenceExplanation target, object arg)
-            {
-                var result = Enumerable.Empty<Term>();
-                foreach (var eq in target.sourceArgumentEqualities)
-                {
-                    result = result.Concat(visit(eq, arg));
-                }
-                return result;
-            }
-
-            public override IEnumerable<Term> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
-            {
-                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
-            }
-        }
-        private static readonly DirectEqualityCollector directEqualityCollector = new DirectEqualityCollector();
-
         public Quantifier Quant;
         public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
@@ -64,7 +30,6 @@ namespace AxiomProfiler.QuantifierModel
                 {
                     _Responsible = bindingInfo.TopLevelTerms
                         .Concat(bindingInfo.EqualityExplanations.Select(expl => expl.target))
-                        //.Concat(bindingInfo.EqualityExplanations.SelectMany(expl => directEqualityCollector.visit(expl, null)))
                         .ToArray();
                 }
                 return _Responsible;
