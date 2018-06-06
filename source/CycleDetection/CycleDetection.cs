@@ -232,7 +232,7 @@ namespace AxiomProfiler.CycleDetection
                     //only a finite prefix of terms may be produced outside of the loop
                     var loopProduced = terms.Select(t => loopInstantiations.Any(qInsts => qInsts.Any(inst => inst.concreteBody.isSubterm(t))));
                     loopProduced = loopProduced.SkipWhile(c => !c);
-                    if (loopProduced.Any(c => c) && loopProduced.All(c => c))
+                    if (loopProduced.Any() && loopProduced.All(c => c))
                     {
                         loopProducedAssocBlameTerms.Add(otherGenTerm);
                     }
@@ -264,9 +264,9 @@ namespace AxiomProfiler.CycleDetection
             //generalize equality explanations
             for (var it = 0; it < loopInstantiations.Length; it++)
             {
-                generalizeEqualityExplanations(it, false);
+                GeneralizeEqualityExplanations(it, false);
             }
-            generalizeEqualityExplanations(0, true);
+            GeneralizeEqualityExplanations(0, true);
 
             var iterationFinalTerm = generalizedTerms.Last();
             var genBindings = GetGeneralizedBindingInfo(loopInstantiations[0][0]);
@@ -296,7 +296,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private void generalizeEqualityExplanations(int instIndex, bool loopWrapAround)
+        private void GeneralizeEqualityExplanations(int instIndex, bool loopWrapAround)
         {
             var insts = loopInstantiations[instIndex];
             var equalityExplanationsDict = new Dictionary<Term, List<Tuple<EqualityExplanation, int>>>();
@@ -319,8 +319,8 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
-            var usableEqualityExplanations = equalityExplanationsDict.Values.GroupBy(l => l.Count).OrderByDescending(g => g.Key).FirstOrDefault();
-            var equalityExplanations = usableEqualityExplanations == null ? new List<Tuple<EqualityExplanation, int>>[0] : usableEqualityExplanations.ToArray();
+            var safeIndex = insts.Count / 2;
+            var equalityExplanations = equalityExplanationsDict.Values.Where(l => safeIndex < l.Count).ToArray();
 
             BindingInfo generalizedBindingInfo;
             if (loopWrapAround)
@@ -332,7 +332,6 @@ namespace AxiomProfiler.CycleDetection
                 generalizedBindingInfo = generalizedBindings[insts[insts.Count / 2].Quant.BodyTerm.id];
             }
 
-            var safeIndex = insts.Count / 2;
             var recursionPointFinder = new RecursionPointFinder();
             var candidates = new List<List<EqualityExplanation[]>>();
             for (var generation = 0; generation <= safeIndex; ++generation)
@@ -1470,7 +1469,7 @@ namespace AxiomProfiler.CycleDetection
 
         private Term getGeneralizedTerm(Stack<Term>[] todoStacks)
         {
-            if (TryGetExistingReplacement(todoStacks, out var existingReplacement) && existingReplacement.generalizationCounter < 0)
+            if (TryGetExistingReplacement(todoStacks, out var existingReplacement))
             {
                 generalizationTerms.Add(existingReplacement);
                 return existingReplacement;

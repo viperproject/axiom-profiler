@@ -485,6 +485,13 @@ namespace AxiomProfiler.QuantifierModel
                     {
                         var equalityNumber = equalityExplanation.Item1;
                         var shiftedEqualityExplanation = EqualityExplanationShifter.singleton.visit(equalityExplanation.Item2, group.Key);
+
+                        var newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(shiftedEqualityExplanation, null)
+                                   .GroupBy(gen => gen.generalizationCounter).Select(g => g.First())
+                                   .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                        PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                        alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
                         content.switchToDefaultFormat();
                         var numberingString = $"({equalityNumber}') ";
                         content.Append(numberingString);
@@ -579,6 +586,44 @@ namespace AxiomProfiler.QuantifierModel
             public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
             {
                 return true;
+            }
+        }
+
+        private class GeneralizationCollector : EqualityExplanationVisitor<IEnumerable<Term>, object>
+        {
+            public static readonly GeneralizationCollector singleton = new GeneralizationCollector();
+
+            public override IEnumerable<Term> Direct(DirectEqualityExplanation target, object arg)
+            {
+                return target.source.GetAllGeneralizationSubterms()
+                    .Concat(target.equality.GetAllGeneralizationSubterms())
+                    .Concat(target.target.GetAllGeneralizationSubterms());
+            }
+
+            public override IEnumerable<Term> Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                return target.source.GetAllGeneralizationSubterms()
+                    .Concat(target.equalities.SelectMany(ee => visit(ee, arg)))
+                    .Concat(target.target.GetAllGeneralizationSubterms());
+            }
+
+            public override IEnumerable<Term> Congruence(CongruenceExplanation target, object arg)
+            {
+                return target.source.GetAllGeneralizationSubterms()
+                    .Concat(target.sourceArgumentEqualities.SelectMany(ee => visit(ee, arg)))
+                    .Concat(target.target.GetAllGeneralizationSubterms());
+            }
+
+            public override IEnumerable<Term> Theory(TheoryEqualityExplanation target, object arg)
+            {
+                return target.source.GetAllGeneralizationSubterms()
+                    .Concat(target.target.GetAllGeneralizationSubterms());
+            }
+
+            public override IEnumerable<Term> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                return target.source.GetAllGeneralizationSubterms()
+                    .Concat(target.target.GetAllGeneralizationSubterms());
             }
         }
 
@@ -720,10 +765,23 @@ namespace AxiomProfiler.QuantifierModel
 
                             if (format.ShowEqualityExplanations && !isRecursive)
                             {
+                                newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(explanation, null)
+                                    .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
+                                    .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                                PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                                alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
                                 explanation.PrettyPrint(content, format, termNumber);
                             }
                             else
                             {
+                                newlyIntroducedGeneralizations = t.GetAllGeneralizationSubterms()
+                                    .Concat(effectiveTerm.GetAllGeneralizationSubterms())
+                                    .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
+                                    .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                                PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                                alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
                                 numberingString = $"({termNumber}) ";
                                 content.switchToDefaultFormat();
                                 content.Append(numberingString);
@@ -764,10 +822,23 @@ namespace AxiomProfiler.QuantifierModel
 
                             if (format.ShowEqualityExplanations && !isRecursive)
                             {
+                                newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(explanation, null)
+                                    .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
+                                    .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                                PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                                alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
                                 explanation.PrettyPrint(content, format, termNumber);
                             }
                             else
                             {
+                                newlyIntroducedGeneralizations = t.GetAllGeneralizationSubterms()
+                                    .Concat(effectiveTerm.GetAllGeneralizationSubterms())
+                                    .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
+                                    .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                                PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                                alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
                                 numberingString = $"({termNumber}) ";
                                 content.switchToDefaultFormat();
                                 content.Append(numberingString);
