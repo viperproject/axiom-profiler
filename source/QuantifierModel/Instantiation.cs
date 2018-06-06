@@ -179,9 +179,10 @@ namespace AxiomProfiler.QuantifierModel
             var termNumberings = new List<Tuple<Term, int>>();
 
             var blameTerms = bindingInfo.getDistinctBlameTerms();
-            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)))
-                .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id))
-                .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req));
+            var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
+                (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id) &&
+                !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k] == req)));
+
             foreach (var t in distinctBlameTerms)
             {
                 var termNumber = bindingInfo.GetTermNumber(t) + 1;

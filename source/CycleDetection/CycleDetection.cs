@@ -186,6 +186,7 @@ namespace AxiomProfiler.CycleDetection
                 var child = loopInstantiations[j][robustIdx];
                 var distinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
 
+                Term parentConcreteTerm;
                 Term generalizedYield;
                 if (it == 0)
                 {
@@ -199,12 +200,14 @@ namespace AxiomProfiler.CycleDetection
                      * trigger, i.e. any unnecessary higher level structure a term might have is automatically omitted.
                      */
                     var loopResultIndex = Enumerable.Range(0, distinctBlameTerms.Count).First(y => parent.concreteBody.isSubterm(distinctBlameTerms[y]));
+                    parentConcreteTerm = distinctBlameTerms[loopResultIndex];
                     var concreteTerms = loopInstantiations[j].Select(inst => inst.bindingInfo.getDistinctBlameTerms()[loopResultIndex]).Where(t => t != null);
                     generalizedYield = generalizeTerms(concreteTerms, loopInstantiations[j], false, false);
                 }
                 else
                 {
-                    // Here we cann simply use the terms produced by the previous instantiation.
+                    // Here we can simply use the terms produced by the previous instantiation.
+                    parentConcreteTerm = parent.concreteBody;
                     generalizedYield = generalizeYieldTermPointWise(loopInstantiations[i], loopInstantiations[j], j <= i, it == loopInstantiations.Length);
                 }
 
@@ -217,7 +220,7 @@ namespace AxiomProfiler.CycleDetection
                     .GroupBy(repl => repl.generalizationCounter).Select(group => group.First()).ToArray();
 
                 // Other prerequisites:
-                var boundTos = distinctBlameTerms.Where(y => !parent.concreteBody.isSubterm(y)).SelectMany(y => child.bindingInfo.bindings.Where(kv => kv.Value.id == y.id)).Select(kv => kv.Key);
+                var boundTos = distinctBlameTerms.Where(y => !parentConcreteTerm.isSubterm(y)).SelectMany(y => child.bindingInfo.bindings.Where(kv => kv.Value.id == y.id)).Select(kv => kv.Key);
 
                 foreach (var boundTo in boundTos)
                 {
@@ -266,7 +269,16 @@ namespace AxiomProfiler.CycleDetection
             generalizeEqualityExplanations(0, true);
 
             var iterationFinalTerm = generalizedTerms.Last();
-            MarkGeneralizations(generalizedTerms.First(), wrapBindings.getDistinctBlameTerms().First(t => iterationFinalTerm.isSubterm(t.id)));
+            var genBindings = GetGeneralizedBindingInfo(loopInstantiations[0][0]);
+            foreach (var loopEndTerm in wrapBindings.getDistinctBlameTerms().Where(t => iterationFinalTerm.isSubterm(t.id)))
+            {
+                foreach (var boundTo in wrapBindings.bindings.Where(kv => kv.Value.id == loopEndTerm.id).Select(kv => kv.Key))
+                {
+
+                    // These might overwrite each other. That is ok.
+                    MarkGeneralizations(genBindings.bindings[boundTo], loopEndTerm);
+                }
+            }
         }
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd)
@@ -306,7 +318,9 @@ namespace AxiomProfiler.CycleDetection
                     }
                 }
             }
-            var equalityExplanations = equalityExplanationsDict.Values.ToArray();
+
+            var usableEqualityExplanations = equalityExplanationsDict.Values.GroupBy(l => l.Count).OrderByDescending(g => g.Key).FirstOrDefault();
+            var equalityExplanations = usableEqualityExplanations == null ? new List<Tuple<EqualityExplanation, int>>[0] : usableEqualityExplanations.ToArray();
 
             BindingInfo generalizedBindingInfo;
             if (loopWrapAround)
