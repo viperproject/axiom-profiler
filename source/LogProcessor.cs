@@ -38,9 +38,7 @@ namespace AxiomProfiler
 
         //TODO: estimate capacity based on file size
         private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
-        private readonly Dictionary<Term, HashSet<Term>> proofStepClosuresReverse = new Dictionary<Term, HashSet<Term>>(300_000); //inverse for more efficient updates
         private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000); //keeps track of term rewritings by z3
-        private readonly Dictionary<Term, HashSet<Term>> reverseRewriteClusureReverse = new Dictionary<Term, HashSet<Term>>(40_000); //inverse for more efficient updates
         private static readonly String[] proofRuleNames =
             { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
             "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
@@ -803,9 +801,9 @@ namespace AxiomProfiler
                         Term[] args = GetArgs(words, 3);
 
                         //We are only interested in the result of a proof step (i.e. the last argument)
-                        Term t = proofRuleNames.Contains(words[2]) ? new Term(args.Last()) : new Term(words[2], args);
                         if (proofRuleNames.Contains(words[2]))
                         {
+                            var t = args.Last();
                             if (words[2] == "rewrite" || words[2] == "rewrite*" || words[2] == "unit-resolution")
                             {
                                 Term from, to;
@@ -823,56 +821,25 @@ namespace AxiomProfiler
                                         throw new Exception("Unexpected result term for rewrite proof step.");
                                     }
                                     //TODO: result always rhs?
-                                    from = GetOrId(reverseRewriteClosure, equality.Args[0]);
+                                    from = GetOrIdTransitive(reverseRewriteClosure, equality.Args[0]);
                                     to = equality.Args[1];
                                 }
                                 reverseRewriteClosure[to] = from;
-
-                                if (!reverseRewriteClusureReverse.TryGetValue(from, out var fromPaths))
-                                {
-                                    fromPaths = new HashSet<Term>();
-                                    reverseRewriteClusureReverse.Add(from, fromPaths);
-                                }
-                                fromPaths.Add(to);
-
-                                if (reverseRewriteClusureReverse.TryGetValue(to, out var pathBeginnings))
-                                {
-                                    fromPaths.UnionWith(pathBeginnings);
-
-                                    foreach (var pathBeginning in pathBeginnings)
-                                    {
-                                        reverseRewriteClosure[pathBeginning] = from;
-                                    }
-                                }
                             }
 
-                            var prerequisiteClosure = new HashSet<Term>(args);
-                            foreach (var arg in args)
+                            foreach (var prerequisite in args.Take(args.Length - 1))
                             {
-                                if (proofStepClosuresReverse.TryGetValue(arg, out var closure))
-                                {
-                                    prerequisiteClosure.UnionWith(closure);
-                                }
-                            }
-                            var newProofStepClosure = GetOrId(proofStepClosures, t);
-
-                            if (!proofStepClosuresReverse.TryGetValue(newProofStepClosure, out var reverse))
-                            {
-                                proofStepClosuresReverse[newProofStepClosure] = prerequisiteClosure;
-                            }
-                            else
-                            {
-                                reverse.UnionWith(prerequisiteClosure);
-                                proofStepClosuresReverse[newProofStepClosure] = reverse;
+                                proofStepClosures[prerequisite] = t;
                             }
 
-                            foreach (var prerequisite in prerequisiteClosure)
-                            {
-                                proofStepClosures[prerequisite] = newProofStepClosure;
-                            }
+                            model.terms[parseIdentifier(words[1])] = t;
                         }
-                        model.terms[parseIdentifier(words[1])] = t;
-                        t.id = parseIdentifier(words[1]);
+                        else
+                        {
+                            var t = new Term(words[2], args);
+                            model.terms[parseIdentifier(words[1])] = t;
+                            t.id = parseIdentifier(words[1]);
+                        }
                     }
                     break;
                     
@@ -975,7 +942,7 @@ namespace AxiomProfiler
                         {
                             long id = GetId(words[pos]);
                             var t = model.terms[(int)id];
-                            Term quantImpliesBody = GetOrId(proofStepClosures, model.terms[(int) id]);
+                            Term quantImpliesBody = GetOrIdTransitive(proofStepClosures, model.terms[(int) id]);
 
                             if (quantImpliesBody.Name == "or")
                             {
@@ -1248,11 +1215,13 @@ namespace AxiomProfiler
             }
         }
 
-        private static T GetOrId<T>(Dictionary<T, T> dict, T key)
+        private static T GetOrIdTransitive<T>(Dictionary<T, T> dict, T key)
         {
-            if (!dict.TryGetValue(key, out var returnValue))
+            var returnValue = key;
+            while (dict.TryGetValue(key, out var found))
             {
-                returnValue = key;
+                if (Object.ReferenceEquals(returnValue, found)) break;
+                returnValue = found;
             }
             return returnValue;
         }
