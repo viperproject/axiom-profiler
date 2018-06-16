@@ -676,6 +676,36 @@ namespace AxiomProfiler
             }
         }
 
+        private static Term GetBodyFromImplication(Term quantImpliesBody, out bool isSinglyReferenced)
+        {
+            isSinglyReferenced = false;
+
+            var bodyChildren = new List<Term>();
+            foreach (var child in quantImpliesBody.Args)
+            {
+                if (child.Name != "not" || child.Args.First().Name != "FORALL")
+                {
+                    bodyChildren.Add(child);
+                }
+            }
+            if (bodyChildren.Count == 0)
+            {
+                throw new Exception("Body couldn't be found");
+            }
+            else if (bodyChildren.Count == 1)
+            {
+                return bodyChildren.First();
+            }
+            else
+            {
+                isSinglyReferenced = true;
+                return new Term("or", bodyChildren.ToArray())
+                {
+                    id = quantImpliesBody.id
+                };
+            }
+        }
+
         private EqualityExplanation GetExplanation(int sourceId, int targetId)
         {
             var key = $"{sourceId}, {targetId}";
@@ -942,38 +972,25 @@ namespace AxiomProfiler
                         {
                             long id = GetId(words[pos]);
                             var t = model.terms[(int)id];
-                            Term quantImpliesBody = GetOrIdTransitive(proofStepClosures, model.terms[(int) id]);
+                            var originalBody = model.terms[(int)id];
+                            var body = GetOrIdTransitive(proofStepClosures, originalBody);
+                            var isSinglyReferenced = false;
 
-                            if (quantImpliesBody.Name == "or")
+                            if (body.Name == "or")
                             {
-                                var bodyChildren = new List<Term>();
-                                foreach (var child in quantImpliesBody.Args)
+                                body = GetBodyFromImplication(body, out isSinglyReferenced);
+                            }
+                            if (originalBody.Name == "or")
+                            {
+                                originalBody = GetBodyFromImplication(originalBody, out _);
+                                if (!isSinglyReferenced)
                                 {
-                                    if (child.Name != "not" || child.Args.First().Name != "FORALL")
-                                    {
-                                        bodyChildren.Add(child);
-                                    }
-                                }
-                                if (bodyChildren.Count == 0)
-                                {
-                                    throw new Exception("Body couldn't be found");
-                                }
-                                else if (bodyChildren.Count == 1)
-                                {
-                                    inst.concreteBody = bodyChildren.First();
-                                }
-                                else
-                                {
-                                    inst.concreteBody = new Term("or", bodyChildren.ToArray())
-                                    {
-                                        id = quantImpliesBody.id
-                                    };
+                                    body = new Term(body);
                                 }
                             }
-                            else
-                            {
-                                inst.concreteBody = quantImpliesBody;
-                            }
+
+                            body.reverseRewrite = originalBody;
+                            inst.concreteBody = body;
                             pos++;
                         }
                         else
@@ -1231,7 +1248,7 @@ namespace AxiomProfiler
             //add reverse rewrites to terms
             foreach (var reverseRewrite in reverseRewriteClosure)
             {
-                reverseRewrite.Key.reverseRewrite = reverseRewrite.Value;
+                reverseRewrite.Key.reverseRewrite = GetOrIdTransitive(reverseRewriteClosure, reverseRewrite.Value);
             }
 
             //unify quantifiers with the same name and body

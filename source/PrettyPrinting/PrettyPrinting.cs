@@ -165,7 +165,7 @@ namespace AxiomProfiler.PrettyPrinting
                 (format.showType ? t.GenericType : "") +
                 (t.generalizationCounter >= 0 ? (isPrime ? "'" : "") + "_" + t.generalizationCounter : "") +
                 (t.iterationOffset > 0 ? "_-" + t.iterationOffset : "") +
-                (format.showTermId && t.generalizationCounter < 0 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (isPrime ? "'" : "") + "]" : "") +
+                (format.showTermId && t.generalizationCounter < 0 && t.id != -1 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (isPrime ? "'" : "") + "]" : "") +
                 "(");
             return new PrintRule
             {
