@@ -268,6 +268,8 @@ namespace AxiomProfiler.CycleDetection
             }
             GeneralizeEqualityExplanations(0, true);
 
+            DoGeneralizationSubstitution();
+
             var iterationFinalTerm = generalizedTerms.Last();
             var genBindings = GetGeneralizedBindingInfo(loopInstantiations[0][0]);
             foreach (var loopEndTerm in wrapBindings.getDistinctBlameTerms().Where(t => iterationFinalTerm.isSubterm(t.id)))
@@ -1068,6 +1070,376 @@ namespace AxiomProfiler.CycleDetection
             return NonRecursiveEqualityExplanationGeneralizer.singleton.visit(partiallyGeneralized, Tuple.Create(this, concrete.Item1, concrete.Item2));
         }
 
+        private class GeneralizationEqualitiesCollector : EqualityExplanationVisitor<object, Dictionary<Term, List<Term>>>
+        {
+            public static readonly GeneralizationEqualitiesCollector singleton = new GeneralizationEqualitiesCollector();
+
+            private static void InsertEquality(Dictionary<Term, List<Term>> dict, Term gen, Term equalTo)
+            {
+                if (!dict.TryGetValue(gen, out var equals))
+                {
+                    equals = new List<Term>();
+                    dict[gen] = equals;
+                }
+                equals.Add(equalTo);
+            }
+
+            private static void Default(EqualityExplanation ee, Dictionary<Term, List<Term>> dict)
+            {
+                if (ee.source.generalizationCounter >= 0)
+                {
+                    InsertEquality(dict, ee.source, ee.target);
+                }
+                if (ee.target.generalizationCounter >= 0)
+                {
+                    InsertEquality(dict, ee.target, ee.source);
+                }
+            }
+
+            public override object Direct(DirectEqualityExplanation target, Dictionary<Term, List<Term>> arg)
+            {
+                Default(target, arg);
+
+                return null;
+            }
+
+            public override object Transitive(TransitiveEqualityExplanation target, Dictionary<Term, List<Term>> arg)
+            {
+                var equalToTerms = target.equalities.Select(ee => ee.source).ToList();
+                equalToTerms.Add(target.source);
+                equalToTerms.Add(target.target);
+                equalToTerms = equalToTerms.Distinct().ToList();
+
+                foreach (var term in equalToTerms)
+                {
+                    if (term.generalizationCounter >= 0)
+                    {
+                        if (arg.TryGetValue(term, out var existingEqualTos))
+                        {
+                            existingEqualTos.AddRange(equalToTerms);
+                        }
+                        else
+                        {
+                            arg[term] = new List<Term>(equalToTerms);
+                        }
+                    }
+                }
+
+                foreach (var ee in target.equalities)
+                {
+                    visit(ee, arg);
+                }
+
+                return null;
+            }
+
+            public override object Congruence(CongruenceExplanation target, Dictionary<Term, List<Term>> arg)
+            {
+                Default(target, arg);
+
+                for (var i = 0; i < target.source.Args.Length; ++i)
+                {
+                    var ee = target.sourceArgumentEqualities[i];
+                    EqualityExplanation toVisit;
+                    if (ee.GetType() == typeof(TransitiveEqualityExplanation))
+                    {
+                        var transEE = (TransitiveEqualityExplanation) ee;
+                        toVisit = new TransitiveEqualityExplanation(target.source.Args[i], transEE.target, transEE.equalities);
+                    }
+                    else
+                    {
+                        toVisit = new TransitiveEqualityExplanation(target.source.Args[i], ee.target, new EqualityExplanation[] { ee });
+                    }
+                    visit(toVisit, arg);
+                }
+
+                return null;
+            }
+
+            public override object Theory(TheoryEqualityExplanation target, Dictionary<Term, List<Term>> arg)
+            {
+                Default(target, arg);
+
+                return null;
+            }
+
+            public override object RecursiveReference(RecursiveReferenceEqualityExplanation target, Dictionary<Term, List<Term>> arg)
+            {
+                Default(target, arg);
+
+                return null;
+            }
+        }
+
+        private Dictionary<Term, List<Term>> CollectGeneralizationEqualities()
+        {
+            var collectedEqs = new Dictionary<Term, List<Term>>();
+
+            foreach (var bindingInfo in generalizedBindings.Values)
+            {
+                foreach (var ee in bindingInfo.EqualityExplanations)
+                {
+                    GeneralizationEqualitiesCollector.singleton.visit(ee, collectedEqs);
+                }
+            }
+            foreach (var ee in wrapBindings.EqualityExplanations)
+            {
+                GeneralizationEqualitiesCollector.singleton.visit(ee, collectedEqs);
+            }
+
+            return collectedEqs;
+        }
+
+        private List<int> SelectGeneralizationsToKeep(Dictionary<Term, List<Term>> eqs)
+        {
+            var gensToCover = generalizationTerms.Select(t => t.generalizationCounter).Distinct();
+            var generalizationLookup = new Dictionary<int, Term>();
+            foreach (var gen in gensToCover)
+            {
+                generalizationLookup[gen] = generalizationTerms.First(t => t.generalizationCounter == gen);
+            }
+
+            var coverageClosures = new Dictionary<int, HashSet<int>>();
+
+            // Reflexive
+            foreach (var gen in gensToCover)
+            {
+                coverageClosures[gen] = new HashSet<int>() { gen };
+            }
+
+            // Transitive
+            foreach (var kv in eqs)
+            {
+                var coveringGens = gensToCover.Where(gen => kv.Value.Any(t => t.isSubtermGen(gen)));
+                foreach (var coveringGen in coveringGens)
+                {
+                    coverageClosures[coveringGen].Add(kv.Key.generalizationCounter);
+                }
+            }
+            bool changed;
+            do
+            {
+                changed = false;
+                foreach (var gen in gensToCover)
+                {
+                    var covering = coverageClosures[gen];
+                    var toAdd = new List<int>();
+                    foreach (var coveree in covering)
+                    {
+                        foreach (var newCoveree in coverageClosures[coveree])
+                        {
+                            if (!covering.Contains(newCoveree))
+                            {
+                                toAdd.Add(newCoveree);
+                            }
+                        }
+                    }
+                    changed |= toAdd.Any();
+                    covering.UnionWith(toAdd);
+                }
+            } while (changed);
+
+            var chosenGens = new List<int>();
+            var coveredGens = new HashSet<int>();
+
+            while (!coveredGens.IsSupersetOf(gensToCover))
+            {
+                var maxCoverable = coverageClosures.Max(kv => kv.Value.Count());
+                var candidates = coverageClosures.Where(kv => kv.Value.Count() == maxCoverable);
+                var heuristic = candidates.Min(kv => generalizationLookup[kv.Key].Args.Length);
+                var chosen = candidates.First(kv => generalizationLookup[kv.Key].Args.Length == heuristic);
+                chosenGens.Add(chosen.Key);
+                coveredGens.UnionWith(chosen.Value);
+
+                coverageClosures.Remove(chosen.Key);
+                foreach (var value in coverageClosures.Values)
+                {
+                    value.ExceptWith(chosen.Value);
+                }
+            }
+            
+            return chosenGens;
+        }
+
+        private static Term SubstituteGeneralizationsUsingSubstitutionMap(Term t, Dictionary<int, Term> map)
+        {
+            if (t.generalizationCounter >= 0)
+            {
+                return new Term(map[t.generalizationCounter]);
+            }
+            else
+            {
+                var replacementArgs = t.Args.Select(arg => SubstituteGeneralizationsUsingSubstitutionMap(arg, map)).ToArray();
+                return new Term(t, replacementArgs);
+            }
+        }
+
+        private static Term SubstituteAndUpdateBindings(Term t, Dictionary<int, Term> map, BindingInfo bindingInfo)
+        {
+            Term resultTerm;
+            if (t.generalizationCounter >= 0)
+            {
+                resultTerm = new Term(map[t.generalizationCounter]);
+            }
+            else
+            {
+                var replacementArgs = t.Args.Select(arg => SubstituteAndUpdateBindings(arg, map, bindingInfo)).ToArray();
+                resultTerm = new Term(t, replacementArgs);
+            }
+
+            var boundTo = bindingInfo.bindings.Where(kv => kv.Value.id == t.id).Select(kv => kv.Key).ToList();
+            foreach (var key in boundTo)
+            {
+                bindingInfo.bindings[key] = resultTerm;
+            }
+
+            foreach (var eqList in bindingInfo.equalities.Values)
+            {
+                if (eqList.Any(e => e.id == t.id))
+                {
+                    eqList.RemoveAll(e => e.id == t.id);
+                    eqList.Add(resultTerm);
+                }
+            }
+
+            return resultTerm;
+        }
+
+        private static IEnumerable<int> CollectGeneralizationsFromTerm(Term t)
+        {
+            if (t.generalizationCounter >= 0)
+            {
+                return Enumerable.Repeat(t.generalizationCounter, 1);
+            }
+            else
+            {
+                return t.Args.SelectMany(arg => CollectGeneralizationsFromTerm(arg));
+            }
+        }
+
+        private Dictionary<int, Term> GenerateGeneralizationSubstitutions()
+        {
+            var substitutionMap = new Dictionary<int, Term>();
+
+            var eqs = CollectGeneralizationEqualities();
+            foreach (var kv in eqs)
+            {
+                var nonGeneralTerm = kv.Value.FirstOrDefault(t => !t.ContainsGeneralization());
+                if (nonGeneralTerm != null)
+                {
+                    substitutionMap[kv.Key.generalizationCounter] = nonGeneralTerm;
+                }
+            }
+            var keysToRemove = eqs.Keys.Where(t => substitutionMap.Keys.Contains(t.generalizationCounter)).ToList();
+            foreach (var key in keysToRemove)
+            {
+                eqs.Remove(key);
+            }
+
+            var gensToKeep = SelectGeneralizationsToKeep(eqs).Where(gen => !substitutionMap.ContainsKey(gen));
+            foreach (var gen in gensToKeep)
+            {
+                substitutionMap[gen] = generalizationTerms.First(t => t.generalizationCounter == gen);
+            }
+
+            var substitutionOptions = eqs.GroupBy(kv => kv.Key.generalizationCounter)
+                .Select(group => Tuple.Create(group.Key, group.SelectMany(kv => kv.Value)))
+                .Where(tuple => !gensToKeep.Contains(tuple.Item1));
+            var workQueue = new Queue<Tuple<int, IEnumerable<Term>>>(substitutionOptions);
+
+            while (workQueue.Any())
+            {
+                var substitution = workQueue.Dequeue();
+
+                var key = substitution.Item1;
+                if (substitutionMap.ContainsKey(key)) continue;
+
+                var options = substitution.Item2;
+
+                var chosenSubstitution = options.FirstOrDefault(t => CollectGeneralizationsFromTerm(t).All(gen => substitutionMap.Keys.Contains(gen)));
+                if (chosenSubstitution != null)
+                {
+                    substitutionMap.Add(key, chosenSubstitution);
+                }
+                else
+                {
+                    workQueue.Enqueue(substitution);
+                }
+            }
+
+            return substitutionMap;
+        }
+
+        private class EqualityExplanationSubstituter : EqualityExplanationVisitor<EqualityExplanation, Dictionary<int, Term>>
+        {
+            public static readonly EqualityExplanationSubstituter singleton = new EqualityExplanationSubstituter();
+
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, Dictionary<int, Term> arg)
+            {
+                var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
+                var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
+                var newEquality = SubstituteGeneralizationsUsingSubstitutionMap(target.equality, arg);
+                return new DirectEqualityExplanation(newSource, newTarget, newEquality);
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Dictionary<int, Term> arg)
+            {
+                var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
+                var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
+                return new RecursiveReferenceEqualityExplanation(newSource, newTarget, target.EqualityNumber, target.GenerationOffset, target.isPrime);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Dictionary<int, Term> arg)
+            {
+                var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
+                var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
+                var newEqualities = target.equalities.Select(ee => visit(ee, arg)).ToArray();
+                return new TransitiveEqualityExplanation(newSource, newTarget, newEqualities);
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, Dictionary<int, Term> arg)
+            {
+                var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
+                var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
+                var newArgumentEqualities = target.sourceArgumentEqualities.Select(ee => visit(ee, arg)).ToArray();
+                return new CongruenceExplanation(newSource, newTarget, newArgumentEqualities);
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, Dictionary<int, Term> arg)
+            {
+                var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
+                var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
+                return new TheoryEqualityExplanation(newSource, newTarget, target.TheoryName);
+            }
+        }
+
+        private void DoGeneralizationSubstitution()
+        {
+            var substitutionMap = GenerateGeneralizationSubstitutions();
+
+            var newGenTerms = new List<Term>();
+            for (var i = 0; i < generalizedTerms.Count; ++i)
+            {
+                var term = generalizedTerms[i];
+                var bindingInfo = i < generalizedTerms.Count - 1 ? generalizedBindings[loopInstantiations[i][0].Quant.BodyTerm.id] : wrapBindings;
+
+                var substitution = SubstituteAndUpdateBindings(term, substitutionMap, bindingInfo);
+                var newAssocTerms = assocGenBlameTerm[term].Select(t => SubstituteAndUpdateBindings(t, substitutionMap, bindingInfo)).ToList();
+
+                assocGenBlameTerm.Remove(term);
+                assocGenBlameTerm.Add(substitution, newAssocTerms);
+                newGenTerms.Add(substitution);
+                
+                for (var idx = 0; idx < bindingInfo.EqualityExplanations.Length; ++idx)
+                {
+                    bindingInfo.EqualityExplanations[idx] = EqualityExplanationSubstituter.singleton.visit(bindingInfo.EqualityExplanations[idx], substitutionMap);
+                }
+            }
+
+            generalizedTerms.Clear();
+            generalizedTerms.AddRange(newGenTerms);
+        }
+
         private Term generalizeYieldTermPointWise(List<Instantiation> parentInsts, List<Instantiation> childInsts, bool blameWrapAround, bool loopWrapAround)
         {
             var yieldTerms = parentInsts
@@ -1571,6 +1943,8 @@ namespace AxiomProfiler.CycleDetection
             }
 
             //highlight remaining terms using the generalized binding info. Note that these highlightings may override the highlightings for generalizations in some cases.
+            //TODO: remove unecessary equalities / keep original dependent instantiations
+            if (!generalizedTerm.dependentInstantiationsBlame.Any()) return;
             var bindingInfo = last ? wrapBindings : generalizedBindings[generalizedTerm.dependentInstantiationsBlame.First().Quant.BodyTerm.id];
             foreach (var term in bindingInfo.equalities.SelectMany(kv1 => kv1.Value))
             {

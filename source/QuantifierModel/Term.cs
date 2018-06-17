@@ -71,6 +71,10 @@ namespace AxiomProfiler.QuantifierModel
             }
             generalizationCounter = t.generalizationCounter;
             iterationOffset = t.iterationOffset;
+
+            dependentInstantiationsBlame = new List<Instantiation>(t.dependentInstantiationsBlame);
+            dependentInstantiationsBind = new List<Instantiation>(t.dependentInstantiationsBind);
+            dependentTerms = new List<Term>(t.dependentTerms);
         }
 
         public bool ContainsFreeVar()
@@ -164,6 +168,12 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (id == subtermId) return true;
             return Args.Any(t => t.isSubterm(subtermId));
+        }
+
+        public bool isSubtermGen(int genCounter)
+        {
+            if (generalizationCounter == genCounter) return true;
+            return Args.Any(t => t.isSubtermGen(genCounter));
         }
 
         public void printName(InfoPanelContent content, PrettyPrintFormat format)
