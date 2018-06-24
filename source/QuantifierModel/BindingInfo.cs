@@ -189,7 +189,7 @@ namespace AxiomProfiler.QuantifierModel
         private BindingInfo(BindingInfo other)
         {
             processed = other.processed;
-            _bindings = new Dictionary<Term, Term>(other.bindings);
+            _bindings = new Dictionary<Term, Term>(other._bindings);
             BoundTerms = other.BoundTerms;
             TopLevelTerms = other.TopLevelTerms;
             EqualityExplanations = other.EqualityExplanations;
@@ -218,7 +218,7 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        public BindingInfo clone()
+        public BindingInfo Clone()
         {
             return new BindingInfo(this);
         }

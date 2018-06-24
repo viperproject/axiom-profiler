@@ -58,6 +58,15 @@ namespace AxiomProfiler.QuantifierModel
             };
         }
 
+        public Instantiation CopyForBindingInfoModification()
+        {
+            return new Instantiation(bindingInfo.Clone())
+            {
+                Quant = Quant,
+                concreteBody = concreteBody
+            };
+        }
+
         public int Depth
         {
             get
