@@ -439,7 +439,7 @@ namespace AxiomProfiler.QuantifierModel
             var blameTerms = bindings
                 .Select(bnd => bnd.Value).Distinct();
             return blameTerms
-                .Where(t1 => blameTerms.All(t2 => t2 == t1 || !t2.isSubterm(t1)))
+                .Where(t1 => matchContext[t1.id].Any(l => l.Count == 0))
                 .ToList();
         }
 

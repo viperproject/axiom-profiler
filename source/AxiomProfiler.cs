@@ -625,10 +625,13 @@ namespace AxiomProfiler
             uiUpdateTimer.Start();
             Task.Run(() =>
             {
-                var content = new InfoPanelContent();
-                c.InfoPanelText(content, getFormatFromGUI());
-                content.finalize();
-                infoPanelQueue.Enqueue(content);
+                lock (this)
+                {
+                    var content = new InfoPanelContent();
+                    c.InfoPanelText(content, getFormatFromGUI());
+                    content.finalize();
+                    infoPanelQueue.Enqueue(content);
+                }
             });
         }
 

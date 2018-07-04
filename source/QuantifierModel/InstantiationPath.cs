@@ -563,24 +563,29 @@ namespace AxiomProfiler.QuantifierModel
         {
             public static readonly EqualityExplanationIsRecursiveVisitor singleton = new EqualityExplanationIsRecursiveVisitor();
 
+            private static bool HasRecursiveTerm(EqualityExplanation target)
+            {
+                return target.source.iterationOffset > 0 || target.target.iterationOffset > 0;
+            }
+
             public override bool Direct(DirectEqualityExplanation target, object arg)
             {
-                return false;
+                return HasRecursiveTerm(target);
             }
 
             public override bool Transitive(TransitiveEqualityExplanation target, object arg)
             {
-                return target.equalities.Any(e => visit(e, arg));
+                return HasRecursiveTerm(target) || target.equalities.Any(e => visit(e, arg));
             }
 
             public override bool Congruence(CongruenceExplanation target, object arg)
             {
-                return target.sourceArgumentEqualities.Any(e => visit(e, arg));
+                return HasRecursiveTerm(target) || target.sourceArgumentEqualities.Any(e => visit(e, arg));
             }
 
             public override bool Theory(TheoryEqualityExplanation target, object arg)
             {
-                return false;
+                return HasRecursiveTerm(target);
             }
 
             public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
