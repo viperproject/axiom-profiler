@@ -430,7 +430,6 @@ namespace AxiomProfiler.QuantifierModel
                 {
                     patternStack.Push(subPattern);
                 }
-
             }
         }
 

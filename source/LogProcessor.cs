@@ -828,7 +828,8 @@ namespace AxiomProfiler
 
                 case "[mk-app]":
                     {
-                        Term[] args = GetArgs(words, 3);
+                        //TODO: remove once lambda expressions end up in the log, add as proof rule
+                        Term[] args = GetArgs(words, words[2] == "proof-bind" ? 4 : 3);
 
                         //We are only interested in the result of a proof step (i.e. the last argument)
                         if (proofRuleNames.Contains(words[2]))
