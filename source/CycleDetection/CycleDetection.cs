@@ -859,12 +859,20 @@ namespace AxiomProfiler.CycleDetection
                         if (t1.Name == t2.Name && t1.Args.Length == t2.Args.Length)
                         {
                             var generalizedArgs = t1.Args.Zip(t2.Args, (a1, a2) => GetGeneralizedTerm(a1, a2, genState, iteration, wrap)).ToArray();
-                            newGen = new Term(t1.Name, generalizedArgs) { id = genState.idCounter };
+                            newGen = new Term(t1.Name, generalizedArgs)
+                            {
+                                id = genState.idCounter,
+                                Responsible = t1.Responsible.Quant == t2.Responsible.Quant ? t1.Responsible : null
+                            };
                             --genState.idCounter;
                         }
                         else
                         {
-                            newGen = new Term("T", emptyTerms, genState.genCounter) { id = genState.idCounter };
+                            newGen = new Term("T", emptyTerms, genState.genCounter)
+                            {
+                                id = genState.idCounter,
+                                Responsible = t1.Responsible.Quant == t2.Responsible.Quant ? t1.Responsible : null
+                            };
                             ++genState.genCounter;
                             --genState.idCounter;
                         }
@@ -2075,7 +2083,7 @@ namespace AxiomProfiler.CycleDetection
             return false;
         }
 
-        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory, bool updateReplacements)
+        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates, Stack<Term>[] todoStacks, Stack<Term> generalizedHistory, bool overrideReplacements)
         {
             Term currTerm;
             if (candidates.Count == 1)
@@ -2124,7 +2132,7 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
-            if (updateReplacements)
+            if (overrideReplacements || !Enumerable.Range(0, todoStacks.Count()).Any(i => replacementDict.ContainsKey(Tuple.Create(i, todoStacks[i].Peek().id))))
             {
                 for (var i = 0; i < todoStacks.Length; ++i)
                 {
