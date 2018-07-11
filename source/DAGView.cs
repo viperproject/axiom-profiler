@@ -581,34 +581,56 @@ namespace AxiomProfiler
             return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.Statistics().Count();
         }
 
-        private static InstantiationPath BestDownPath(Node node)
-        {
-            return AllDownPaths(new InstantiationPath(), node).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
-        }
+        private static readonly int pathSegmentSize = 10;
 
-        private static InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
+        private InstantiationPath BestDownPath(Node node)
         {
-            return AllUpPaths(new InstantiationPath(), node).OrderByDescending(path =>
+            var curNode = node;
+            var curPath = new InstantiationPath();
+            curPath.append((Instantiation)node.UserData);
+            while (curNode.OutEdges.Any())
             {
-                path.appendWithOverlap(downPath);
-                return InstantiationPathScoreFunction(path, true, true);
-            }).First();
+                curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
+                curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
+            }
+            return curPath;
         }
 
-        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node)
+        private InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
         {
-            basePath = new InstantiationPath(basePath);
-            basePath.append((Instantiation)node.UserData);
-            if (node.OutEdges.Any()) return node.OutEdges.SelectMany(e => AllDownPaths(basePath, e.TargetNode));
-            else return Enumerable.Repeat(basePath, 1);
+            var curNode = node;
+            var curPath = new InstantiationPath();
+            curPath.append((Instantiation)node.UserData);
+            while (curNode.InEdges.Any())
+            {
+                curPath = AllUpPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path =>
+                {
+                    path.appendWithOverlap(downPath);
+                    return InstantiationPathScoreFunction(path, true, true);
+                }).First();
+                curNode = graph.FindNode(curPath.getInstantiations().First().uniqueID);
+            }
+            return curPath;
         }
 
-        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node)
+        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node, int nodesToGo)
         {
-            basePath = new InstantiationPath(basePath);
-            basePath.prepend((Instantiation)node.UserData);
-            if (node.InEdges.Any()) return node.InEdges.SelectMany(e => AllUpPaths(basePath, e.SourceNode));
-            else return Enumerable.Repeat(basePath, 1);
+            if (nodesToGo <= 0 || !node.OutEdges.Any()) return Enumerable.Repeat(basePath, 1);
+            return node.OutEdges.SelectMany(e => {
+                var copy = new InstantiationPath(basePath);
+                copy.append((Instantiation)e.TargetNode.UserData);
+                return AllDownPaths(copy, e.TargetNode, nodesToGo - 1);
+            });
+        }
+
+        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node, int nodesToGo)
+        {
+            if (nodesToGo <= 0 || !node.InEdges.Any()) return Enumerable.Repeat(basePath, 1);
+            return node.InEdges.SelectMany(e => {
+                var copy = new InstantiationPath(basePath);
+                copy.prepend((Instantiation)e.TargetNode.UserData);
+                return AllUpPaths(copy, e.TargetNode, nodesToGo - 1);
+            });
         }
 
         private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
