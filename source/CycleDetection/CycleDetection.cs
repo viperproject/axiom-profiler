@@ -771,7 +771,7 @@ namespace AxiomProfiler.CycleDetection
                 var recursionTargetEqualityIndex = recursionPoint.Value.Item3;
                 
                 var numberingOffset = loopInstantiations.Take(recursionTargetQuantifier).Sum(instantiations => instantiations[safeIndex].bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed()) + 1;
-                var numberOfGeneralizedBlameTerms = assocGenBlameTerm[generalizedTerms[recursionTargetQuantifier]].Count + 1;
+                var numberOfGeneralizedBlameTerms = assocGenBlameTerm.TryGetValue(generalizedTerms[recursionTargetQuantifier], out var assocTerms) ? assocTerms.Count + 1 : 1;
                 var equalityNumber = numberingOffset + numberOfGeneralizedBlameTerms + recursionTargetEqualityIndex;
 
                 var recursionInfo = Tuple.Create(equalityNumber, recursionTargetIterationOffset);
@@ -1974,30 +1974,39 @@ namespace AxiomProfiler.CycleDetection
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory, !loopWrapAround);
 
                 // Update binding info with generalized term if necessary.
-                if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var bindingKey))
+                if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var bindingKeys))
                 {
-                    if (localBindingInfo.bindings.TryGetValue(bindingKey, out var existing) && existing.id != currTerm.id)
+                    foreach (var bindingKey in bindingKeys)
                     {
-                        throw new Exception("Trying to match two different terms against the same subpattern");
+                        if (localBindingInfo.bindings.TryGetValue(bindingKey, out var existing) && existing.id != currTerm.id)
+                        {
+                            throw new Exception("Trying to match two different terms against the same subpattern");
+                        }
+                    
+                        localBindingInfo.bindings[bindingKey] = currTerm;
                     }
-                    localBindingInfo.bindings[bindingKey] = currTerm;
+
                     if (!localBindingInfo.matchContext.ContainsKey(currTerm.id))
                     {
                         localBindingInfo.matchContext[currTerm.id] = new List<List<Term>>();
                     }
                     localBindingInfo.matchContext[currTerm.id].Add(generalizedHistory.Reverse().ToList());
                 }
-                if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var key))
+                if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var keys))
                 {
-                    if (!localBindingInfo.equalities.TryGetValue(key, out var eqList))
+                    foreach (var key in keys)
                     {
-                        eqList = new List<Term>();
-                        localBindingInfo.equalities[key] = eqList;
+                        if (!localBindingInfo.equalities.TryGetValue(key, out var eqList))
+                        {
+                            eqList = new List<Term>();
+                            localBindingInfo.equalities[key] = eqList;
+                        }
+                        if (!eqList.Contains(currTerm))
+                        {
+                            eqList.Add(currTerm);
+                        }
                     }
-                    if (!eqList.Contains(currTerm))
-                    {
-                        eqList.Add(currTerm);
-                    }
+
                     if (!localBindingInfo.matchContext.ContainsKey(currTerm.id))
                     {
                         localBindingInfo.matchContext[currTerm.id] = new List<List<Term>>();
@@ -2019,7 +2028,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out Term boundTo)
+        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out List<Term> boundTo)
         {
             boundTo = null;
 
@@ -2027,21 +2036,22 @@ namespace AxiomProfiler.CycleDetection
             var childIdx = childInsts.Count / 2;
             var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
             var checkInst = childInsts[childIdx];
-            var termKV = checkInst.bindingInfo.bindings.FirstOrDefault(t => t.Value.id == todoStacks[robustIdx].Peek().id);
+            var termKVs = checkInst.bindingInfo.bindings.Where(t => t.Value.id == todoStacks[robustIdx].Peek().id).Where(kv => {
+                var term = kv.Value;
+                var constraints = checkInst.bindingInfo.matchContext[term.id];
+                return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+            });
 
-            if (termKV.Equals(default(KeyValuePair<Term, Term>))) return false;
+            if (!termKVs.Any()) return false;
 
-            boundTo = termKV.Key;
-            var term = termKV.Value;
-
-            var constraints = checkInst.bindingInfo.matchContext[term.id];
-            return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+            boundTo = termKVs.Select(kv => kv.Key).ToList();
+            return true;
         }
 
-        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out Term boundTo)
+        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out List<Term> boundTo)
         {
             //We try to find an equality that was used in the concrete case and assume that it should also be extended to the generalized case
-            boundTo = null;
+            boundTo = new List<Term>();
             var childIdx = childInsts.Count / 2;
             var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
             var checkInst = childInsts[childIdx];
@@ -2053,12 +2063,11 @@ namespace AxiomProfiler.CycleDetection
                     var constraints = checkInst.bindingInfo.matchContext[term.id];
                     if (constraintsSat(concreteHistory.Reverse().ToList(), constraints))
                     {
-                        boundTo = equality.Key;
-                        return true;
+                        boundTo.Add(equality.Key);
                     }
                 }
             }
-            return false;
+            return boundTo.Any();
         }
 
         private static bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints)

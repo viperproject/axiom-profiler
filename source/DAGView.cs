@@ -558,6 +558,7 @@ namespace AxiomProfiler
             if (curLength > maxLength)
             {
                 maxStartIndex = curStartIndex;
+                lastMaxStartIndex = curStartIndex;
                 maxLength = curLength;
             }
             else if (curLength == maxLength)
@@ -641,7 +642,7 @@ namespace AxiomProfiler
             if (nodesToGo <= 0 || !node.InEdges.Any()) return Enumerable.Repeat(basePath, 1);
             return node.InEdges.SelectMany(e => {
                 var copy = new InstantiationPath(basePath);
-                copy.prepend((Instantiation)e.TargetNode.UserData);
+                copy.prepend((Instantiation)e.SourceNode.UserData);
                 return AllUpPaths(copy, e.TargetNode, nodesToGo - 1);
             });
         }
