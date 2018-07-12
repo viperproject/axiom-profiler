@@ -9,6 +9,8 @@ namespace AxiomProfiler.PrettyPrinting
 {
     public class PrintConstants
     {
+        public static bool LargeTextMode = false;
+
         //colors
         public static readonly Color patternMatchColor = Color.LimeGreen;
         public static readonly Color blameColor = Color.Goldenrod;
@@ -22,11 +24,23 @@ namespace AxiomProfiler.PrettyPrinting
         public static readonly Color instantiationTitleColor = Color.DarkRed;
 
         //fonts
-        public static readonly Font DefaultFont = new Font("Consolas", 9, FontStyle.Regular);
-        public static readonly Font TitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
-        public static readonly Font SubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
-        public static readonly Font BoldFont = new Font(DefaultFont, FontStyle.Bold);
-        public static readonly Font ItalicFont = new Font(DefaultFont, FontStyle.Italic);
+        private static readonly Font RegDefaultFont = new Font("Consolas", 9, FontStyle.Regular);
+        private static readonly Font RegTitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font RegSubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
+        private static readonly Font RegBoldFont = new Font(DefaultFont, FontStyle.Bold);
+        private static readonly Font RegItalicFont = new Font(DefaultFont, FontStyle.Italic);
+
+        private static readonly Font BigDefaultFont = new Font("Consolas", 23, FontStyle.Bold);
+        private static readonly Font BigTitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigSubtitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigBoldFont = new Font(DefaultFont, FontStyle.Bold);
+        private static readonly Font BigItalicFont = new Font(DefaultFont, FontStyle.Italic | FontStyle.Bold);
+
+        public static Font DefaultFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font TitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font SubtitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font BoldFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font ItalicFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
 
         //strings
         public static readonly string indentDiff = "¦ ";

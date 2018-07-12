@@ -122,10 +122,7 @@ namespace AxiomProfiler
                 case "Cost (desc)":
                     ordFunc = inst => -inst.Cost;
                     break;
-                case "Deepest Subpath Length":
-                    ordFunc = inst => inst.DeepestSubpathDepth;
-                    break;
-                case "Deepest Subpath Length (desc)":
+                case "Deepest Subpath":
                     ordFunc = inst => -inst.DeepestSubpathDepth;
                     break;
                 default:

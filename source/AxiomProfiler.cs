@@ -59,31 +59,19 @@ namespace AxiomProfiler
             uiUpdateTimer.Interval = 5;
             uiUpdateTimer.Tick += treeUiUpdateTimerTick;
             uiUpdateTimer.Tick += InfoPanelUpdateTick;
+
+            var largeTextMode = Properties.Settings.Default.LargeTextMode;
+            largeTextToolStripMenuItem.Checked = largeTextMode;
+            PrintConstants.LargeTextMode = largeTextMode;
+            z3AxiomTree.Font = PrintConstants.DefaultFont;
         }
 
 
         private void AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
         {
             if (parameterConfiguration == null) return;
-
-            Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
-
-            if (!string.IsNullOrEmpty(parameterConfiguration.z3LogFile))
-            {
-                task = Loader.LoaderTask.LoaderTaskParse;
-            }
-            loadModel(parameterConfiguration, task);
+            loadModel(parameterConfiguration);
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-        }
-
-        private void LoadBoogie_Click(object sender, EventArgs e)
-        {
-            loadModelFromBoogie();
-        }
-
-        private void LoadZ3_Click(object sender, EventArgs e)
-        {
-            loadModelFromZ3();
         }
 
         private void LoadZ3Logfile_Click(object sender, EventArgs e)
@@ -113,7 +101,6 @@ namespace AxiomProfiler
 
             ParameterConfiguration config = new ParameterConfiguration();
 
-            config.boogieOptions = "/bv:z /trace";
             error = "";
 
             for (idx = 0; idx < args.Length; idx++)
@@ -123,25 +110,11 @@ namespace AxiomProfiler
                 if (args[idx].StartsWith("/") && !File.Exists(args[idx]))
                 {
                     // parse command line parameter switches
-                    if (args[idx].StartsWith("/f:"))
-                    {
-                        config.functionName = args[idx].Substring(3);
-                    }
-                    else if (args[idx].StartsWith("/l:"))
+                    if (args[idx].StartsWith("/l:"))
                     {
                         config.z3LogFile = args[idx].Substring(3);
                         // minimum requirements have been fulfilled.
                         retval = true;
-                    }
-                    else if (args[idx].StartsWith("/t:"))
-                    {
-                        uint timeout;
-                        if (!uint.TryParse(args[idx].Substring(3), out timeout))
-                        {
-                            error = $"Cannot parse timeout duration \"{args[idx].Substring(3)}\"";
-                            return false;
-                        }
-                        config.timeout = (int)timeout;
                     }
                     else if (args[idx].StartsWith("/c:"))
                     {
@@ -193,16 +166,6 @@ namespace AxiomProfiler
                         config.z3LogFile = args[idx];
                         retval = true;
                     }
-                    else if (config.preludeBplFileInfo == null)
-                    {
-                        config.preludeBplFileInfo = new FileInfo(args[idx]);
-                    }
-                    else if (config.codeBplFileInfo == null)
-                    {
-                        config.codeBplFileInfo = new FileInfo(args[idx]);
-                        // minimum requirements have been fulfilled.
-                        retval = true;
-                    }
                     else
                     {
                         error = "Multiple inputs files specified.";
@@ -216,50 +179,6 @@ namespace AxiomProfiler
                 parameterConfiguration = config;
             }
             return true;
-        }
-
-        private void loadModelFromBoogie()
-        {
-            LoadBoogieForm loadform = new LoadBoogieForm();
-            if (parameterConfiguration != null)
-            {
-                loadform.setParameterConfiguration(parameterConfiguration);
-            }
-            else
-            {
-                loadform.reloadParameterConfiguration();
-            }
-
-            var dialogResult = loadform.ShowDialog();
-            if (dialogResult != DialogResult.OK)
-                return;
-
-            parameterConfiguration = loadform.GetParameterConfiguration();
-            ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskBoogie);
-        }
-
-        private void loadModelFromZ3()
-        {
-            LoadZ3Form loadform = new LoadZ3Form();
-            if (parameterConfiguration != null)
-            {
-                loadform.setParameterConfiguration(parameterConfiguration);
-            }
-            else
-            {
-                loadform.reloadParameterConfiguration();
-            }
-
-            var dialogResult = loadform.ShowDialog();
-            if (dialogResult != DialogResult.OK)
-                return;
-
-            parameterConfiguration = loadform.GetParameterConfiguration();
-            ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskZ3);
         }
 
         private void loadModelFromZ3Logfile()
@@ -281,15 +200,15 @@ namespace AxiomProfiler
             parameterConfiguration = loadform.GetParameterConfiguration();
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
 
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskParse);
+            loadModel(parameterConfiguration);
         }
 
-        private void loadModel(ParameterConfiguration config, Loader.LoaderTask task)
+        private void loadModel(ParameterConfiguration config)
         {
             resetProfiler();
 
             // Create a new loader and LoadingProgressForm and execute the loading
-            Loader loader = new Loader(config, task);
+            Loader loader = new Loader(config);
             LoadingProgressForm lprogf = new LoadingProgressForm(loader);
             lprogf.ShowDialog();
 
@@ -791,8 +710,7 @@ namespace AxiomProfiler
         {
             if (model != null)
             {
-                var fInfo = parameterConfiguration?.preludeBplFileInfo;
-                GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
+                GraphVizualization.DumpGraph(model, "<unknown>");
             }
         }
 
@@ -855,6 +773,16 @@ namespace AxiomProfiler
         private void showEqualityExplanationsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
             SetInfoPanel(currentInfoPanelPrintable);
+        }
+
+        private void largeTextToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var largeTextMode = largeTextToolStripMenuItem.Checked;
+            Properties.Settings.Default.LargeTextMode = largeTextMode;
+            Properties.Settings.Default.Save();
+            PrintConstants.LargeTextMode = largeTextMode;
+            SetInfoPanel(currentInfoPanelPrintable);
+            z3AxiomTree.Font = PrintConstants.DefaultFont;
         }
     }
 }

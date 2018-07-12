@@ -876,6 +876,7 @@ namespace AxiomProfiler.CycleDetection
                             };
                             ++genState.genCounter;
                             --genState.idCounter;
+                            genState.generalizationTerms.Add(newGen);
                         }
 
                         locallyProducedGeneralizations.Add(newGen);

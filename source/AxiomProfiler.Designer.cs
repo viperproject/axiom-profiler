@@ -34,8 +34,6 @@ namespace AxiomProfiler
             this.z3AxiomTree = new System.Windows.Forms.TreeView();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadZ3TraceLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.profileZ3TraceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.loadZ3FromBoogieToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.colorVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -50,6 +48,8 @@ namespace AxiomProfiler
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.largeTextToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsPanel = new System.Windows.Forms.Panel();
             this.showEqualityExplanationsCheckBox = new System.Windows.Forms.CheckBox();
             this.congruenceDepthUD = new System.Windows.Forms.NumericUpDown();
@@ -141,8 +141,6 @@ namespace AxiomProfiler
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadZ3TraceLogToolStripMenuItem,
-            this.profileZ3TraceToolStripMenuItem,
-            this.loadZ3FromBoogieToolStripMenuItem,
             this.searchToolStripMenuItem,
             this.toolStripSeparator2,
             this.colorVisualizationToolStripMenuItem,
@@ -160,20 +158,6 @@ namespace AxiomProfiler
             this.loadZ3TraceLogToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
             this.loadZ3TraceLogToolStripMenuItem.Text = "&Load Z3 Output File";
             this.loadZ3TraceLogToolStripMenuItem.Click += new System.EventHandler(this.LoadZ3Logfile_Click);
-            // 
-            // profileZ3TraceToolStripMenuItem
-            // 
-            this.profileZ3TraceToolStripMenuItem.Name = "profileZ3TraceToolStripMenuItem";
-            this.profileZ3TraceToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.profileZ3TraceToolStripMenuItem.Text = "Profile Z3 Trace";
-            this.profileZ3TraceToolStripMenuItem.Click += new System.EventHandler(this.LoadZ3_Click);
-            // 
-            // loadZ3FromBoogieToolStripMenuItem
-            // 
-            this.loadZ3FromBoogieToolStripMenuItem.Name = "loadZ3FromBoogieToolStripMenuItem";
-            this.loadZ3FromBoogieToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.loadZ3FromBoogieToolStripMenuItem.Text = "Profile Z3 Trace for &Boogie Execution";
-            this.loadZ3FromBoogieToolStripMenuItem.Click += new System.EventHandler(this.LoadBoogie_Click);
             // 
             // searchToolStripMenuItem
             // 
@@ -271,12 +255,29 @@ namespace AxiomProfiler
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
             this.cSVToolStripMenuItem1,
+            this.viewToolStripMenuItem,
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(1184, 24);
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
+            // 
+            // viewToolStripMenuItem
+            // 
+            this.viewToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.largeTextToolStripMenuItem});
+            this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
+            this.viewToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+            this.viewToolStripMenuItem.Text = "View";
+            // 
+            // largeTextToolStripMenuItem
+            // 
+            this.largeTextToolStripMenuItem.CheckOnClick = true;
+            this.largeTextToolStripMenuItem.Name = "largeTextToolStripMenuItem";
+            this.largeTextToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.largeTextToolStripMenuItem.Text = "Large Text";
+            this.largeTextToolStripMenuItem.Click += new System.EventHandler(this.largeTextToolStripMenuItem_Click);
             // 
             // toolsPanel
             // 
@@ -451,7 +452,6 @@ namespace AxiomProfiler
             this.Controls.Add(this.menuStrip1);
             this.Name = "AxiomProfiler";
             this.Text = "Axiom Profiler";
-            this.Load += new System.EventHandler(this.AxiomProfiler_OnLoadEvent);
             this.splitContainer1.Panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
@@ -478,8 +478,6 @@ namespace AxiomProfiler
         private System.Windows.Forms.TreeView z3AxiomTree;
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadZ3TraceLogToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem profileZ3TraceToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem loadZ3FromBoogieToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripMenuItem colorVisualizationToolStripMenuItem;
@@ -506,6 +504,8 @@ namespace AxiomProfiler
         private System.Windows.Forms.NumericUpDown congruenceDepthUD;
         private System.Windows.Forms.Label congruenceDepthLabel;
         private System.Windows.Forms.CheckBox showEqualityExplanationsCheckBox;
+        private System.Windows.Forms.ToolStripMenuItem viewToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem largeTextToolStripMenuItem;
     }
 }
 
