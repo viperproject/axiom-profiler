@@ -643,7 +643,7 @@ namespace AxiomProfiler
             return node.InEdges.SelectMany(e => {
                 var copy = new InstantiationPath(basePath);
                 copy.prepend((Instantiation)e.SourceNode.UserData);
-                return AllUpPaths(copy, e.TargetNode, nodesToGo - 1);
+                return AllUpPaths(copy, e.SourceNode, nodesToGo - 1);
             });
         }
 
