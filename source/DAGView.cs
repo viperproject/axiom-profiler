@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
@@ -464,32 +465,44 @@ namespace AxiomProfiler
                 return;
             }
 
-            // building path downwards:
-            var bestDownPath = BestDownPath(previouslySelectedNode);
-            InstantiationPath bestUpPath;
-            if (bestDownPath.TryGetLoop(out var loop))
+            Task.Run(() =>
             {
-                bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
-                if (bestUpPath == null)
+                try
                 {
-                    bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                    _z3AxiomProfiler.DisplayMessage("Finding best path for generalization...");
+
+                    // building path downwards:
+                    var bestDownPath = BestDownPath(previouslySelectedNode);
+                    InstantiationPath bestUpPath;
+                    if (bestDownPath.TryGetLoop(out var loop))
+                    {
+                        bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
+                        if (bestUpPath == null)
+                        {
+                            bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                        }
+                    }
+                    else
+                    {
+                        bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                    }
+
+                    if (bestUpPath.TryGetCyclePath(out var cyclePath))
+                    {
+                        highlightPath(cyclePath);
+                        _z3AxiomProfiler.UpdateSync(cyclePath);
+                    }
+                    else
+                    {
+                        highlightPath(bestUpPath);
+                        _z3AxiomProfiler.UpdateSync(bestUpPath);
+                    }
                 }
-            }
-            else
-            {
-                bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
-            }
-            
-            if (bestUpPath.TryGetCyclePath(out var cyclePath))
-            {
-                highlightPath(cyclePath);
-                _z3AxiomProfiler.SetInfoPanel(cyclePath);
-            }
-            else
-            {
-                highlightPath(bestUpPath);
-                _z3AxiomProfiler.SetInfoPanel(bestUpPath);
-            }
+                catch (Exception exception)
+                {
+                    _z3AxiomProfiler.DisplayMessage($"Something went wrong: {exception.Message}");
+                }
+            });
         }
 
         // These factors were determined experimentally
@@ -581,7 +594,7 @@ namespace AxiomProfiler
             return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.Statistics().Count();
         }
 
-        private static readonly int pathSegmentSize = 10;
+        private static readonly int pathSegmentSize = 8;
 
         private InstantiationPath BestDownPath(Node node)
         {

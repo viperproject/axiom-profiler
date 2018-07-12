@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using AxiomProfiler.PrettyPrinting;
 using AxiomProfiler.QuantifierModel;
@@ -375,18 +374,20 @@ namespace AxiomProfiler.CycleDetection
             }
 
             var recursionPointFinder = new RecursionPointFinder();
-            var candidates = new List<List<EqualityExplanation[]>>();
-            for (var generation = 0; generation <= safeIndex; ++generation)
-            {
-                var generationSlice = loopInstantiations.Select(quantInstantiations => quantInstantiations[generation + offset].bindingInfo.EqualityExplanations);
-                if (generation == safeIndex)
-                {
-                    generationSlice = generationSlice.Take(instIndex);
-                }
-                candidates.Add(generationSlice.ToList());
-            }
-            candidates.Reverse();
             generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
+                var candidates = new List<List<EqualityExplanation[]>>();
+                var referenceGeneration = list[safeIndex].Item2 - offset;
+                for (var generation = 0; generation <= referenceGeneration; ++generation)
+                {
+                    var generationSlice = loopInstantiations.Select(quantInstantiations => quantInstantiations[generation + offset].bindingInfo.EqualityExplanations);
+                    if (generation == referenceGeneration)
+                    {
+                        generationSlice = generationSlice.Take(instIndex);
+                    }
+                    candidates.Add(generationSlice.ToList());
+                }
+                candidates.Reverse();
+
                 recursionPointFinder.visit(list[safeIndex].Item1, Tuple.Create(new List<int>(), candidates));
 
                 var validationFilter = ValidateRecursionPoints(recursionPointFinder.recursionPoints, list);
@@ -871,7 +872,7 @@ namespace AxiomProfiler.CycleDetection
                             newGen = new Term("T", emptyTerms, genState.genCounter)
                             {
                                 id = genState.idCounter,
-                                Responsible = t1.Responsible.Quant == t2.Responsible.Quant ? t1.Responsible : null
+                                Responsible = t1.Responsible != null && t2.Responsible != null && t1.Responsible.Quant == t2.Responsible.Quant ? t1.Responsible : null
                             };
                             ++genState.genCounter;
                             --genState.idCounter;
@@ -1497,7 +1498,20 @@ namespace AxiomProfiler.CycleDetection
 
                 var substitution = SubstituteAndUpdateBindings(term, substitutionMap, bindingInfo);
 
-                if (assocGenBlameTerm.TryGetValue(term, out var assocTerms))
+                var hasAssocTerms = assocGenBlameTerm.TryGetValue(term, out var assocTerms);
+
+                if (i == 0)
+                {
+                    var additionalTerms = bindingInfo.getDistinctBlameTerms();
+                    additionalTerms.RemoveAll(t => substitution.isSubterm(t));
+                    if (hasAssocTerms) additionalTerms.RemoveAll(t => assocTerms.Contains(t));
+                    foreach (var t in additionalTerms)
+                    {
+                        SubstituteAndUpdateBindings(t, substitutionMap, bindingInfo);
+                    }
+                }
+
+                if (hasAssocTerms)
                 {
                     var newAssocTerms = assocTerms.Select(t => SubstituteAndUpdateBindings(t, substitutionMap, bindingInfo)).ToList();
                     assocGenBlameTerm.Remove(term);
@@ -1612,11 +1626,13 @@ namespace AxiomProfiler.CycleDetection
                     var boundTos = bindingInfo.bindings.Where(kv => kv.Value.id == equalityExplanation.target.id).Select(kv => kv.Key);
                     foreach (var boundTo in boundTos)
                     {
-                        var lhs = bindingInfo.equalities[boundTo];
-                        lhs.RemoveAll(t => t.id == equalityExplanation.source.id);
-                        if (lhs.Count == 0)
+                        if (bindingInfo.equalities.TryGetValue(boundTo, out var lhs))
                         {
-                            bindingInfo.equalities.Remove(boundTo);
+                            lhs.RemoveAll(t => t.id == equalityExplanation.source.id);
+                            if (lhs.Count == 0)
+                            {
+                                bindingInfo.equalities.Remove(boundTo);
+                            }
                         }
                     }
                 }
@@ -1625,7 +1641,12 @@ namespace AxiomProfiler.CycleDetection
                     simplifiedEqualityExplanations.Add(simplifiedExplanation);
                 }
             }
-            bindingInfo.EqualityExplanations = simplifiedEqualityExplanations.ToArray();
+            bindingInfo.EqualityExplanations = simplifiedEqualityExplanations.Distinct().ToArray();
+
+            foreach (var binding in bindingInfo.bindings.Values)
+            {
+                SimplifyTermIds(binding, idLookup);
+            }
         }
 
         private struct IDLookupEntry
@@ -1644,6 +1665,7 @@ namespace AxiomProfiler.CycleDetection
 
         private void SimplifyTermIds(Term t, Dictionary<string, IDLookupEntry> idLookup)
         {
+            if (t.generalizationCounter >= 0) return;
             if (!idLookup.TryGetValue(t.Name, out var cursor))
             {
                 cursor = new IDLookupEntry(t.Args.Length == 0, t.id);
@@ -2216,7 +2238,7 @@ namespace AxiomProfiler.CycleDetection
                 var oldTuple = candidates[key];
                 candidates[key] = new Tuple<int, string, int, int, int, Term>
                     (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5,
-                    oldTuple.Item6 != null && oldTuple.Item6.id == generalization.id ? oldTuple.Item6 : null); //-1 indicates disagreement on id / generalization counter
+                    oldTuple.Item6 != null && generalization != null && oldTuple.Item6.id == generalization.id ? oldTuple.Item6 : null); //-1 indicates disagreement on id / generalization counter
             }
         }
 

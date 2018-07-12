@@ -616,23 +616,61 @@ namespace AxiomProfiler
             }
         }
 
-        public void SetInfoPanel(IPrintable c)
+        public void DisplayMessage(string message)
         {
-            if (c == null) return;
-
-            currentInfoPanelPrintable = c;
             Interlocked.Increment(ref workCounter);
-            uiUpdateTimer.Start();
-            Task.Run(() =>
+            if (InvokeRequired)
             {
-                lock (this)
+                Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
+            }
+            else
+            {
+                uiUpdateTimer.Start();
+            }
+
+            var messageContent = new InfoPanelContent();
+            messageContent.Append(message);
+            messageContent.finalize();
+            infoPanelQueue.Enqueue(messageContent);
+        }
+
+        public void UpdateSync(IPrintable c)
+        {
+            Interlocked.Increment(ref workCounter);
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
+            }
+            else
+            {
+                uiUpdateTimer.Start();
+            }
+
+            lock (this)
+            {
+                try
                 {
+                    DisplayMessage("busy...");
+
                     var content = new InfoPanelContent();
                     c.InfoPanelText(content, getFormatFromGUI());
                     content.finalize();
                     infoPanelQueue.Enqueue(content);
                 }
-            });
+                catch (Exception e)
+                {
+                    Interlocked.Decrement(ref workCounter);
+                    DisplayMessage($"Something went wrong: {e.Message}");
+                }
+            }
+        }
+
+        public void SetInfoPanel(IPrintable c)
+        {
+            if (c == null) return;
+
+            currentInfoPanelPrintable = c;
+            Task.Run(() => UpdateSync(c));
         }
 
         private PrettyPrintFormat getFormatFromGUI()

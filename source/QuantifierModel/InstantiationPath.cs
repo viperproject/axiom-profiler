@@ -645,8 +645,9 @@ namespace AxiomProfiler.QuantifierModel
             alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
 
             var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
-            
-            var topLevelTerm = bindingInfo.getDistinctBlameTerms().First(t => term.isSubterm(t.id));
+
+            var distinctBlameTerms = bindingInfo.getDistinctBlameTerms();
+            var topLevelTerm = distinctBlameTerms.First(t => term.isSubterm(t.id));
             var termNumber = termNumberOffset + bindingInfo.GetTermNumber(topLevelTerm);
             var numberingString = $"({termNumber}) ";
             content.switchToDefaultFormat();
@@ -680,7 +681,37 @@ namespace AxiomProfiler.QuantifierModel
 
             var numberOfGeneralizedTerms = 1;
 
-            if (generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements))
+            var hasOtherRequirements = generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements);
+
+            if (first)
+            {
+                distinctBlameTerms.Remove(topLevelTerm);
+                if (hasOtherRequirements) distinctBlameTerms.RemoveAll(t => otherRequirements.Contains(t));
+
+                numberOfGeneralizedTerms += distinctBlameTerms.Count;
+
+                foreach (var t in distinctBlameTerms)
+                {
+                    termNumber = termNumberOffset + bindingInfo.GetTermNumber(t);
+                    numberingString = $"({termNumber}) ";
+                    content.switchToDefaultFormat();
+                    content.Append('\n');
+
+                    newlyIntroducedGeneralizations = t.GetAllGeneralizationSubterms()
+                        .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
+                        .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
+                    PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
+                    alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
+
+                    content.Append(numberingString);
+                    t.PrettyPrint(content, format, numberingString.Length);
+                    content.Append('\n');
+
+                    termNumberings.Add(Tuple.Create(t, termNumber));
+                }
+            }
+
+            if (hasOtherRequirements)
             {
                 numberOfGeneralizedTerms += otherRequirements.Count;
 
