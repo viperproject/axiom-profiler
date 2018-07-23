@@ -222,7 +222,7 @@ namespace AxiomProfiler.QuantifierModel
                         equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));
                         if (format.ShowEqualityExplanations)
                         {
-                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                            var explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
                             explanation.PrettyPrint(content, format, termNumber);
                         }
                         else

@@ -203,9 +203,9 @@ namespace AxiomProfiler.CycleDetection
                      * gerneralization on these terms. This also has the convenient side-effect of the term only including structure that matches the
                      * trigger, i.e. any unnecessary higher level structure a term might have is automatically omitted.
                      */
-                    var loopResultIndex = Enumerable.Range(0, distinctBlameTerms.Count).First(y => parent.concreteBody.isSubterm(distinctBlameTerms[y]));
-                    parentConcreteTerm = distinctBlameTerms[loopResultIndex];
-                    var concreteTerms = loopInstantiationsWorkSpace[i].Select(inst => inst.bindingInfo.getDistinctBlameTerms()[loopResultIndex]).Where(t => t != null);
+                    parentConcreteTerm = distinctBlameTerms.First(t => parent.concreteBody.isSubterm(t));
+                    var boundTo = child.bindingInfo.bindings.First(kv => kv.Value == parentConcreteTerm).Key;
+                    var concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.bindingInfo.bindings[boundTo]);
                     generalizedYield = generalizeTerms(concreteTerms, loopInstantiationsWorkSpace[j], false, false);
                 }
                 else
@@ -284,9 +284,10 @@ namespace AxiomProfiler.CycleDetection
                         afterNextBindingInfo = loopInstantiationsWorkSpace[afterNextIdx][iterator].bindingInfo;
                     }
 
-                    var newBody = GeneralizeBindings(inst.concreteBody, inst.Quant.BodyTerm.Args.Last(), generalizedBindings[inst.Quant.BodyTerm.id], afterNextBindingInfo, Enumerable.Empty<Term>());
+                    var newBody = GeneralizeBindings(inst.concreteBody, inst.Quant.BodyTerm.Args.Last(), generalizedBindings[inst.Quant.BodyTerm.id]);
                     if (newBody != null)
                     {
+                        if (afterNextBindingInfo != null) UpdateBindingsForReplacementTerm(inst.concreteBody, newBody, afterNextBindingInfo, new List<Term>(), new List<Term>());
                         inst.concreteBody = newBody;
                     }
                     else
@@ -1763,11 +1764,9 @@ namespace AxiomProfiler.CycleDetection
         /// <param name="concrete">The concrete term in which occurences of quantified variables should be replaced.</param>
         /// <param name="quantifier">The body of the quantifier that produced the concrete term.</param>
         /// <param name="bindingInfo">The generalized binding info indicating what generalized terms each quantified variable is bound to in the loop explanation.</param>
-        /// <param name="childBindingInfo">The binding info for the instantiation triggered by the concrete term that will be updated.</param>
-        /// <param name="history">The history of parent terms used to check match contexts.</param>
         /// <returns>The concrete term updated to use the specified bindings or null if the algorithm failed. The algorithm fails if the
         /// structue of the concrete term (and the term obtained by reversing z3's rewritings) and the quantifier body do not match.</returns>
-        private static Term GeneralizeBindings(Term concrete, Term quantifier, BindingInfo bindingInfo, BindingInfo childBindingInfo, IEnumerable<Term> history)
+        private static Term GeneralizeBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
         {
             Term replacement;
             if (quantifier.id == -1)
@@ -1783,33 +1782,17 @@ namespace AxiomProfiler.CycleDetection
                 var concreteContinue = concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite : concrete;
 
                 //recurse over the arguments
-                replacement = GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo, childBindingInfo, history.Concat(Enumerable.Repeat(concrete, 1)));
-            }
+                replacement = GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo);
 
-            if (childBindingInfo != null && childBindingInfo.matchContext.TryGetValue(concrete.id, out var constraints) && constraintsSat(history.ToList(), constraints))
-            {
-                var keys = childBindingInfo.bindings.Where(kv => kv.Value == concrete).Select(kv => kv.Key).ToList();
-                foreach (var key in keys)
+                if (replacement == null && !ReferenceEquals(concrete, concrete.reverseRewrite))
                 {
-                    childBindingInfo.bindings[key] = replacement;
+                    replacement = GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo);
                 }
-
-                foreach (var list in childBindingInfo.equalities.Values)
-                {
-                    if (list.Contains(concrete))
-                    {
-                        list.Remove(concrete);
-                        list.Add(replacement);
-                    }
-                }
-
-                childBindingInfo.matchContext.Remove(concrete.id);
-                childBindingInfo.matchContext[replacement.id] = constraints;
             }
             return replacement;
         }
 
-        private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo bindingInfo, BindingInfo childBindingInfo, IEnumerable<Term> history)
+        private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo bindingInfo)
         {
             if (concrete == null) return null;
             var copy = new Term(concrete); //do not modify the original term
@@ -1823,7 +1806,7 @@ namespace AxiomProfiler.CycleDetection
             //recurse on arguments
             for (int i = 0; i < concrete.Args.Count(); i++)
             {
-                var replacement = GeneralizeBindings(concrete.Args[i], quantifier.Args[i], bindingInfo, childBindingInfo, history);
+                var replacement = GeneralizeBindings(concrete.Args[i], quantifier.Args[i], bindingInfo);
                 if (replacement == null)
                 {
                     //Failed => backtrack
@@ -1838,12 +1821,68 @@ namespace AxiomProfiler.CycleDetection
                          * quantifier body but some deeper structure doesn't and it is not possible to resolve the issue by locally reversing
                          * the rewritng of the deeper term.
                          */
-                        return GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo, childBindingInfo, history);
+                        return GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo);
                     }
                 }
                 copy.Args[i] = replacement;
             }
             return copy;
+        }
+
+        private static void UpdateBindingsForReplacementTerm(Term originalTerm, Term newTerm, BindingInfo bindingInfo, List<Term> history, List<Term> newHistory)
+        {
+            if (bindingInfo.matchContext.TryGetValue(originalTerm.id, out var constraints))
+            {
+                var constraintMask = WhichConstraintsSat(history, constraints);
+                if (constraintMask.Any(val => val))
+                {
+                    var keys = bindingInfo.bindings.Where(kv => kv.Value == originalTerm).Select(kv => kv.Key).ToList();
+                    foreach (var key in keys)
+                    {
+                        bindingInfo.bindings[key] = newTerm;
+                    }
+
+                    foreach (var list in bindingInfo.equalities.Values)
+                    {
+                        if (list.Contains(originalTerm))
+                        {
+                            list.Remove(originalTerm);
+                            list.Add(newTerm);
+                        }
+                    }
+
+                    var matchLookup = bindingInfo.matchContext[originalTerm.id].Zip(constraintMask, Tuple.Create).ToLookup(tuple => tuple.Item2);
+                    var newConstraints = matchLookup[true].Select(tuple => tuple.Item1.Count).Select(length => newHistory.GetRange(newHistory.Count - length, length)).ToList();
+                    if (matchLookup[false].Any())
+                    {
+                        bindingInfo.matchContext[originalTerm.id] = matchLookup[false].Select(tuple => tuple.Item1).ToList();
+                    }
+                    else
+                    {
+                        bindingInfo.matchContext.Remove(originalTerm.id);
+                    }
+
+                    if (!bindingInfo.matchContext.TryGetValue(newTerm.id, out var existingConstraints))
+                    {
+                        existingConstraints = new List<List<Term>>();
+                        bindingInfo.matchContext[newTerm.id] = existingConstraints;
+                    }
+                    existingConstraints.AddRange(newConstraints);
+                }
+            }
+
+            if (newTerm.generalizationCounter < 0) {
+                history.Add(originalTerm);
+                newHistory.Add(newTerm);
+
+                foreach (var argTuple in originalTerm.Args.Zip(newTerm.Args, Tuple.Create))
+                {
+                    UpdateBindingsForReplacementTerm(argTuple.Item1, argTuple.Item2, bindingInfo, history, newHistory);
+                }
+
+                history.RemoveAt(history.Count - 1);
+                newHistory.RemoveAt(newHistory.Count - 1);
+            }
         }
 
         private static List<Term> AllFreeVarsIn(Term t)
@@ -2079,6 +2118,16 @@ namespace AxiomProfiler.CycleDetection
                     let slice = gerneralizeHistory.GetRange(gerneralizeHistory.Count - constraint.Count, constraint.Count)
                     select slice.Zip(constraint, (term1, term2) => term1.id == term2.id))
                                 .Any(intermediate => intermediate.All(val => val));
+        }
+
+        private static IEnumerable<bool> WhichConstraintsSat(List<Term> generalizedHistory, List<List<Term>> constraints)
+        {
+            return constraints.Select(constraint =>
+            {
+                if (constraint.Count > generalizedHistory.Count) return false;
+                var slice = generalizedHistory.GetRange(generalizedHistory.Count - constraint.Count, constraint.Count);
+                return slice.Zip(constraint, (term1, term2) => term1.id == term2.id).All(val => val);
+            });
         }
 
         private bool TryGetExistingReplacement(Stack<Term>[] todoStacks, out Term existingGenTerm)
