@@ -90,8 +90,14 @@ namespace AxiomProfiler.QuantifierModel
 
         public IEnumerable<Term> GetAllGeneralizationSubterms()
         {
-            return Args.SelectMany(arg => arg.GetAllGeneralizationSubterms())
-                .Concat(Enumerable.Repeat(this, generalizationCounter >= 0 ? 1 : 0));
+            if (generalizationCounter >= 0)
+            {
+                return Enumerable.Repeat(this, 1);
+            }
+            else
+            {
+                return Args.SelectMany(arg => arg.GetAllGeneralizationSubterms());
+            }
         }
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color)
@@ -168,12 +174,6 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (id == subtermId) return true;
             return Args.Any(t => t.isSubterm(subtermId));
-        }
-
-        public bool isSubtermGen(int genCounter)
-        {
-            if (generalizationCounter == genCounter) return true;
-            return Args.Any(t => t.isSubtermGen(genCounter));
         }
 
         public void printName(InfoPanelContent content, PrettyPrintFormat format)

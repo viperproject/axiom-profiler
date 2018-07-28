@@ -1263,24 +1263,81 @@ namespace AxiomProfiler.CycleDetection
             }
 
             var coverageClosures = new Dictionary<int, HashSet<int>>();
+            var trueCoverageClosures = new Dictionary<int, HashSet<int>>();
+            var checkTrueCoverageGens = new HashSet<int>();
 
             // Reflexive
             foreach (var gen in gensToCover)
             {
                 coverageClosures[gen] = new HashSet<int>() { gen };
+                trueCoverageClosures[gen] = new HashSet<int>() { gen };
             }
 
             // Transitive
             foreach (var kv in eqs)
             {
 
-                // isSubtermGen is true if the term itself is the generalization in question => includes regular equality edges
-                var coveringGens = gensToCover.Where(gen => kv.Value.Any(t => t.isSubtermGen(gen)));
+                // CollectGeneralizationsFromTerm contains the term itself if it is a generalization => includes regular equality edges
+                var perTermCoveringGens = kv.Value.Select(t => CollectGeneralizationsFromTerm(t).Distinct().ToList());
+                var trueCoveringGens = perTermCoveringGens.Where(gens => gens.Count == 1).SelectMany(gens => gens);
+                var checkGens = perTermCoveringGens.Where(gens => gens.Count > 1).SelectMany(gens => gens).Distinct();
+                var coveringGens = perTermCoveringGens.SelectMany(ts => ts).ToList();
                 foreach (var coveringGen in coveringGens)
                 {
                     coverageClosures[coveringGen].Add(kv.Key.generalizationCounter);
                 }
+
+                foreach (var gen in trueCoveringGens)
+                {
+                    trueCoverageClosures[gen].Add(kv.Key.generalizationCounter);
+                }
+                checkTrueCoverageGens.UnionWith(checkGens);
             }
+            CalculateCoverageTransitiveClosure(gensToCover, coverageClosures);
+            CalculateCoverageTransitiveClosure(gensToCover, trueCoverageClosures);
+
+            var chosenGens = new List<int>();
+            var coveredGens = new HashSet<int>();
+
+            while (!coveredGens.IsSupersetOf(gensToCover))
+            {
+                var maxCoverable = coverageClosures.Max(kv => kv.Value.Count());
+                var candidates = coverageClosures.Where(kv => kv.Value.Count() == maxCoverable);
+                var heuristic = candidates.Min(kv => generalizationLookup[kv.Key].Args.Length);
+                var chosen = candidates.First(kv => generalizationLookup[kv.Key].Args.Length == heuristic);
+                chosenGens.Add(chosen.Key);
+                coveredGens.UnionWith(chosen.Value);
+
+                coverageClosures.Remove(chosen.Key);
+                foreach (var value in coverageClosures.Values)
+                {
+                    value.ExceptWith(chosen.Value);
+                }
+            }
+
+            foreach (var checkGen in checkTrueCoverageGens)
+            {
+                if (!chosenGens.Any(cg => trueCoverageClosures[cg].Contains(checkGen)))
+                {
+                    var candidateRatings = trueCoverageClosures.Where(kv => kv.Value.Contains(checkGen))
+                        .Select(kv => Tuple.Create(kv.Key, coveredGens.Where(g => kv.Value.Contains(g)).ToList()));
+                    var maxReplace = candidateRatings.Max(tuple => tuple.Item2.Count);
+                    var candidates = candidateRatings.Where(tuple => tuple.Item2.Count == maxReplace);
+                    var heuristic = candidates.Min(tuple => generalizationLookup[tuple.Item1].Args.Length);
+                    var chosen = candidates.First(tuple => generalizationLookup[tuple.Item1].Args.Length == heuristic);
+                    foreach (var gen in chosen.Item2)
+                    {
+                        chosenGens.Remove(gen);
+                    }
+                    chosenGens.Add(chosen.Item1);
+                }
+            }
+
+            return chosenGens;
+        }
+
+        private static void CalculateCoverageTransitiveClosure(IEnumerable<int> gensToCover, Dictionary<int, HashSet<int>> coverageClosures)
+        {
             bool changed;
             do
             {
@@ -1303,27 +1360,6 @@ namespace AxiomProfiler.CycleDetection
                     covering.UnionWith(toAdd);
                 }
             } while (changed);
-
-            var chosenGens = new List<int>();
-            var coveredGens = new HashSet<int>();
-
-            while (!coveredGens.IsSupersetOf(gensToCover))
-            {
-                var maxCoverable = coverageClosures.Max(kv => kv.Value.Count());
-                var candidates = coverageClosures.Where(kv => kv.Value.Count() == maxCoverable);
-                var heuristic = candidates.Min(kv => generalizationLookup[kv.Key].Args.Length);
-                var chosen = candidates.First(kv => generalizationLookup[kv.Key].Args.Length == heuristic);
-                chosenGens.Add(chosen.Key);
-                coveredGens.UnionWith(chosen.Value);
-
-                coverageClosures.Remove(chosen.Key);
-                foreach (var value in coverageClosures.Values)
-                {
-                    value.ExceptWith(chosen.Value);
-                }
-            }
-            
-            return chosenGens;
         }
 
         private static Term SubstituteGeneralizationsUsingSubstitutionMap(Term t, Dictionary<int, Term> map)
