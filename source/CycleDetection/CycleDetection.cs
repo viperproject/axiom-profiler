@@ -207,7 +207,7 @@ namespace AxiomProfiler.CycleDetection
 
                     var boundToCandidates = loopInstantiationsWorkSpace[i].Zip(loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0), (p, c) =>
                     {
-                        var parentConcreteTerms = child.bindingInfo.getDistinctBlameTerms().Where(t => p.concreteBody.isSubterm(t));
+                        var parentConcreteTerms = c.bindingInfo.getDistinctBlameTerms().Where(t => p.concreteBody.isSubterm(t));
                         return c.bindingInfo.bindings.Where(kv => parentConcreteTerms.Contains(kv.Value)).Select(kv => kv.Key);
                     });
                     var boundTo = boundToCandidates.Skip(1).Aggregate(new HashSet<Term>(boundToCandidates.First()), (set, iterationResult) =>
@@ -1361,35 +1361,39 @@ namespace AxiomProfiler.CycleDetection
 
             while (!coveredGens.IsSupersetOf(gensToCover))
             {
-                var maxCoverable = coverageClosures.Max(kv => kv.Value.Count());
-                var candidates = coverageClosures.Where(kv => kv.Value.Count() == maxCoverable);
+                var maxCoverable = coverageClosures.Max(kv => kv.Value.Where(g => !coveredGens.Contains(g)).Count());
+                var candidates = coverageClosures.Where(kv => kv.Value.Where(g => !coveredGens.Contains(g)).Count() == maxCoverable);
                 var heuristic = candidates.Min(kv => generalizationLookup[kv.Key].Args.Length);
                 var chosen = candidates.First(kv => generalizationLookup[kv.Key].Args.Length == heuristic);
                 chosenGens.Add(chosen.Key);
                 coveredGens.UnionWith(chosen.Value);
-
-                coverageClosures.Remove(chosen.Key);
-                foreach (var value in coverageClosures.Values)
-                {
-                    value.ExceptWith(chosen.Value);
-                }
             }
 
+            var addedGens = new List<int>();
             foreach (var checkGen in checkTrueCoverageGens)
             {
                 if (!chosenGens.Any(cg => trueCoverageClosures[cg].Contains(checkGen)))
                 {
-                    var candidateRatings = trueCoverageClosures.Where(kv => kv.Value.Contains(checkGen))
-                        .Select(kv => Tuple.Create(kv.Key, coveredGens.Where(g => kv.Value.Contains(g)).ToList()));
-                    var maxReplace = candidateRatings.Max(tuple => tuple.Item2.Count);
-                    var candidates = candidateRatings.Where(tuple => tuple.Item2.Count == maxReplace);
-                    var heuristic = candidates.Min(tuple => generalizationLookup[tuple.Item1].Args.Length);
-                    var chosen = candidates.First(tuple => generalizationLookup[tuple.Item1].Args.Length == heuristic);
-                    foreach (var gen in chosen.Item2)
-                    {
-                        chosenGens.Remove(gen);
-                    }
-                    chosenGens.Add(chosen.Item1);
+                    var candidates = trueCoverageClosures.Where(kv => kv.Value.Contains(checkGen));
+                    var heuristic = candidates.Min(candidate => generalizationLookup[candidate.Key].Args.Length);
+                    var chosen = candidates.First(candidate => generalizationLookup[candidate.Key].Args.Length == heuristic).Key;
+                    chosenGens.Add(chosen);
+                    addedGens.Add(chosen);
+                }
+            }
+
+            for (var i = 0; i < addedGens.Count;)
+            {
+                var addedGen = addedGens[i];
+                var addedGenHeuristic = generalizationLookup[addedGen].Args.Length;
+                if (addedGens.Any(gen => gen != addedGen && coverageClosures[gen].Contains(addedGen) && generalizationLookup[gen].Args.Length <= addedGenHeuristic))
+                {
+                    addedGens.RemoveAt(i);
+                    chosenGens.Remove(addedGen);
+                }
+                else
+                {
+                    ++i;
                 }
             }
 
