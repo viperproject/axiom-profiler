@@ -546,7 +546,7 @@ namespace AxiomProfiler
                     i += 2;
                 }
             }
-            return new BindingInfo(pattern, bindingsRoots, topLevelTerms, explanations);
+            return new BindingInfo(pattern, bindingsRoots, topLevelTerms, explanations.Where(ee => ee.source.id != ee.target.id).Distinct());
         }
 
         private class ExplanationFinalizer : EqualityExplanationVisitor<EqualityExplanation, LogProcessor>

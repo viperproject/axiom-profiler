@@ -142,6 +142,8 @@ namespace AxiomProfiler.CycleDetection
         public readonly Dictionary<Term, List<Term>> assocGenBlameTerm = new Dictionary<Term, List<Term>>();
         public readonly List<Term> wrapAssocGenBlameTerms = new List<Term>();
 
+        private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
+
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
         {
             loopInstantiations = new List<Instantiation>[cycleLength];
@@ -187,7 +189,6 @@ namespace AxiomProfiler.CycleDetection
                 var robustIdx = loopInstantiationsWorkSpace[i].Count / 2;
                 var parent = loopInstantiationsWorkSpace[i][j <= i ? Math.Max(robustIdx - 1, 0) : robustIdx];
                 var child = loopInstantiationsWorkSpace[j][robustIdx];
-                var distinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
 
                 Term parentConcreteTerm;
                 Term generalizedYield;
@@ -203,8 +204,20 @@ namespace AxiomProfiler.CycleDetection
                      * gerneralization on these terms. This also has the convenient side-effect of the term only including structure that matches the
                      * trigger, i.e. any unnecessary higher level structure a term might have is automatically omitted.
                      */
-                    parentConcreteTerm = distinctBlameTerms.First(t => parent.concreteBody.isSubterm(t));
-                    var boundTo = child.bindingInfo.bindings.First(kv => kv.Value == parentConcreteTerm).Key;
+
+                    var boundToCandidates = loopInstantiationsWorkSpace[i].Zip(loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0), (p, c) =>
+                    {
+                        var parentConcreteTerms = child.bindingInfo.getDistinctBlameTerms().Where(t => p.concreteBody.isSubterm(t));
+                        return c.bindingInfo.bindings.Where(kv => parentConcreteTerms.Contains(kv.Value)).Select(kv => kv.Key);
+                    });
+                    var boundTo = boundToCandidates.Skip(1).Aggregate(new HashSet<Term>(boundToCandidates.First()), (set, iterationResult) =>
+                    {
+                        set.IntersectWith(iterationResult);
+                        return set;
+                    }).FirstOrDefault();
+                    if (boundTo == null) throw new Exception("Couldn't generalize! Pattern probably repeats after multiple uses of the same quantifier in a single iteration.");
+
+                    parentConcreteTerm = child.bindingInfo.bindings[boundTo];
                     var concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.bindingInfo.bindings[boundTo]);
                     generalizedYield = generalizeTerms(concreteTerms, loopInstantiationsWorkSpace[j], false, false);
                 }
@@ -225,8 +238,8 @@ namespace AxiomProfiler.CycleDetection
                     .GroupBy(repl => repl.generalizationCounter).Select(group => group.First()).ToArray();
 
                 // Other prerequisites:
+                var distinctBlameTerms = child.bindingInfo.getDistinctBlameTerms();
                 var boundTos = distinctBlameTerms.SelectMany(y => child.bindingInfo.bindings.Where(kv => kv.Value.id == y.id)).Select(kv => kv.Key);
-                var boundTosToKeep = distinctBlameTerms.Where(y => !parentConcreteTerm.isSubterm(y)).SelectMany(y => child.bindingInfo.bindings.Where(kv => kv.Value.id == y.id)).Select(kv => kv.Key);
 
                 foreach (var boundTo in boundTos)
                 {
@@ -244,7 +257,7 @@ namespace AxiomProfiler.CycleDetection
                         loopProducedAssocBlameTerms.Add(otherGenTerm);
                     }
 
-                    if (boundTosToKeep.Contains(boundTo))
+                    if (!generalizedYield.isSubterm(otherGenTerm.id))
                     {
                         if (isWrapInstantiation)
                         {
@@ -341,28 +354,55 @@ namespace AxiomProfiler.CycleDetection
         {
             var offset = loopWrapAround ? 1 : 0;
             var insts = loopInstantiations[instIndex].Skip(offset).ToList();
-            var equalityExplanationsDict = new Dictionary<Term, List<Tuple<EqualityExplanation, int>>>();
+            var equalityExplanationsDict = new Dictionary<Tuple<Term, Term>, List<Tuple<EqualityExplanation, int>>>();
             for (var i = 0; i < insts.Count; ++i)
             {
+                var generation = i + offset;
                 var inst = insts[i];
                 foreach (var ee in inst.bindingInfo.EqualityExplanations)
                 {
-                    var possibleBoundTo = inst.bindingInfo.bindings.Where(kv => kv.Value.id == ee.target.id).Where(kv => inst.bindingInfo.equalities.TryGetValue(kv.Key, out var equality) && equality.Contains(ee.source));
-                    if (possibleBoundTo.Any())
+                    var generalizedSource = replacementDict[Tuple.Create(generation, ee.source.id)];
+                    var generalizedTarget = replacementDict[Tuple.Create(generation, ee.target.id)];
+                    var keys = generalizedSource.SelectMany(s => generalizedTarget.Select(t => Tuple.Create(s, t)));
+
+                    foreach (var key in keys)
                     {
-                        var boundTo = possibleBoundTo.Single().Key;
-                        if (!equalityExplanationsDict.TryGetValue(boundTo, out var equalityCollector))
+                        if (!equalityExplanationsDict.TryGetValue(key, out var equalityCollector))
                         {
                             equalityCollector = new List<Tuple<EqualityExplanation, int>>();
-                            equalityExplanationsDict[boundTo] = equalityCollector;
+                            equalityExplanationsDict[key] = equalityCollector;
                         }
-                        equalityCollector.Add(Tuple.Create(ee, i + offset));
+                        equalityCollector.Add(Tuple.Create(ee, generation));
                     }
                 }
             }
 
             var safeIndex = insts.Count / 2;
-            var equalityExplanations = equalityExplanationsDict.Values.Where(l => safeIndex < l.Count).ToArray();
+            var equalityExplanations = equalityExplanationsDict.Values.Where(l => safeIndex < l.Count).ToList();
+            for (var i = 0; i < equalityExplanations.Count - 1;) {
+                foreach (var eeTuple in equalityExplanations[i])
+                {
+                    for (var j = i + 1; j < equalityExplanations.Count;)
+                    {
+                        if (equalityExplanations[j].Contains(eeTuple))
+                        {
+                            if (equalityExplanations[i].Count < equalityExplanations[j].Count)
+                            {
+                                equalityExplanations.RemoveAt(i);
+                                goto noInc;
+                            }
+                            else
+                            {
+                                equalityExplanations.RemoveAt(j);
+                                continue;
+                            }
+                        }
+                        ++j;
+                    }
+                }
+                ++i;
+                noInc: {}
+            }
 
             BindingInfo generalizedBindingInfo;
             if (loopWrapAround)
@@ -390,13 +430,21 @@ namespace AxiomProfiler.CycleDetection
                 candidates.Reverse();
 
                 recursionPointFinder.visit(list[safeIndex].Item1, Tuple.Create(new List<int>(), candidates));
+                var recursionPoints = new Dictionary<List<int>, Tuple<int, int, List<Term>, List<Term>>>();
+                foreach (var key in recursionPointFinder.recursionPoints.Keys)
+                {
+                    var foundPoint = recursionPointFinder.recursionPoints[key];
+                    var ee = candidates[foundPoint.Item1][foundPoint.Item2][foundPoint.Item3];
+                    var generalizedSource = replacementDict[Tuple.Create(referenceGeneration + offset - foundPoint.Item1, ee.source.id)];
+                    var generalizedTarget = replacementDict[Tuple.Create(referenceGeneration + offset - foundPoint.Item1, ee.target.id)];
+                    recursionPoints[key] = Tuple.Create(foundPoint.Item1, foundPoint.Item2, generalizedSource, generalizedTarget);
+                }
+                recursionPointFinder.recursionPoints.Clear();
 
-                var validationFilter = ValidateRecursionPoints(recursionPointFinder.recursionPoints, list);
+                var validationFilter = ValidateRecursionPoints(recursionPoints, list);
                 var validExplanations = list.Zip(validationFilter, Tuple.Create).Where(filter => filter.Item2).Select(filter => filter.Item1);
                 //TODO: warn if very few remain
-                var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPointFinder.recursionPoints, validExplanations.Select(pair => pair.Item1));
-
-                recursionPointFinder.recursionPoints.Clear();
+                var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPoints, validExplanations.Select(pair => pair.Item1));
 
                 var reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create).Reverse();
                 var result = reversed.Skip(1).Aggregate(reversed.First().Item1, (gen, conc) => EqualityExplanationGeneralizer(gen, conc, loopWrapAround));
@@ -629,7 +677,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private bool[] ValidateRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, List<Tuple<EqualityExplanation, int>> equalityExplanations)
+        private bool[] ValidateRecursionPoints(Dictionary<List<int>, Tuple<int, int, List<Term>, List<Term>>> recursionPoints, List<Tuple<EqualityExplanation, int>> equalityExplanations)
         {
             var recursionPointVerifier = RecursionPointVerifier.singleton;
             var returnValue = Enumerable.Repeat(true, equalityExplanations.Count).ToArray();
@@ -640,7 +688,8 @@ namespace AxiomProfiler.CycleDetection
                 var recursionOffset = recursionPoint.Value;
                 var generationOffset = recursionOffset.Item1;
                 var quantifer = recursionOffset.Item2;
-                var equality = recursionOffset.Item3;
+                var equalitySource = recursionOffset.Item3;
+                var equalityTarget = recursionOffset.Item4;
 
                 int i = 0;
                 for (; i < equalityExplanations.Count; ++i)
@@ -653,9 +702,15 @@ namespace AxiomProfiler.CycleDetection
                 {
                     var explanation = equalityExplanations[i].Item1;
                     var explanationGeneratiton = equalityExplanations[i].Item2;
-                    var recursionTarget = loopInstantiations[quantifer][explanationGeneratiton - generationOffset].bindingInfo.EqualityExplanations[equality];
+                    var targetGeneration = explanationGeneratiton - generationOffset;
+                    var recursionTarget = loopInstantiations[quantifer][targetGeneration].bindingInfo.EqualityExplanations.SingleOrDefault(ee =>
+                    {
+                        var generalizedSource = replacementDict[Tuple.Create(targetGeneration, ee.source.id)];
+                        var generalizedTarget = replacementDict[Tuple.Create(targetGeneration, ee.target.id)];
+                        return generalizedSource.Any(s => equalitySource.Contains(s)) && generalizedTarget.Any(t => equalityTarget.Contains(t));
+                    });
                     var arg = Tuple.Create<IEnumerable<int>, EqualityExplanation>(path, recursionTarget);
-                    if (!recursionPointVerifier.visit(explanation, arg))
+                    if (recursionTarget == null || !recursionPointVerifier.visit(explanation, arg))
                     {
                         returnValue[i] = false;
                     }
@@ -746,7 +801,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private IEnumerable<EqualityExplanation> GeneralizeAtRecursionPoints(Dictionary<List<int>, Tuple<int, int, int>> recursionPoints, IEnumerable<EqualityExplanation> equalityExplanations)
+        private IEnumerable<EqualityExplanation> GeneralizeAtRecursionPoints(Dictionary<List<int>, Tuple<int, int, List<Term>, List<Term>>> recursionPoints, IEnumerable<EqualityExplanation> equalityExplanations)
         {
             var recursionPointGeneralizer = RecursionPointGeneralizer.singleton;
             var currentGeneralizations = equalityExplanations.ToArray();
@@ -769,11 +824,17 @@ namespace AxiomProfiler.CycleDetection
             {
                 var recursionTargetIterationOffset = recursionPoint.Value.Item1;
                 var recursionTargetQuantifier = recursionPoint.Value.Item2;
-                var recursionTargetEqualityIndex = recursionPoint.Value.Item3;
+                var equalitySource = recursionPoint.Value.Item3;
+                var equalityTarget = recursionPoint.Value.Item4;
                 
                 var numberingOffset = loopInstantiations.Take(recursionTargetQuantifier).Sum(instantiations => instantiations[safeIndex].bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed()) + 1;
                 var numberOfGeneralizedBlameTerms = assocGenBlameTerm.TryGetValue(generalizedTerms[recursionTargetQuantifier], out var assocTerms) ? assocTerms.Count + 1 : 1;
-                var equalityNumber = numberingOffset + numberOfGeneralizedBlameTerms + recursionTargetEqualityIndex;
+                var equalityNumber = numberingOffset + numberOfGeneralizedBlameTerms + Array.FindIndex(loopInstantiations[recursionTargetQuantifier][safeIndex].bindingInfo.EqualityExplanations, ee =>
+                {
+                    var generalizedSource = replacementDict[Tuple.Create(safeIndex, ee.source.id)];
+                    var generalizedTarget = replacementDict[Tuple.Create(safeIndex, ee.target.id)];
+                    return generalizedSource.Any(s => equalitySource.Contains(s)) && generalizedTarget.Any(t => equalityTarget.Contains(t));
+                });
 
                 var recursionInfo = Tuple.Create(equalityNumber, recursionTargetIterationOffset);
                 for (int i = 0; i < currentGeneralizations.Length; ++i)
@@ -787,7 +848,6 @@ namespace AxiomProfiler.CycleDetection
         private class NonRecursiveEqualityExplanationGeneralizer: EqualityExplanationVisitor<EqualityExplanation, Tuple<GeneralizationState, EqualityExplanation, int, bool>>
         {
             public static readonly NonRecursiveEqualityExplanationGeneralizer singleton = new NonRecursiveEqualityExplanationGeneralizer();
-            private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
             private static readonly Term[] emptyTerms = new Term[0];
             private readonly HashSet<Term> locallyProducedGeneralizations = new HashSet<Term>();
 
@@ -1577,8 +1637,6 @@ namespace AxiomProfiler.CycleDetection
         {
             public static readonly EqualityExplanationSimplifier singleton = new EqualityExplanationSimplifier();
 
-            private static readonly EqualityExplanation[] NoExplanations = new EqualityExplanation[0];
-
             public override EqualityExplanation Direct(DirectEqualityExplanation target, object arg)
             {
                 if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
@@ -1636,7 +1694,7 @@ namespace AxiomProfiler.CycleDetection
                 if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else
                 {
-                    var simplifiedArgumentExplanations = target.sourceArgumentEqualities.Select(ee => visit(ee, arg) ?? new TransitiveEqualityExplanation(ee.source, ee.target, NoExplanations)).ToArray();
+                    var simplifiedArgumentExplanations = target.sourceArgumentEqualities.Select(ee => visit(ee, arg) ?? new TransitiveEqualityExplanation(ee.source, ee.target, emptyEqualityExplanations)).ToArray();
                     return new CongruenceExplanation(target.source, target.target, simplifiedArgumentExplanations);
                 }
             }
@@ -1953,10 +2011,8 @@ namespace AxiomProfiler.CycleDetection
             // 4th and 5th element are id and generalization counter (kept if all terms agree)
             // last element is a T term all terms are equal to or null
             var candidates = new Dictionary<string, Tuple<int, string, int, int, int, Term>>();
-            var concreteHistory = new Stack<Term>();
+            var concreteHistories = terms.Select(_ => new Stack<Term>()).ToArray();
             var generalizedHistory = new Stack<Term>();
-
-            var idx = blameWrapAround ? Math.Max(highlightInfoInsts.Count / 2 - 1, 0) : highlightInfoInsts.Count / 2;
 
             BindingInfo localBindingInfo;
             
@@ -2008,7 +2064,7 @@ namespace AxiomProfiler.CycleDetection
                             }
                             else
                             {
-                                generalizedBindings[highlightInfoInsts[idx].Quant.BodyTerm.id] = localBindingInfo;
+                                generalizedBindings[highlightInfoInsts.First().Quant.BodyTerm.id] = localBindingInfo;
                             }
 
                             return mostRecent;
@@ -2016,7 +2072,7 @@ namespace AxiomProfiler.CycleDetection
 
                         // all subterms connected -> pop parent
                         generalizedHistory.Pop();
-                        concreteHistory.Pop();
+                        foreach (var concreteHistory in concreteHistories) concreteHistory.Pop();
                         foreach (var stack in todoStacks)
                         {
                             stack.Pop();
@@ -2050,7 +2106,7 @@ namespace AxiomProfiler.CycleDetection
                 var currTerm = getGeneralizedTerm(candidates, todoStacks, generalizedHistory, !loopWrapAround);
 
                 // Update binding info with generalized term if necessary.
-                if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var bindingKeys))
+                if (isBlameTerm(highlightInfoInsts, todoStacks, concreteHistories, blameWrapAround, out var bindingKeys))
                 {
                     foreach (var bindingKey in bindingKeys)
                     {
@@ -2068,7 +2124,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                     localBindingInfo.matchContext[currTerm.id].Add(generalizedHistory.Reverse().ToList());
                 }
-                if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistory, blameWrapAround, out var keys))
+                if (isEqTerm(highlightInfoInsts, todoStacks, concreteHistories, blameWrapAround, out var keys))
                 {
                     foreach (var key in keys)
                     {
@@ -2092,7 +2148,7 @@ namespace AxiomProfiler.CycleDetection
 
                 // always push the generalized term, because it is one term 'behind' the others
                 generalizedHistory.Push(currTerm);
-                concreteHistory.Push(todoStacks[idx].Peek());
+                foreach (var pair in concreteHistories.Zip(todoStacks, Tuple.Create)) pair.Item1.Push(pair.Item2.Peek());
                 // push children if applicable
                 if (currTerm.Args.Length > 0 && currTerm.generalizationCounter < 0)
                 {
@@ -2104,46 +2160,97 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out List<Term> boundTo)
+        private bool isBlameTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term>[] concreteHistories, bool flipped, out List<Term> boundTo)
         {
             boundTo = null;
 
-            //We try to find a binding in the concrete case and assume that it should also be extend to the generalized case
-            var childIdx = childInsts.Count / 2;
-            var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
-            var checkInst = childInsts[childIdx];
-            var termKVs = checkInst.bindingInfo.bindings.Where(t => t.Value.id == todoStacks[robustIdx].Peek().id).Where(kv => {
+            var blameKeyCandidates = todoStacks.Select(s => s.Peek()).Zip(concreteHistories, Tuple.Create)
+                .Zip(childInsts.Skip(flipped ? 1 : 0), (checkTermAndHistory, checkInst) => checkInst.bindingInfo.bindings.Where(t => t.Value.id == checkTermAndHistory.Item1.id).Where(kv => {
                 var term = kv.Value;
                 var constraints = checkInst.bindingInfo.matchContext[term.id];
-                return constraintsSat(concreteHistory.Reverse().ToList(), constraints);
+                return constraintsSat(checkTermAndHistory.Item2.Reverse().ToList(), constraints);
+            }).Select(kv => kv.Key));
+            var blameKeys = blameKeyCandidates.Skip(1).Aggregate(new HashSet<Term>(blameKeyCandidates.First()), (set, keys) =>
+            {
+                set.IntersectWith(keys);
+                return set;
             });
 
-            if (!termKVs.Any()) return false;
+            if (!blameKeys.Any()) return false;
 
-            boundTo = termKVs.Select(kv => kv.Key).ToList();
+            boundTo = blameKeys.ToList();
             return true;
         }
 
-        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term> concreteHistory, bool flipped, out List<Term> boundTo)
+        private bool isEqTerm(List<Instantiation> childInsts, Stack<Term>[] todoStacks, Stack<Term>[] concreteHistories, bool flipped, out List<Term> boundTos)
         {
             //We try to find an equality that was used in the concrete case and assume that it should also be extended to the generalized case
-            boundTo = new List<Term>();
-            var childIdx = childInsts.Count / 2;
-            var robustIdx = flipped ? Math.Max(childIdx - 1, 0) : childIdx;
-            var checkInst = childInsts[childIdx];
-            foreach (var equality in checkInst.bindingInfo.equalities)
+            var eqsPerIteration = todoStacks.Select(s => s.Peek()).Zip(concreteHistories, Tuple.Create).Zip(childInsts.Skip(flipped ? 1 : 0), (checkTermAndHistory, checkInst) =>
             {
-                var term = equality.Value.FirstOrDefault(t => t.id == todoStacks[robustIdx].Peek().id);
-                if (term != null)
+                var returnList = new List<Term>();
+                foreach (var equality in checkInst.bindingInfo.equalities)
                 {
-                    var constraints = checkInst.bindingInfo.matchContext[term.id];
-                    if (constraintsSat(concreteHistory.Reverse().ToList(), constraints))
+                    var term = equality.Value.FirstOrDefault(t => t.id == checkTermAndHistory.Item1.id);
+                    if (term != null)
                     {
-                        boundTo.Add(equality.Key);
+                        var constraints = checkInst.bindingInfo.matchContext[term.id];
+                        if (constraintsSat(checkTermAndHistory.Item2.Reverse().ToList(), constraints))
+                        {
+                            returnList.Add(equality.Key);
+                        }
+                    }
+                }
+                return Tuple.Create(returnList, checkTermAndHistory.Item1, checkInst, checkTermAndHistory.Item2.Reverse().ToList());
+            }).ToList();
+
+            boundTos = eqsPerIteration.Aggregate(new HashSet<Term>(), (set, iterationResult) =>
+            {
+                set.UnionWith(iterationResult.Item1);
+                return set;
+            }).ToList();
+
+            foreach (var boundTo in boundTos)
+            {
+                foreach (var iterationResult in eqsPerIteration)
+                {
+                    if (!iterationResult.Item1.Contains(boundTo))
+                    {
+                        var bindingInfo = iterationResult.Item3.bindingInfo;
+                        if (!bindingInfo.equalities.TryGetValue(boundTo, out var equalityLhs))
+                        {
+                            equalityLhs = new List<Term>();
+                            bindingInfo.equalities[boundTo] = equalityLhs;
+                        }
+                        equalityLhs.Add(iterationResult.Item2);
+                        var eeLength = bindingInfo.EqualityExplanations.Length;
+                        var newEqualityExplanations = new EqualityExplanation[eeLength + 1];
+                        Array.Copy(bindingInfo.EqualityExplanations, newEqualityExplanations, eeLength);
+                        newEqualityExplanations[eeLength] = new TransitiveEqualityExplanation(iterationResult.Item2, iterationResult.Item2, emptyEqualityExplanations);
+                        bindingInfo.EqualityExplanations = newEqualityExplanations;
+
+                        if (!bindingInfo.matchContext.TryGetValue(iterationResult.Item2.id, out var contexts))
+                        {
+                            contexts = new List<List<Term>>();
+                            bindingInfo.matchContext[iterationResult.Item2.id] = contexts;
+                        }
+                        RemovePrefixFromConstraints(iterationResult.Item4, bindingInfo);
+                        contexts.Add(iterationResult.Item4);
                     }
                 }
             }
-            return boundTo.Any();
+
+            return boundTos.Any();
+        }
+
+        private static void RemovePrefixFromConstraints(List<Term> prefix, BindingInfo bindingInfo)
+        {
+            foreach (var context in bindingInfo.matchContext.SelectMany(kv => kv.Value))
+            {
+                if (context.Count >= prefix.Count && prefix.Zip(context, (t1, t2) => t1.id == t2.id).All(x => x))
+                {
+                    context.RemoveRange(0, prefix.Count);
+                }
+            }
         }
 
         private static bool constraintsSat(List<Term> gerneralizeHistory, List<List<Term>> constraints)
