@@ -200,14 +200,14 @@ namespace AxiomProfiler.QuantifierModel
             _matchContext = new Dictionary<int, List<List<Term>>>();
             foreach (var context in other._matchContext)
             {
-                _matchContext[context.Key] = new List<List<Term>>(context.Value);
+                _matchContext[context.Key] = context.Value.Select(l => new List<Term>(l)).ToList();
             }
 
             // 'deeper' copy
             _patternMatchContext = new Dictionary<int, List<List<Term>>>();
             foreach (var context in other._patternMatchContext)
             {
-                _patternMatchContext[context.Key] = new List<List<Term>>(context.Value);
+                _patternMatchContext[context.Key] = context.Value.Select(l => new List<Term>(l)).ToList();
             }
 
             // 'deeper' copy
