@@ -46,6 +46,10 @@ To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g
 
     silicon ./file.sil --z3Args TRACE=true
 
+If it complains about unrecognized argument, try this:
+
+    silicon ./file.sil --z3Args '"TRACE=true"'
+
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
     carbon ./file.sil --print ./file.bpl
