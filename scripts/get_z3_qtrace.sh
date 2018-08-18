@@ -21,7 +21,7 @@ echo ">>>>> Writing Z3 logs with prefix $Z3LOGFILE ..."
 
 Z3_EXE=/usr/local/Viper/z3/bin/z3
 
-SILICON="java -cp :/usr/local/Viper/backends/* viper.silicon.SiliconRunner --numberOfParallelVerifiers=1 --z3Exe=$Z3_EXE --z3LogFile=$Z3LOGFILE $VIPERFILE"
+SILICON="java -Xmx2048m -Xss16m -cp :/usr/local/Viper/backends/* viper.silicon.SiliconRunner --numberOfParallelVerifiers=1 --z3Exe=$Z3_EXE --z3LogFile=$Z3LOGFILE --timeout=100 $VIPERFILE"
 
 echo ">>>>> Running $SILICON"
 
