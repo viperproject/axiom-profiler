@@ -90,7 +90,7 @@ namespace AxiomProfiler
         {
             var newNodeInsts = _z3AxiomProfiler.model.instances
                                        .Where(inst => inst.Depth <= maxRenderDepth.Value)
-                                       .OrderByDescending(inst => inst.Cost)
+                                       .OrderByDescending(inst => inst.DeepestSubpathDepth)
                                        .Take(numberOfInitialNodes)
                                        .ToList();
 
@@ -104,7 +104,9 @@ namespace AxiomProfiler
 
         private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts)
         {
-            colorMap.Clear();
+            var usedQuants = newNodeInsts.Select(inst => inst.Quant).Distinct().ToList();
+            var removedQuants = colorMap.Keys.Where(quant => !usedQuants.Contains(quant)).ToList();
+            foreach (var removedQuant in removedQuants) colorMap.Remove(removedQuant);
             currColorIdx = 0;
 
             var edgeRoutingSettings = new EdgeRoutingSettings
@@ -159,15 +161,18 @@ namespace AxiomProfiler
 
         private Color getColor(Quantifier quant)
         {
-            if (!colorMap.ContainsKey(quant) && currColorIdx >= colors.Count)
+            if (!colorMap.TryGetValue(quant, out var color))
             {
-                return Color.Black;
-            }
-            if (colorMap.ContainsKey(quant)) return colorMap[quant];
+                color = colors.FirstOrDefault(c => !colorMap.Values.Contains(c));
+                if (color == default(Color))
+                {
+                    color = Color.Black;
+                }
 
-            colorMap[quant] = colors[currColorIdx];
-            currColorIdx++;
-            return colorMap[quant];
+                colorMap[quant] = color;
+            }
+
+            return color;
         }
 
         private int oldX = -1;
