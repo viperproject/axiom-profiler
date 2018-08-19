@@ -50,7 +50,6 @@ namespace AxiomProfiler
         private static readonly Color parentColor = Color.DarkOrange;
 
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
-        private int currColorIdx;
 
         public DAGView(AxiomProfiler profiler)
         {
@@ -107,7 +106,6 @@ namespace AxiomProfiler
             var usedQuants = newNodeInsts.Select(inst => inst.Quant).Distinct().ToList();
             var removedQuants = colorMap.Keys.Where(quant => !usedQuants.Contains(quant)).ToList();
             foreach (var removedQuant in removedQuants) colorMap.Remove(removedQuant);
-            currColorIdx = 0;
 
             var edgeRoutingSettings = new EdgeRoutingSettings
             {

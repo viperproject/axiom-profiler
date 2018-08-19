@@ -1256,6 +1256,8 @@ namespace AxiomProfiler.CycleDetection
 
             private static void InsertEquality(Dictionary<Term, List<Term>> dict, Term gen, Term equalTo)
             {
+                if (equalTo.ReferencesOtherIteration(gen.generalizationCounter)) return;
+
                 if (!dict.TryGetValue(gen, out var equals))
                 {
                     equals = new List<Term>();
@@ -1290,17 +1292,20 @@ namespace AxiomProfiler.CycleDetection
                 equalToTerms.Add(target.target);
                 equalToTerms = equalToTerms.Distinct().ToList();
 
-                foreach (var term in equalToTerms)
+                foreach (var equalToGeneration in equalToTerms.Where(t => !t.ReferencesOtherIteration(t.iterationOffset)).GroupBy(t => t.iterationOffset))
                 {
-                    if (term.generalizationCounter >= 0)
+                    foreach (var term in equalToGeneration)
                     {
-                        if (arg.TryGetValue(term, out var existingEqualTos))
+                        if (term.generalizationCounter >= 0)
                         {
-                            existingEqualTos.AddRange(equalToTerms);
-                        }
-                        else
-                        {
-                            arg[term] = new List<Term>(equalToTerms);
+                            if (arg.TryGetValue(term, out var existingEqualTos))
+                            {
+                                existingEqualTos.AddRange(equalToGeneration);
+                            }
+                            else
+                            {
+                                arg[term] = new List<Term>(equalToGeneration);
+                            }
                         }
                     }
                 }
@@ -1623,12 +1628,20 @@ namespace AxiomProfiler.CycleDetection
                 list.RemoveAll(item => valuesToRemove.Contains(item));
             }
 
-            var gensToKeep = SelectGeneralizationsToKeep(eqs).Where(gen => !substitutionMap.ContainsKey(gen)).ToList();
-            foreach (var gen in gensToKeep)
+            var gensToKeep = SelectGeneralizationsToKeep(eqs).Where(gen => !substitutionMap.ContainsKey(gen)).OrderBy(gen => gen).ToList();
+            var newGenCounter = 1;
+            var generalizationTermsToKeep = gensToKeep.Select(gen => generalizationTerms.First(t => t.generalizationCounter == gen)).ToList();
+            generalizationTerms.Clear();
+            foreach (var generalizationTerm in generalizationTermsToKeep)
             {
-                var generalizationTerm = generalizationTerms.First(t => t.generalizationCounter == gen);
                 var newArgs = generalizationTerm.Args.Where(t => gensToKeep.Contains(t.generalizationCounter)).ToArray();
-                substitutionMap[gen] = new Term(generalizationTerm, newArgs);
+                var newGeneralizationTerm = new Term(generalizationTerm, newArgs)
+                {
+                    generalizationCounter = newGenCounter
+                };
+                ++newGenCounter;
+                substitutionMap[generalizationTerm.generalizationCounter] = newGeneralizationTerm;
+                generalizationTerms.Add(newGeneralizationTerm);
             }
 
             var substitutionOptions = eqs.GroupBy(kv => kv.Key.generalizationCounter)

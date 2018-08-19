@@ -100,6 +100,11 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        public bool ReferencesOtherIteration(int iteration = 0)
+        {
+            return iterationOffset != iteration || Args.Any(arg => arg.ReferencesOtherIteration(iteration));
+        }
+
         public void highlightTemporarily(PrettyPrintFormat format, Color color)
         {
             var tmp = format.getPrintRule(this).Clone();

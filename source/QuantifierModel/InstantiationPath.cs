@@ -565,7 +565,7 @@ namespace AxiomProfiler.QuantifierModel
 
             private static bool HasRecursiveTerm(EqualityExplanation target)
             {
-                return target.source.iterationOffset > 0 || target.target.iterationOffset > 0;
+                return target.source.ReferencesOtherIteration() || target.target.ReferencesOtherIteration();
             }
 
             public override bool Direct(DirectEqualityExplanation target, object arg)
