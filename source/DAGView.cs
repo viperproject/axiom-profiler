@@ -36,7 +36,8 @@ namespace AxiomProfiler
         private readonly AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
         private Graph graph;
-        private static int newNodeWarningThreshold = 40;
+        private static readonly int newNodeWarningThreshold = 200;
+        private static readonly int numberOfInitialNodes = 40;
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
@@ -90,7 +91,7 @@ namespace AxiomProfiler
             var newNodeInsts = _z3AxiomProfiler.model.instances
                                        .Where(inst => inst.Depth <= maxRenderDepth.Value)
                                        .OrderByDescending(inst => inst.Cost)
-                                       .Take(newNodeWarningThreshold)
+                                       .Take(numberOfInitialNodes)
                                        .ToList();
 
             drawGraphWithInstantiations(newNodeInsts);

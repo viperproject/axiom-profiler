@@ -185,7 +185,7 @@
             "Depth (desc)",
             "Cost",
             "Cost (desc)",
-            "Deepest Subpath"});
+            "Starting Longest Path"});
             this.sortSelectionBox.Location = new System.Drawing.Point(285, 221);
             this.sortSelectionBox.Name = "sortSelectionBox";
             this.sortSelectionBox.Size = new System.Drawing.Size(121, 21);

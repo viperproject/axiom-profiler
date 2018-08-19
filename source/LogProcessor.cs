@@ -799,6 +799,7 @@ namespace AxiomProfiler
             switch (words[0])
             {
                 case "[mk-quant]":
+                case "[mk-lambda]":
                     {
                         Term[] args = GetArgs(words, 3);
                         Term t = new Term("FORALL", args)

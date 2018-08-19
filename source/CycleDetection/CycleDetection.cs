@@ -329,28 +329,41 @@ namespace AxiomProfiler.CycleDetection
 
             var iterationFinalTerm = generalizedTerms.Last();
             var genBindings = GetGeneralizedBindingInfo(loopInstantiations[0][0]);
-            foreach (var loopEndTerm in wrapBindings.getDistinctBlameTerms().Where(t => iterationFinalTerm.isSubterm(t.id)))
+            var loopEndBoundTos = wrapBindings.getDistinctBlameTerms().Where(t => iterationFinalTerm.isSubterm(t.id))
+                .SelectMany(loopEndTerm => wrapBindings.bindings.Where(kv => kv.Value.id == loopEndTerm.id).Select(kv => kv.Key)).ToList();
+            foreach (var boundTo in loopEndBoundTos)
             {
-                foreach (var boundTo in wrapBindings.bindings.Where(kv => kv.Value.id == loopEndTerm.id).Select(kv => kv.Key))
-                {
 
-                    // These might overwrite each other. That is ok.
-                    MarkGeneralizations(genBindings.bindings[boundTo], loopEndTerm);
-                }
+                // These might overwrite each other. That is ok.
+                MarkGeneralizations(genBindings.bindings[boundTo], wrapBindings.bindings[boundTo], Enumerable.Empty<Term>());
             }
         }
 
-        private void MarkGeneralizations(Term loopStart, Term loopEnd)
+        private void MarkGeneralizations(Term loopStart, Term loopEnd, IEnumerable<Term> loopEndHistory)
         {
             if (loopStart.generalizationCounter >= 0)
             {
                 genReplacementTermsForNextIteration[loopStart] = loopEnd;
+
+                if (wrapBindings.matchContext.TryGetValue(loopEnd.id, out var context) && constraintsSat(loopEndHistory.ToList(), context))
+                {
+                    var keys = wrapBindings.equalities.Where(kv => kv.Value.Contains(loopEnd)).Select(kv => kv.Key).ToList();
+                    foreach (var key in keys)
+                    {
+                        wrapBindings.bindings[key] = loopEnd;
+                        wrapBindings.equalities[key].Remove(loopEnd);
+                        if (!wrapBindings.equalities[key].Any())
+                        {
+                            wrapBindings.equalities.Remove(key);
+                        }
+                    }
+                }
             }
             else
             {
                 for (int i = 0; i < loopStart.Args.Length; i++)
                 {
-                    MarkGeneralizations(loopStart.Args[i], loopEnd.Args[i]);
+                    MarkGeneralizations(loopStart.Args[i], loopEnd.Args[i], loopEndHistory.Concat(Enumerable.Repeat(loopEnd, 1)));
                 }
             }
         }
@@ -468,19 +481,19 @@ namespace AxiomProfiler.CycleDetection
                 });
                 foreach (var source in generalizedSource)
                 {
-                    if (!bonusEqs.TryGetValue(source, out var existingEqs))
+                    if (!eqsFromEliminatingIterations.TryGetValue(source, out var existingEqs))
                     {
                         existingEqs = new List<Term>();
-                        bonusEqs[source] = existingEqs;
+                        eqsFromEliminatingIterations[source] = existingEqs;
                     }
                     existingEqs.Add(result.source);
                 }
                 foreach (var target in generalizedTarget)
                 {
-                    if (!bonusEqs.TryGetValue(target, out var existingEqs))
+                    if (!eqsFromEliminatingIterations.TryGetValue(target, out var existingEqs))
                     {
                         existingEqs = new List<Term>();
-                        bonusEqs[target] = existingEqs;
+                        eqsFromEliminatingIterations[target] = existingEqs;
                     }
                     existingEqs.Add(result.target);
                 }
@@ -1426,11 +1439,28 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
+            addedGens = addedGens.OrderByDescending(ag => generalizationLookup[ag].Args.Length).ToList();
             for (var i = 0; i < addedGens.Count;)
             {
                 var addedGen = addedGens[i];
-                var addedGenHeuristic = generalizationLookup[addedGen].Args.Length;
-                if (addedGens.Any(gen => gen != addedGen && coverageClosures[gen].Contains(addedGen) && generalizationLookup[gen].Args.Length <= addedGenHeuristic))
+                var candidateCoverers = new HashSet<int>(chosenGens.Where(gen => coverageClosures[gen].Contains(addedGen) && !trueCoverageClosures[gen].Contains(addedGen)).SelectMany(gen => trueCoverageClosures[gen]));
+                bool change = true;
+                do
+                {
+                    var nextGeneration = eqs.Where(kv => kv.Value.Any(t => {
+                        var generalizationSubterms = t.GetAllGeneralizationSubterms().Select(gen => gen.generalizationCounter).ToList();
+                        return !generalizationSubterms.Contains(addedGen) && candidateCoverers.IsSupersetOf(generalizationSubterms);
+                    })).Select(kv => kv.Key.generalizationCounter).ToList();
+                    if (candidateCoverers.IsSupersetOf(nextGeneration))
+                    {
+                        change = false;
+                    }
+                    else
+                    {
+                        candidateCoverers.UnionWith(nextGeneration);
+                    }
+                } while (change && !candidateCoverers.Contains(addedGen));
+                if (change)
                 {
                     addedGens.RemoveAt(i);
                     chosenGens.Remove(addedGen);
@@ -1532,6 +1562,18 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
+            foreach (var constraint in bindingInfo.matchContext.SelectMany(kv => kv.Value))
+            {
+                for (var i = 0; i < constraint.Count; ++i)
+                {
+                    if (constraint[i].id == t.id)
+                    {
+                        constraint[i] = resultTerm;
+                        break;
+                    }
+                }
+            }
+
             return resultTerm;
         }
 
@@ -1547,7 +1589,7 @@ namespace AxiomProfiler.CycleDetection
             }
         }
 
-        private readonly Dictionary<Term, List<Term>> bonusEqs = new Dictionary<Term, List<Term>>();
+        private readonly Dictionary<Term, List<Term>> eqsFromEliminatingIterations = new Dictionary<Term, List<Term>>();
 
         private Dictionary<int, Term> GenerateGeneralizationSubstitutions()
         {
@@ -1555,7 +1597,7 @@ namespace AxiomProfiler.CycleDetection
 
             var eqs = CollectGeneralizationEqualities();
 
-            foreach (var kv in bonusEqs)
+            foreach (var kv in eqsFromEliminatingIterations)
             {
                 if (eqs.TryGetValue(kv.Key, out var existingEqs))
                 {
@@ -1809,11 +1851,16 @@ namespace AxiomProfiler.CycleDetection
             foreach (var key in keys)
             {
                 var rhsId = bindingInfo.bindings[key].id;
+                var numberToRemove = bindingInfo.equalities[key].Count(t => t.id == rhsId);
                 bindingInfo.equalities[key].RemoveAll(t => t.id == rhsId);
                 if (!bindingInfo.equalities[key].Any())
                 {
                     bindingInfo.equalities.Remove(key);
                 }
+
+                var matchContext = bindingInfo.matchContext[rhsId];
+                var idxs = Enumerable.Range(0, matchContext.Count).Where(i => matchContext[i].Count == 0).Take(numberToRemove).Reverse().ToList();
+                foreach (var idx in idxs) matchContext.RemoveAt(idx);
             }
         }
 
@@ -1895,6 +1942,7 @@ namespace AxiomProfiler.CycleDetection
                 if (assocGenBlameTerm.TryGetValue(loopTerm, out var assocTerms))
                 {
                     assocTerms.RemoveAll(t => t.generalizationCounter >= 0);
+                    assocTerms.RemoveAll(t => loopTerm.isSubterm(t.id));
                     if (assocTerms.Count == 0)
                     {
                         assocGenBlameTerm.Remove(loopTerm);
@@ -1902,6 +1950,7 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
             wrapAssocGenBlameTerms.RemoveAll(t => t.generalizationCounter >= 0);
+            wrapAssocGenBlameTerms.RemoveAll(t => generalizedTerms.Last().isSubterm(t.id));
 
             foreach (var assocTerm in assocGenBlameTerm.Values.SelectMany(x => x))
             {
