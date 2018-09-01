@@ -574,6 +574,7 @@ namespace AxiomProfiler
                     var content = new InfoPanelContent();
                     c.InfoPanelText(content, getFormatFromGUI());
                     content.finalize();
+                    currentInfoPanelPrintable = c;
                     infoPanelQueue.Enqueue(content);
                 }
                 catch (Exception e)
