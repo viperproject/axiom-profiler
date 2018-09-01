@@ -354,14 +354,14 @@ namespace AxiomProfiler.QuantifierModel
             private static Term MakePrime(Term t)
             {
                 if (t.id >= 0) return t;
-                var newArgs = t.Args.Select(a => MakePrime(a)).ToArray();
+                var newArgs = t.Args.Select(a => a.iterationOffset == 0 ? MakePrime(a) : RemoveIterationOffset(a)).ToArray();
                 return new Term(t, newArgs) { isPrime = true };
             }
 
             private static Term RemoveIterationOffset(Term t)
             {
                 if (t.iterationOffset == 0) return t;
-                var newArgs = t.Args.Select(a => RemoveIterationOffset(a)).ToArray();
+                var newArgs = t.Args.Select(a => a.iterationOffset == 0 ? MakePrime(a) : RemoveIterationOffset(a)).ToArray();
                 return new Term(t, newArgs) { iterationOffset = 0 };
             }
 
@@ -437,11 +437,13 @@ namespace AxiomProfiler.QuantifierModel
 
             var recursiveEqualityExplanations = new List<Tuple<int, EqualityExplanation>>();
             var termNumbering = 1;
-            termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, generalizedTerms.First(), insts.Current, true, false, termNumbering, recursiveEqualityExplanations);
+            var firstStep = generalizationState.generalizedTerms.First();
+            termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, firstStep.Item1, firstStep.Item2, firstStep.Item3, true, false, termNumbering, recursiveEqualityExplanations);
 
             var count = 1;
-            var loopYields = generalizedTerms.GetRange(1, generalizedTerms.Count - 1);
-            foreach (var term in loopYields)
+            var loopSteps = generalizedTerms.Skip(1);
+            var numberOfSteps = loopSteps.Count();
+            foreach (var step in loopSteps)
             {
                 format.restoreAllOriginalRules();
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -459,7 +461,7 @@ namespace AxiomProfiler.QuantifierModel
 
                 insts.MoveNext();
                 format.restoreAllOriginalRules();
-                termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, term, insts.Current, false, count == loopYields.Count, termNumbering, recursiveEqualityExplanations);
+                termNumbering = printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, step.Item1, step.Item2, step.Item3, false, count == numberOfSteps, termNumbering, recursiveEqualityExplanations);
                 count++;
             }
 
@@ -633,18 +635,16 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         private static int printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format, GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations,
-            Term term, Instantiation instantiation, bool first, bool last, int termNumberOffset, List<Tuple<int, EqualityExplanation>> recursiveEqualityExplanations)
+            Term term, BindingInfo bindingInfo, List<Term> assocTerms, bool first, bool last, int termNumberOffset, List<Tuple<int, EqualityExplanation>> recursiveEqualityExplanations)
         {
             var termNumberings = new List<Tuple<Term, int>>();
-            generalizationState.tmpHighlightGeneralizedTerm(format, term, last);
+            generalizationState.tmpHighlightGeneralizedTerm(format, term, bindingInfo, last);
 
             var newlyIntroducedGeneralizations = term.GetAllGeneralizationSubterms()
                     .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
                     .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
             PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
             alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
-
-            var bindingInfo = last ? generalizationState.GetWrapAroundBindingInfo() : generalizationState.GetGeneralizedBindingInfo(term.dependentInstantiationsBlame.First());
 
             var distinctBlameTerms = bindingInfo.getDistinctBlameTerms();
             var topLevelTerm = distinctBlameTerms.First(t => term.isSubterm(t.id));
@@ -681,12 +681,12 @@ namespace AxiomProfiler.QuantifierModel
 
             var numberOfGeneralizedTerms = 1;
 
-            var hasOtherRequirements = generalizationState.assocGenBlameTerm.TryGetValue(term, out var otherRequirements);
+            var hasOtherRequirements = assocTerms.Any();
 
             if (first)
             {
                 distinctBlameTerms.Remove(topLevelTerm);
-                if (hasOtherRequirements) distinctBlameTerms.RemoveAll(t => otherRequirements.Contains(t));
+                if (hasOtherRequirements) distinctBlameTerms.RemoveAll(t => assocTerms.Contains(t));
 
                 numberOfGeneralizedTerms += distinctBlameTerms.Count;
 
@@ -713,14 +713,14 @@ namespace AxiomProfiler.QuantifierModel
 
             if (hasOtherRequirements)
             {
-                numberOfGeneralizedTerms += otherRequirements.Count;
+                numberOfGeneralizedTerms += assocTerms.Count;
 
-                foreach (var req in otherRequirements)
+                foreach (var req in assocTerms)
                 {
-                    generalizationState.tmpHighlightGeneralizedTerm(format, req, last);
+                    generalizationState.tmpHighlightGeneralizedTerm(format, req, bindingInfo, last);
                 }
 
-                var constantTermsLookup = otherRequirements
+                var constantTermsLookup = assocTerms
                     .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id))
                     .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req))
                     .ToLookup(t => t.ContainsGeneralization());
