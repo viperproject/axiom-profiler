@@ -56,10 +56,75 @@ namespace AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
-        public IEnumerable<Tuple<Tuple<Quantifier, Term>, int>> Statistics()
+        public IEnumerable<Tuple<Tuple<Quantifier, Term, Term>, int>> Statistics()
         {
-            return pathInstantiations.Skip(pathInstantiations.First().bindingInfo == null ? 1 : 0) //it may, in some cases, be impossible to calculate the binding info for the first instatntiation in a path
-                .GroupBy(i => Tuple.Create(i.Quant, i.bindingInfo.fullPattern)).Select(group => Tuple.Create(group.Key, group.Count()));
+            return pathInstantiations.Zip(pathInstantiations.Skip(1), Tuple.Create)
+                .SelectMany(i => i.Item2.bindingInfo.bindings.Where(kv => i.Item1.concreteBody.isSubterm(kv.Value.id))
+                    .Select(kv => Tuple.Create(i.Item2.Quant, i.Item2.bindingInfo.fullPattern, kv.Key)))
+                    .GroupBy(x => x).Select(group => Tuple.Create(group.Key, group.Count()));
+        }
+
+        public int NumberOfDistinctQuantifierFingerprints()
+        {
+            if (!pathInstantiations.Any()) return 0;
+
+            var perInstantiationFingerprints = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) => next.bindingInfo.bindings
+                .Where(kv => prev.concreteBody.isSubterm(kv.Value.id))
+                .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key)))
+                .ToList();
+            var fingerprintGroupings = perInstantiationFingerprints.SelectMany(x => x).GroupBy(x => x);
+            var stats = new Dictionary<Tuple<Quantifier, Term, Term>, int>();
+            foreach (var group in fingerprintGroupings)
+            {
+                stats[group.Key] = group.Count();
+            }
+            var orderedStats = stats.OrderByDescending(kv => kv.Value);
+
+            var firstInstantiation = pathInstantiations.First();
+            var firstQuant = orderedStats.FirstOrDefault(stat => stat.Key.Item1 == firstInstantiation.Quant &&
+                stat.Key.Item2 == firstInstantiation.bindingInfo.fullPattern).Key;
+            for (var i = 0; i < perInstantiationFingerprints.Count;)
+            {
+                var fingerprints = perInstantiationFingerprints[i];
+                if (fingerprints.Contains(firstQuant))
+                {
+                    foreach (var fingerprint in fingerprints)
+                    {
+                        --stats[fingerprint];
+                    }
+                    perInstantiationFingerprints.RemoveAt(i);
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+
+            var count = 1;
+            while (orderedStats.Any() && orderedStats.First().Value > 0)
+            {
+                var curQuant = orderedStats.First().Key;
+                ++count;
+
+                for (var i = 0; i < perInstantiationFingerprints.Count;)
+                {
+                    var fingerprints = perInstantiationFingerprints[i];
+                    if (fingerprints.Contains(curQuant))
+                    {
+                        foreach (var fingerprint in fingerprints)
+                        {
+                            --stats[fingerprint];
+                        }
+                        perInstantiationFingerprints.RemoveAt(i);
+                    }
+                    else
+                    {
+                        ++i;
+                    }
+                }
+            }
+
+            return count;
         }
 
         private CycleDetection.CycleDetection cycleDetector;

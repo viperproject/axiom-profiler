@@ -567,8 +567,10 @@ namespace AxiomProfiler
 
             lock (this)
             {
+#if !DEBUG
                 try
                 {
+#endif
                     DisplayMessage("busy...");
 
                     var content = new InfoPanelContent();
@@ -576,12 +578,14 @@ namespace AxiomProfiler
                     content.finalize();
                     currentInfoPanelPrintable = c;
                     infoPanelQueue.Enqueue(content);
+#if !DEBUG
                 }
                 catch (Exception e)
                 {
                     Interlocked.Decrement(ref workCounter);
                     DisplayMessage($"Something went wrong: {e.Message}");
                 }
+#endif
             }
         }
 
@@ -589,7 +593,6 @@ namespace AxiomProfiler
         {
             if (c == null) return;
 
-            currentInfoPanelPrintable = c;
             Task.Run(() => UpdateSync(c));
         }
 

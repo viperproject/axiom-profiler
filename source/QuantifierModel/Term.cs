@@ -9,6 +9,20 @@ namespace AxiomProfiler.QuantifierModel
 {
     public class Term : Common
     {
+        public class SemanticTermComparer : IEqualityComparer<Term>
+        {
+            public bool Equals(Term t1, Term t2)
+            {
+                return t1.generalizationCounter >= 0 ? t1.generalizationCounter == t2.generalizationCounter : t1.id == t2.id && t1.Name == t2.Name && t1.isPrime == t2.isPrime && t1.iterationOffset == t2.iterationOffset;
+            }
+
+            public int GetHashCode(Term t)
+            {
+                return t.generalizationCounter >= 0 ? t.generalizationCounter : t.id;
+            }
+        }
+        public static readonly SemanticTermComparer semanticTermComparer = new SemanticTermComparer();
+
         public readonly string Name;
         public readonly string GenericType;
         public readonly Term[] Args;

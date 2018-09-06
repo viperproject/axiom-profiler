@@ -182,7 +182,7 @@ namespace AxiomProfiler.QuantifierModel
             fullPattern = pattern;
             BoundTerms = bindings.Distinct().ToArray();
             TopLevelTerms = topLevelTerms.ToArray();
-            EqualityExplanations = equalityExplanations.ToArray();
+            EqualityExplanations = equalityExplanations.Distinct().ToArray();
             numEq = EqualityExplanations.Length;
         }
 

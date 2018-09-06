@@ -471,8 +471,10 @@ namespace AxiomProfiler
 
             Task.Run(() =>
             {
+#if !DEBUG
                 try
                 {
+#endif
                     _z3AxiomProfiler.DisplayMessage("Finding best path for generalization...");
 
                     // building path downwards:
@@ -501,11 +503,13 @@ namespace AxiomProfiler
                         highlightPath(bestUpPath);
                         _z3AxiomProfiler.UpdateSync(bestUpPath);
                     }
+#if !DEBUG
                 }
                 catch (Exception exception)
                 {
                     _z3AxiomProfiler.DisplayMessage($"Something went wrong: {exception.Message}");
                 }
+#endif
             });
         }
 
@@ -524,22 +528,30 @@ namespace AxiomProfiler
             //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
             var statistics = instantiationPath.Statistics();
             var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
-            var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
-            foreach (var quant in statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1))
-            {
-                eliminatableQuantifiers.Add(quant);
-            }
+            var nonEliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term, Term>>(statistics
+                .Where(dp => dp.Item2 > eliminationTreshhold)
+                .Select(dp => dp.Item1));
 
             //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
-            var instantiations = instantiationPath.getInstantiations().Select(inst => Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern)).ToArray();
+            var pathInstantiations = instantiationPath.getInstantiations();
+            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) =>
+                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.id))
+                .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
+
             var maxStartIndex = 0;
             var maxLength = 0;
             var lastMaxStartIndex = 0;
-            var curStartIndex = 0;
-            var curLength = 0;
+
+            var firstKept = nonEliminatableQuantifiers.Any(q => q.Item1 == pathInstantiations.First().Quant && q.Item2 == pathInstantiations.First().bindingInfo.fullPattern);
+            var curStartIndex = firstKept ? 0 : 1;
+            var curLength = firstKept ? 1 : 0;
             for (var i = 0; i < instantiations.Count(); ++i)
             {
-                if (eliminatableQuantifiers.Contains(instantiations[i]))
+                if (instantiations[i].Any(q => nonEliminatableQuantifiers.Contains(q)))
+                {
+                    ++curLength;
+                }
+                else
                 {
                     if (curLength > maxLength)
                     {
@@ -551,12 +563,8 @@ namespace AxiomProfiler
                     {
                         lastMaxStartIndex = curStartIndex;
                     }
-                    curStartIndex = i + 1;
+                    curStartIndex = i + 2;
                     curLength = 0;
-                }
-                else
-                {
-                    ++curLength;
                 }
             }
             if (curLength > maxLength)
@@ -596,7 +604,7 @@ namespace AxiomProfiler
             /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
              * which is an approximation for the number of repetitions of a matching loop occuring in that path.
              */
-            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.Statistics().Count();
+            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.NumberOfDistinctQuantifierFingerprints();
         }
 
         private static readonly int pathSegmentSize = 8;

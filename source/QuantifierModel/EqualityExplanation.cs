@@ -31,13 +31,13 @@ namespace AxiomProfiler.QuantifierModel
             }
 
             var other = (EqualityExplanation) obj;
-            return source.id == other.source.id && target.id == other.target.id;
+            return Term.semanticTermComparer.Equals(source, other.source) && Term.semanticTermComparer.Equals(target, other.target);
         }
 
         // override object.GetHashCode
         public override int GetHashCode()
         {
-            return source.GetHashCode();
+            return Term.semanticTermComparer.GetHashCode(source);
         }
 
         public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int eqNumber)
@@ -50,7 +50,9 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class DirectEqualityExplanation : EqualityExplanation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public readonly Term equality;
 
@@ -80,17 +82,13 @@ namespace AxiomProfiler.QuantifierModel
             }
 
             var other = (DirectEqualityExplanation) obj;
-            return equality.id == other.equality.id;
-        }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return source.GetHashCode();
+            return Term.semanticTermComparer.Equals(equality, other.equality);
         }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class TransitiveEqualityExplanation : EqualityExplanation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public readonly EqualityExplanation[] equalities;
 
@@ -129,15 +127,11 @@ namespace AxiomProfiler.QuantifierModel
             }
             return true;
         }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return source.GetHashCode();
-        }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class CongruenceExplanation : EqualityExplanation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public readonly EqualityExplanation[] sourceArgumentEqualities;
 
@@ -199,15 +193,11 @@ namespace AxiomProfiler.QuantifierModel
 
             return true;
         }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return source.GetHashCode();
-        }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class TheoryEqualityExplanation: EqualityExplanation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public readonly string TheoryName;
 
@@ -242,15 +232,11 @@ namespace AxiomProfiler.QuantifierModel
 
             return base.Equals(obj);
         }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return source.GetHashCode();
-        }
     }
 
+#pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class RecursiveReferenceEqualityExplanation: EqualityExplanation
+#pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
         public readonly int EqualityNumber;
         public readonly int GenerationOffset;
@@ -288,12 +274,6 @@ namespace AxiomProfiler.QuantifierModel
             if (EqualityNumber != other.EqualityNumber || GenerationOffset != other.GenerationOffset) return false;
 
             return base.Equals(obj);
-        }
-
-        // override object.GetHashCode
-        public override int GetHashCode()
-        {
-            return source.GetHashCode();
         }
     }
 

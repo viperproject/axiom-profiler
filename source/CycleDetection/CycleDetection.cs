@@ -63,21 +63,14 @@ namespace AxiomProfiler.CycleDetection
             var chars = new List<char>();
 
             // map the instantiations
-            var path = this.path;
-            if (path.First().bindingInfo == null)
-            {
-                //in some cases the binding info for the first instantiation in a path cannot be calculated
-                //=> we skip to avoid a null-pointer-exception when accessing the matched pattern in the next step
-                path = path.Skip(1);
-            }
             foreach (var instantiation in path)
             {
                 if (instantiation.bindingInfo == null)
                 {
                     throw new Exception($"Cannot execute findCycle(): bindingInfo missing for {instantiation}");
                 }
-                var key = instantiation.Quant.BodyTerm.id + "" +
-                    instantiation.bindingInfo.fullPattern.id + "";
+                var key = instantiation.Quant.BodyTerm.id + "_" +
+                    instantiation.bindingInfo.fullPattern.id;
                 if (!mapping.ContainsKey(key))
                 {
                     mapping[key] = currMap;
@@ -94,11 +87,96 @@ namespace AxiomProfiler.CycleDetection
             chars.Add(endChar);
 
             // search for cycles
-            suffixTree = new SuffixTree.SuffixTree(chars.Count, minRepetitions);
-            foreach (var c in chars)
+            bool retry;
+            do
             {
-                suffixTree.addChar(c);
-            }
+                retry = false;
+                suffixTree = new SuffixTree.SuffixTree(chars.Count, minRepetitions);
+                foreach (var c in chars)
+                {
+                    suffixTree.addChar(c);
+                }
+
+                if (suffixTree.hasCycle())
+                {
+                    var nRep = suffixTree.nRep;
+                    var startIdx = suffixTree.getStartIdx();
+                    var cycleInstantiations = path.Skip(startIdx).Take(suffixTree.getCycleLength() * nRep);
+                    var cycleFingerprints = cycleInstantiations.Skip(1).Zip(cycleInstantiations, (prev, next) => next.bindingInfo.bindings
+                        .Where(kv => kv.Key.id != -1 && prev.concreteBody.isSubterm(kv.Value.id))
+                        .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
+
+                    var loopFingerprints = new Dictionary<Tuple<Quantifier, Term, Term>, int>[suffixTree.getCycleLength()];
+                    for (var i = 0; i < loopFingerprints.Length; i++)
+                    {
+                        loopFingerprints[i] = new Dictionary<Tuple<Quantifier, Term, Term>, int>();
+                    }
+
+                    var index = 1 % loopFingerprints.Length;
+                    foreach (var instantiationFingerprints in cycleFingerprints)
+                    {
+                        foreach (var fingerprint in instantiationFingerprints) {
+                            loopFingerprints[index][fingerprint] = loopFingerprints[index].TryGetValue(fingerprint, out var prevSum) ? prevSum + 1 : 1;
+                        }
+                        index = ++index % loopFingerprints.Length;
+                    }
+
+                    for (var i = 0; i < loopFingerprints.Length; ++i)
+                    {
+                        var orderedStats = loopFingerprints[i].OrderByDescending(kv => kv.Value);
+                        if (orderedStats.First().Value != nRep - (i == 0 ? 1 : 0))
+                        {
+                            retry = true;
+                            var keepFingerprint = orderedStats.First().Key;
+                            var toUpdate = new List<int>();
+                            for (var loopIdx = (nRep + i - 1) % nRep; loopIdx < cycleFingerprints.Length; loopIdx += nRep)
+                            {
+                                if (cycleFingerprints[loopIdx].Contains(keepFingerprint))
+                                {
+                                    foreach (var fingerprint in cycleFingerprints[loopIdx])
+                                    {
+                                        --loopFingerprints[i][fingerprint];
+                                    }
+                                }
+                                else
+                                {
+                                    toUpdate.Add(loopIdx);
+                                }
+                            }
+                            do
+                            {
+                                var nextFingerprint = orderedStats.First().Key;
+                                var nextKey = nextFingerprint.Item1.BodyTerm.id + "_" + nextFingerprint.Item2.id + nextFingerprint.Item3.id;
+                                if (!mapping.TryGetValue(nextKey, out var curChar))
+                                {
+                                    mapping[nextKey] = currMap;
+                                    curChar = currMap;
+                                    ++currMap;
+                                }
+                                var it = 0;
+                                while (it < toUpdate.Count)
+                                {
+                                    var loopIdx = toUpdate[it];
+                                    if (cycleFingerprints[loopIdx].Contains(nextFingerprint))
+                                    {
+                                        chars[startIdx + loopIdx] = curChar;
+                                        foreach (var fingerprint in cycleFingerprints[loopIdx])
+                                        {
+                                            --loopFingerprints[i][fingerprint];
+                                        }
+                                        toUpdate.RemoveAt(it);
+                                    }
+                                    else
+                                    {
+                                        ++it;
+                                    }
+                                }
+                            } while (orderedStats.First().Value > 0);
+                        }
+                    }
+                }
+            } while (retry);
+
             processed = true;
         }
 
@@ -107,7 +185,7 @@ namespace AxiomProfiler.CycleDetection
             if (!processed) findCycle();
             // return empty list if there is no cycle
             return !hasCycle() ? new List<Instantiation>() :
-                path.Skip(suffixTree.getStartIdx() + (path.First().bindingInfo == null ? 1 : 0)).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
+                path.Skip(suffixTree.getStartIdx()).Take(suffixTree.getCycleLength() * suffixTree.nRep).ToList();
         }
 
         public int GetNumRepetitions()
@@ -212,7 +290,7 @@ namespace AxiomProfiler.CycleDetection
                         set.IntersectWith(iterationResult);
                         return set;
                     }).FirstOrDefault();
-                    if (boundTo == null) throw new Exception("Couldn't generalize! Pattern probably repeats after multiple uses of the same quantifier in a single iteration.");
+                    if (boundTo == null) throw new Exception("Couldn't generalize!");
 
                     parentConcreteTerm = child.bindingInfo.bindings[boundTo];
                     var concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.bindingInfo.bindings[boundTo]);
@@ -301,7 +379,7 @@ namespace AxiomProfiler.CycleDetection
                         Console.Out.WriteLine($"couldn't generalize bindings for {inst}");
                     }
                     loopInstantiationsWorkSpace[j][iterator] = inst;
-                };
+                }
             }
 
             //generalize equality explanations
@@ -330,7 +408,7 @@ namespace AxiomProfiler.CycleDetection
 
         private void MarkGeneralizations(Term loopStart, Term loopEnd, BindingInfo wrapBindings, IEnumerable<Term> loopEndHistory)
         {
-            if (loopStart.generalizationCounter >= 0)
+            if (loopStart.generalizationCounter >= 0 || loopEnd.generalizationCounter >= 0)
             {
                 genReplacementTermsForNextIteration[loopStart] = loopEnd;
 
@@ -348,7 +426,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                 }
             }
-            else
+            else if (loopStart.Name == loopEnd.Name && loopStart.Args.Length == loopEnd.Args.Length)
             {
                 for (int i = 0; i < loopStart.Args.Length; i++)
                 {
@@ -366,10 +444,10 @@ namespace AxiomProfiler.CycleDetection
             {
                 var generation = i + offset;
                 var inst = insts[i];
-                foreach (var ee in inst.bindingInfo.EqualityExplanations)
+                foreach (var ee in inst.bindingInfo.EqualityExplanations.Distinct())
                 {
-                    var generalizedSource = replacementDict[Tuple.Create(generation, ee.source.id)];
-                    var generalizedTarget = replacementDict[Tuple.Create(generation, ee.target.id)];
+                    var generalizedSource = replacementDict[Tuple.Create(generation, ee.source.id)].Distinct(Term.semanticTermComparer);
+                    var generalizedTarget = replacementDict[Tuple.Create(generation, ee.target.id)].Distinct(Term.semanticTermComparer);
                     var keys = generalizedSource.SelectMany(s => generalizedTarget.Select(t => Tuple.Create(s, t)));
 
                     foreach (var key in keys)

@@ -29,7 +29,7 @@ namespace AxiomProfiler.QuantifierModel
                 if (_Responsible == null)
                 {
                     _Responsible = bindingInfo.TopLevelTerms
-                        .Concat(bindingInfo.EqualityExplanations.Select(expl => expl.target))
+                        .Concat(bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.source)).Select(expl => expl.target))
                         .ToArray();
                 }
                 return _Responsible;
