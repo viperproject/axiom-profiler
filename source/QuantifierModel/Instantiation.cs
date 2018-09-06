@@ -189,8 +189,8 @@ namespace AxiomProfiler.QuantifierModel
 
             var blameTerms = bindingInfo.getDistinctBlameTerms();
             var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
-                (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id) &&
-                !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k] == req)));
+                (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.Item2.id == req.id) &&
+                !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k].Item2 == req)));
 
             foreach (var t in distinctBlameTerms)
             {
@@ -215,8 +215,8 @@ namespace AxiomProfiler.QuantifierModel
                 var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 foreach (var equality in bindingInfo.equalities)
                 {
-                    var effectiveTerm = bindingInfo.bindings[equality.Key];
-                    foreach (var term in equality.Value)
+                    var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
+                    foreach (var term in equality.Value.Select(t => t.Item2))
                     {
                         var termNumber = numberOfTopLevelTerms + bindingInfo.GetEqualityNumber(term, effectiveTerm) + 1;
                         equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));
@@ -277,7 +277,7 @@ namespace AxiomProfiler.QuantifierModel
             // highlight replaced, equal terms as well
             foreach (var eqTerm in bindingInfo.equalities.SelectMany(kv => kv.Value))
             {
-                eqTerm.highlightTemporarily(format, PrintConstants.equalityColor, bindingInfo.matchContext[eqTerm.id]);
+                eqTerm.Item2.highlightTemporarily(format, PrintConstants.equalityColor, eqTerm.Item1);
             }
 
             bindingInfo.fullPattern.highlightTemporarily(format, PrintConstants.patternMatchColor);
@@ -289,7 +289,7 @@ namespace AxiomProfiler.QuantifierModel
                 if (patternTerm.id == -1) color = PrintConstants.bindColor;
 
                 patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
-                term.highlightTemporarily(format, color, bindingInfo.matchContext[term.id]);
+                term.Item2.highlightTemporarily(format, color, term.Item1);
             }
         }
 

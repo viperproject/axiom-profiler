@@ -15,25 +15,14 @@ namespace AxiomProfiler.QuantifierModel
         public EqualityExplanation[] EqualityExplanations;
 
         private bool processed = false;
-        // bindings: freeVariable --> Term
-        private Dictionary<Term, Term> _bindings = new Dictionary<Term, Term>();
-        public Dictionary<Term, Term> bindings
+        // bindings: trigger subterm --> (path constraints, Term)
+        private Dictionary<Term, Tuple<List<List<Term>>, Term>> _bindings = new Dictionary<Term, Tuple<List<List<Term>>, Term>>();
+        public Dictionary<Term, Tuple<List<List<Term>>, Term>> bindings
         {
             get
             {
                 if (!processed) Process();
                 return _bindings;
-            }
-        }
-
-        // highlighting info: Term --> List of path constraints
-        private Dictionary<int, List<List<Term>>> _matchContext = new Dictionary<int, List<List<Term>>>();
-        public Dictionary<int, List<List<Term>>> matchContext
-        {
-            get
-            {
-                if (!processed) Process();
-                return _matchContext;
             }
         }
 
@@ -48,8 +37,8 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         // equalities inferred from pattern matching
-        private Dictionary<Term, List<Term>> _equalities = new Dictionary<Term, List<Term>>();
-        public Dictionary<Term, List<Term>> equalities
+        private Dictionary<Term, List<Tuple<List<Term>, Term>>> _equalities = new Dictionary<Term, List<Tuple<List<Term>, Term>>>();
+        public Dictionary<Term, List<Tuple<List<Term>, Term>>> equalities
         {
             get
             {
@@ -105,7 +94,7 @@ namespace AxiomProfiler.QuantifierModel
         /// </summary>
         private Term EffectiveBlameTermForPatternTerm(Term patternTerm)
         {
-            var boundTerm = bindings[patternTerm];
+            var boundTerm = bindings[patternTerm].Item2;
             var newArgs = patternTerm.Args.Count() == 0 ? boundTerm.Args : patternTerm.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToArray();
             var effectiveTerm = new Term(boundTerm.Name, newArgs, boundTerm.generalizationCounter) { id = boundTerm.id };
             if (patternTerm.id == -1)
@@ -169,12 +158,38 @@ namespace AxiomProfiler.QuantifierModel
                 var usedPattern = pair.Item2;
                 var topLevelTerm = termNumberings.First(numbering => numbering.Item1.isSubterm(effectiveTerm.id));
                 var usedEqualityNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
-                    .Select(b => equalityNumberings.First(numbering => numbering.Item1.Contains(b)).Item2).Distinct();
+                    .Select(b => equalityNumberings.First(numbering => numbering.Item1.Contains(b.Item2)).Item2).Distinct();
                 content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Item2}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
                 content.switchToDefaultFormat();
             }
+        }
+
+        private static Dictionary<Term, Tuple<List<List<Term>>, Term>> copyBindings(Dictionary<Term, Tuple<List<List<Term>>, Term>> bindings)
+        {
+            var copy = new Dictionary<Term, Tuple<List<List<Term>>, Term>>();
+
+            // 'deeper' copy of path constraints
+            foreach (var kv in bindings)
+            {
+                copy[kv.Key] = Tuple.Create(kv.Value.Item1.Select(l => new List<Term>(l)).ToList(), kv.Value.Item2);
+            }
+
+            return copy;
+        }
+
+        private static Dictionary<Term, List<Tuple<List<Term>, Term>>> copyEqualities(Dictionary<Term, List<Tuple<List<Term>, Term>>> bindings)
+        {
+            var copy = new Dictionary<Term, List<Tuple<List<Term>, Term>>>();
+
+            // 'deeper' copy of path constraints and equality lhs
+            foreach (var kv in bindings)
+            {
+                copy[kv.Key] = kv.Value.Select(t => Tuple.Create(new List<Term>(t.Item1), t.Item2)).ToList();
+            }
+
+            return copy;
         }
 
         public BindingInfo(Term pattern, ICollection<Term> bindings, ICollection<Term> topLevelTerms, IEnumerable<EqualityExplanation> equalityExplanations)
@@ -189,7 +204,7 @@ namespace AxiomProfiler.QuantifierModel
         private BindingInfo(BindingInfo other)
         {
             processed = other.processed;
-            _bindings = new Dictionary<Term, Term>(other._bindings);
+            _bindings = copyBindings(other._bindings);
             BoundTerms = other.BoundTerms;
             TopLevelTerms = other.TopLevelTerms;
             EqualityExplanations = other.EqualityExplanations;
@@ -197,25 +212,13 @@ namespace AxiomProfiler.QuantifierModel
             numEq = other.numEq;
 
             // 'deeper' copy
-            _matchContext = new Dictionary<int, List<List<Term>>>();
-            foreach (var context in other._matchContext)
-            {
-                _matchContext[context.Key] = context.Value.Select(l => new List<Term>(l)).ToList();
-            }
-
-            // 'deeper' copy
             _patternMatchContext = new Dictionary<int, List<List<Term>>>();
             foreach (var context in other._patternMatchContext)
             {
                 _patternMatchContext[context.Key] = context.Value.Select(l => new List<Term>(l)).ToList();
             }
-
-            // 'deeper' copy
-            _equalities = new Dictionary<Term, List<Term>>();
-            foreach (var equality in other._equalities)
-            {
-                _equalities[equality.Key] = new List<Term>(equality.Value);
-            }
+            
+            _equalities = copyEqualities(other._equalities);
         }
 
         public BindingInfo Clone()
@@ -231,35 +234,27 @@ namespace AxiomProfiler.QuantifierModel
 
         private bool AddPatternMatch(Term pattern, Term match, Term usedEquality, IEnumerable<Term> context, IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch, int multipatternArg)
         {
-            var origBindings = new Dictionary<Term, Term>(_bindings);
-            var origEqualities = new Dictionary<Term, List<Term>>(_equalities);
-            var origMatchContext = new Dictionary<int, List<List<Term>>>(_matchContext);
+            var origBindings = copyBindings(_bindings);
+            var origEqualities = copyEqualities(_equalities);
 
             if (usedEquality != null)
             {
                 if (!_equalities.TryGetValue(pattern, out var eqs))
                 {
-                    eqs = new List<Term>();
+                    eqs = new List<Tuple<List<Term>, Term>>();
                     _equalities[pattern] = eqs;
                 }
-                eqs.Add(usedEquality);
-                if (!_matchContext.TryGetValue(usedEquality.id, out var eqContexts))
-                {
-                    eqContexts = new List<List<Term>>();
-                    _matchContext[usedEquality.id] = eqContexts;
-                }
-                eqContexts.Add(context.ToList());
+                eqs.Add(Tuple.Create(context.ToList(), usedEquality));
                 context = Enumerable.Empty<Term>();
             }
 
-            _bindings[pattern] = match;
-            if (!_matchContext.TryGetValue(match.id, out var contexts))
+            if (!_bindings.TryGetValue(pattern, out var existingBinding))
             {
-                contexts = new List<List<Term>>();
-                _matchContext[match.id] = contexts;
+                existingBinding = Tuple.Create(new List<List<Term>>(), match);
+                _bindings[pattern] = existingBinding;
             }
-            contexts.Add(context.ToList());
-
+            existingBinding.Item1.Add(context.ToList());
+            
             var nextContext = context.Concat(Enumerable.Repeat(match, 1));
             var nextMatches = pattern.Args.Zip(match.Args, (p, m) => Tuple.Create(p, m, nextContext)).Concat(toMatch);
             if (DoNextMatch(nextMatches, multipatternArg))
@@ -270,7 +265,6 @@ namespace AxiomProfiler.QuantifierModel
             {
                 _bindings = origBindings;
                 _equalities = origEqualities;
-                _matchContext = origMatchContext;
                 return false;
             }
         }
@@ -293,12 +287,12 @@ namespace AxiomProfiler.QuantifierModel
                 if (_bindings.TryGetValue(patternTerm, out var existingBinding))
                 {
                     Term equality = null;
-                    if (existingBinding.id != matchedTerm.id)
+                    if (existingBinding.Item2.id != matchedTerm.id)
                     {
-                        if (EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == existingBinding.id))
+                        if (EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == existingBinding.Item2.id))
                         {
                             equality = matchedTerm;
-                            matchedTerm = existingBinding;
+                            matchedTerm = existingBinding.Item2;
                         }
                         else
                         {
@@ -345,11 +339,11 @@ namespace AxiomProfiler.QuantifierModel
         private bool IsValid()
         {
             var qVarBindings = _bindings.Where(kv => kv.Key.id == -1).Select(kv => kv.Value);
-            if (!qVarBindings.All(binding => BoundTerms.Any(o => o.id == binding.id)))
+            if (!qVarBindings.All(binding => BoundTerms.Any(o => o.id == binding.Item2.id)))
             {
                 return false;
             }
-            if (!BoundTerms.All(binding => qVarBindings.Any(o => o.id == binding.id)))
+            if (!BoundTerms.All(binding => qVarBindings.Any(o => o.Item2.id == binding.id)))
             {
                 return false;
             }
@@ -357,13 +351,13 @@ namespace AxiomProfiler.QuantifierModel
             var resolvedEqualities = new Dictionary<int, ISet<int>>();
             foreach (var kv in _equalities)
             {
-                var key = bindings[kv.Key].id;
+                var key = bindings[kv.Key].Item2.id;
                 if (!resolvedEqualities.TryGetValue(key, out var lhs))
                 {
                     lhs = new HashSet<int>();
                     resolvedEqualities[key] = lhs;
                 }
-                lhs.UnionWith(kv.Value.Select(v => v.id));
+                lhs.UnionWith(kv.Value.Select(v => v.Item2.id));
             }
 
             return EqualityExplanations.Where(ee => ee.source.id != ee.target.id).All(ee => {
@@ -438,7 +432,8 @@ namespace AxiomProfiler.QuantifierModel
             var blameTerms = bindings
                 .Select(bnd => bnd.Value).Distinct();
             return blameTerms
-                .Where(t1 => matchContext[t1.id].Any(l => l.Count == 0))
+                .Where(t1 => t1.Item1.Any(l => l.Count == 0))
+                .Select(t => t.Item2)
                 .ToList();
         }
 
@@ -446,6 +441,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             return bindings
                 .Where(bnd => bnd.Key.id == -1)
+                .Select(kv => new KeyValuePair<Term, Term>(kv.Key, kv.Value.Item2))
                 .ToList();
         }
     }

@@ -535,7 +535,7 @@ namespace AxiomProfiler
             //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
             var pathInstantiations = instantiationPath.getInstantiations();
             var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) =>
-                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.id))
+                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
                 .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
 
             var maxStartIndex = 0;

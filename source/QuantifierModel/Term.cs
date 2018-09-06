@@ -126,7 +126,12 @@ namespace AxiomProfiler.QuantifierModel
             format.addTemporaryRule(id + "", tmp);
         }
 
-        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<List<Term>> pathConstraints)
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<Term> pathConstraint)
+        {
+            highlightTemporarily(format, color, Enumerable.Repeat(pathConstraint, 1));
+        }
+
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, IEnumerable<List<Term>> pathConstraints)
         {
             var baseRule = format.getPrintRule(this);
             IEnumerable<PrintRule> newRules;

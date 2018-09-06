@@ -59,7 +59,7 @@ namespace AxiomProfiler.QuantifierModel
         public IEnumerable<Tuple<Tuple<Quantifier, Term, Term>, int>> Statistics()
         {
             return pathInstantiations.Zip(pathInstantiations.Skip(1), Tuple.Create)
-                .SelectMany(i => i.Item2.bindingInfo.bindings.Where(kv => i.Item1.concreteBody.isSubterm(kv.Value.id))
+                .SelectMany(i => i.Item2.bindingInfo.bindings.Where(kv => i.Item1.concreteBody.isSubterm(kv.Value.Item2.id))
                     .Select(kv => Tuple.Create(i.Item2.Quant, i.Item2.bindingInfo.fullPattern, kv.Key)))
                     .GroupBy(x => x).Select(group => Tuple.Create(group.Key, group.Count()));
         }
@@ -69,7 +69,7 @@ namespace AxiomProfiler.QuantifierModel
             if (!pathInstantiations.Any()) return 0;
 
             var perInstantiationFingerprints = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) => next.bindingInfo.bindings
-                .Where(kv => prev.concreteBody.isSubterm(kv.Value.id))
+                .Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
                 .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key)))
                 .ToList();
             var fingerprintGroupings = perInstantiationFingerprints.SelectMany(x => x).GroupBy(x => x);
@@ -227,7 +227,7 @@ namespace AxiomProfiler.QuantifierModel
 
             // Other prerequisites:
             var otherRequiredTerms = current.bindingInfo.getDistinctBlameTerms()
-                .FindAll(term => current.bindingInfo.equalities.Any(eq => current.bindingInfo.bindings[eq.Key] == term) ||
+                .FindAll(term => current.bindingInfo.equalities.Any(eq => current.bindingInfo.bindings[eq.Key].Item2 == term) ||
                         !previous.concreteBody.isSubterm(term)).ToList();
             if (otherRequiredTerms.Count > 0)
             {
@@ -254,14 +254,14 @@ namespace AxiomProfiler.QuantifierModel
                 var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 foreach (var equality in current.bindingInfo.equalities)
                 {
-                    var effectiveTerm = current.bindingInfo.bindings[equality.Key];
-                    equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
+                    var effectiveTerm = current.bindingInfo.bindings[equality.Key].Item2;
+                    equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Select(t => t.Item2).Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
                     numberingString = $"({termNumbering}) ";
                     ++termNumbering;
                     content.Append(numberingString);
                     effectiveTerm.PrettyPrint(content, format, numberingString.Length);
                     var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
-                    foreach (var term in equality.Value)
+                    foreach (var term in equality.Value.Select(t => t.Item2))
                     {
                         content.switchToDefaultFormat();
                         content.Append($"\n{indentString}=\n{indentString}");
@@ -295,8 +295,8 @@ namespace AxiomProfiler.QuantifierModel
             current.tempHighlightBlameBindTerms(format);
             var blameTerms = current.bindingInfo.getDistinctBlameTerms();
             var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)))
-                .Where(req => !current.bindingInfo.equalities.SelectMany(eq => eq.Value).Contains(req))
-                .Where(req => current.bindingInfo.equalities.Keys.All(k => current.bindingInfo.bindings[k] != req));
+                .Where(req => !current.bindingInfo.equalities.SelectMany(eq => eq.Value.Select(t => t.Item2)).Contains(req))
+                .Where(req => current.bindingInfo.equalities.Keys.All(k => current.bindingInfo.bindings[k].Item2 != req));
             foreach (var distinctBlameTerm in distinctBlameTerms)
             {
                 var numberingString = $"({termNumbering}) ";
@@ -318,14 +318,14 @@ namespace AxiomProfiler.QuantifierModel
                 format.printContextSensitive = false;
                 foreach (var equality in current.bindingInfo.equalities)
                 {
-                    var effectiveTerm = current.bindingInfo.bindings[equality.Key];
-                    equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
+                    var effectiveTerm = current.bindingInfo.bindings[equality.Key].Item2;
+                    equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(equality.Value.Select(t => t.Item2).Concat(Enumerable.Repeat(effectiveTerm, 1)), termNumbering));
                     var numberingString = $"({termNumbering}) ";
                     ++termNumbering;
                     content.Append(numberingString);
                     effectiveTerm.PrettyPrint(content, format, numberingString.Length);
                     var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
-                    foreach (var term in equality.Value)
+                    foreach (var term in equality.Value.Select(t => t.Item2))
                     {
                         content.switchToDefaultFormat();
                         content.Append($"\n{indentString}=\n{indentString}");
@@ -786,8 +786,8 @@ namespace AxiomProfiler.QuantifierModel
                 }
 
                 var constantTermsLookup = assocTerms
-                    .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.id == req.id))
-                    .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k] != req))
+                    .Where(req => !bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.Item2.id == req.id))
+                    .Where(req => bindingInfo.equalities.Keys.All(k => bindingInfo.bindings[k].Item2 != req))
                     .ToLookup(t => t.ContainsGeneralization());
                 var setTems = constantTermsLookup[true];
                 var constantTerms = constantTermsLookup[false];
@@ -838,7 +838,7 @@ namespace AxiomProfiler.QuantifierModel
 
             if (bindingInfo.equalities.Count > 0)
             {
-                var equalitySetLookup = bindingInfo.equalities.ToLookup(eq => eq.Key.ContainsGeneralization() || eq.Value.Any(t => t.ContainsGeneralization()));
+                var equalitySetLookup = bindingInfo.equalities.ToLookup(eq => eq.Key.ContainsGeneralization() || eq.Value.Any(t => t.Item2.ContainsGeneralization()));
 
                 format.printContextSensitive = false;
                 var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
@@ -850,8 +850,8 @@ namespace AxiomProfiler.QuantifierModel
 
                     foreach (var equality in equalitySetLookup[true])
                     {
-                        var effectiveTerm = bindingInfo.bindings[equality.Key];
-                        foreach (var t in equality.Value)
+                        var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
+                        foreach (var t in equality.Value.Select(t => t.Item2))
                         {
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
@@ -906,8 +906,8 @@ namespace AxiomProfiler.QuantifierModel
 
                     foreach (var equality in equalitySetLookup[false])
                     {
-                        var effectiveTerm = bindingInfo.bindings[equality.Key];
-                        foreach (var t in equality.Value)
+                        var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
+                        foreach (var t in equality.Value.Select(t => t.Item2))
                         {
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
