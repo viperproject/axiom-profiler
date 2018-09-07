@@ -29,7 +29,7 @@ namespace AxiomProfiler.QuantifierModel
                 if (_Responsible == null)
                 {
                     _Responsible = bindingInfo.TopLevelTerms
-                        .Concat(bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.source)).Select(expl => expl.target))
+                        .Concat(bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.target)).Select(expl => expl.target))
                         .ToArray();
                 }
                 return _Responsible;
@@ -216,7 +216,7 @@ namespace AxiomProfiler.QuantifierModel
                 foreach (var equality in bindingInfo.equalities)
                 {
                     var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
-                    foreach (var term in equality.Value.Select(t => t.Item2))
+                    foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
                         var termNumber = numberOfTopLevelTerms + bindingInfo.GetEqualityNumber(term, effectiveTerm) + 1;
                         equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));

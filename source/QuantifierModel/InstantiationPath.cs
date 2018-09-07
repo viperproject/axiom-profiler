@@ -851,7 +851,7 @@ namespace AxiomProfiler.QuantifierModel
                     foreach (var equality in equalitySetLookup[true])
                     {
                         var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
-                        foreach (var t in equality.Value.Select(t => t.Item2))
+                        foreach (var t in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                         {
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);
@@ -907,7 +907,7 @@ namespace AxiomProfiler.QuantifierModel
                     foreach (var equality in equalitySetLookup[false])
                     {
                         var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
-                        foreach (var t in equality.Value.Select(t => t.Item2))
+                        foreach (var t in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                         {
                             content.Append('\n');
                             termNumber = termNumberOffset + numberOfGeneralizedTerms + bindingInfo.GetEqualityNumber(t, effectiveTerm);

@@ -6,6 +6,26 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler.CycleDetection
 {
+    class LambdaEqualityComparer<T> : IEqualityComparer<T>
+    {
+        private readonly Func<T, T, bool> lambda;
+
+        public LambdaEqualityComparer(Func<T, T, bool> lambda)
+        {
+            this.lambda = lambda;
+        }
+
+        public bool Equals(T first, T second)
+        {
+            return lambda(first, second);
+        }
+
+        public int GetHashCode(T obj)
+        {
+            return 0;
+        }
+    }
+
     public class CycleDetection
     {
         private readonly IEnumerable<Instantiation> path;
@@ -100,9 +120,10 @@ namespace AxiomProfiler.CycleDetection
                 if (suffixTree.hasCycle())
                 {
                     var nRep = suffixTree.nRep;
+                    var cycleLength = suffixTree.getCycleLength();
                     var startIdx = suffixTree.getStartIdx();
-                    var cycleInstantiations = path.Skip(startIdx).Take(suffixTree.getCycleLength() * nRep);
-                    var cycleFingerprints = cycleInstantiations.Skip(1).Zip(cycleInstantiations, (prev, next) => next.bindingInfo.bindings
+                    var cycleInstantiations = path.Skip(startIdx).Take(cycleLength * nRep);
+                    var cycleFingerprints = cycleInstantiations.Zip(cycleInstantiations.Skip(1), (prev, next) => next.bindingInfo.bindings
                         .Where(kv => kv.Key.id != -1 && prev.concreteBody.isSubterm(kv.Value.Item2.id))
                         .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
 
@@ -118,7 +139,7 @@ namespace AxiomProfiler.CycleDetection
                         foreach (var fingerprint in instantiationFingerprints) {
                             loopFingerprints[index][fingerprint] = loopFingerprints[index].TryGetValue(fingerprint, out var prevSum) ? prevSum + 1 : 1;
                         }
-                        index = ++index % loopFingerprints.Length;
+                        index = index + 1 % loopFingerprints.Length;
                     }
 
                     for (var i = 0; i < loopFingerprints.Length; ++i)
@@ -129,7 +150,7 @@ namespace AxiomProfiler.CycleDetection
                             retry = true;
                             var keepFingerprint = orderedStats.First().Key;
                             var toUpdate = new List<int>();
-                            for (var loopIdx = (nRep + i - 1) % nRep; loopIdx < cycleFingerprints.Length; loopIdx += nRep)
+                            for (var loopIdx = (cycleLength + i - 1) % cycleLength; loopIdx < cycleFingerprints.Length; loopIdx += cycleLength)
                             {
                                 if (cycleFingerprints[loopIdx].Contains(keepFingerprint))
                                 {
@@ -386,7 +407,8 @@ namespace AxiomProfiler.CycleDetection
             {
                 GeneralizeEqualityExplanations(it, false);
             }
-            GeneralizeEqualityExplanations(0, true);
+            // Equalities for the wrap instantiation are irrelevant since they are never displayed and any information relvant for the generalization substitution
+            // is already contained in the first instantiation.
 
             DoGeneralizationSubstitution();
             SimplifyAfterGeneralizationSubstitution();
@@ -440,56 +462,6 @@ namespace AxiomProfiler.CycleDetection
         {
             var offset = loopWrapAround ? 1 : 0;
             var insts = loopInstantiationsWorkSpace[instIndex].Skip(offset).ToList();
-            var equalityExplanationsDict = new Dictionary<Tuple<Term, Term>, List<Tuple<EqualityExplanation, int>>>();
-            for (var i = 0; i < insts.Count; ++i)
-            {
-                var generation = i + offset;
-                var inst = insts[i];
-                foreach (var ee in inst.bindingInfo.EqualityExplanations.Distinct())
-                {
-                    var generalizedSource = replacementDict[Tuple.Create(generation, ee.source.id)].Distinct(Term.semanticTermComparer);
-                    var generalizedTarget = replacementDict[Tuple.Create(generation, ee.target.id)].Distinct(Term.semanticTermComparer);
-                    var keys = generalizedSource.SelectMany(s => generalizedTarget.Select(t => Tuple.Create(s, t)));
-
-                    foreach (var key in keys)
-                    {
-                        if (!equalityExplanationsDict.TryGetValue(key, out var equalityCollector))
-                        {
-                            equalityCollector = new List<Tuple<EqualityExplanation, int>>();
-                            equalityExplanationsDict[key] = equalityCollector;
-                        }
-                        equalityCollector.Add(Tuple.Create(ee, generation));
-                    }
-                }
-            }
-
-            var safeIndex = insts.Count / 2;
-            var equalityExplanations = equalityExplanationsDict.Values.Where(l => safeIndex < l.Count).ToList();
-            for (var i = 0; i < equalityExplanations.Count - 1;) {
-                foreach (var eeTuple in equalityExplanations[i])
-                {
-                    for (var j = i + 1; j < equalityExplanations.Count;)
-                    {
-                        if (equalityExplanations[j].Contains(eeTuple))
-                        {
-                            if (equalityExplanations[i].Count < equalityExplanations[j].Count)
-                            {
-                                equalityExplanations.RemoveAt(i);
-                                goto noInc;
-                            }
-                            else
-                            {
-                                equalityExplanations.RemoveAt(j);
-                                continue;
-                            }
-                        }
-                        ++j;
-                    }
-                }
-                ++i;
-                noInc: {}
-            }
-
             BindingInfo generalizedBindingInfo;
             if (loopWrapAround)
             {
@@ -499,6 +471,37 @@ namespace AxiomProfiler.CycleDetection
             {
                 generalizedBindingInfo = generalizedTerms[instIndex].Item2;
             }
+            var safeIndex = insts.Count / 2;
+
+            var neededEqs = generalizedBindingInfo.equalities.SelectMany(kv =>
+            {
+                var rhs = generalizedBindingInfo.bindings[kv.Key].Item2;
+                return kv.Value.Select(t => Tuple.Create(t.Item2, rhs));
+            }).Where(t => !Term.semanticTermComparer.Equals(t.Item1, t.Item2))
+                .Distinct(new LambdaEqualityComparer<Tuple<Term, Term>>((t1, t2) => Term.semanticTermComparer.Equals(t1.Item1, t2.Item1) &&
+                Term.semanticTermComparer.Equals(t1.Item2, t2.Item2)));
+
+            var equalityExplanations = neededEqs.Select(t =>
+            {
+                var source = t.Item1;
+                var target = t.Item2;
+                var eeCollector = new List<Tuple<EqualityExplanation, int>>();
+                for (var i = 0; i < insts.Count; ++i)
+                {
+                    var inst = insts[i];
+                    var generation = i + offset;
+                    foreach (var ee in inst.bindingInfo.EqualityExplanations.Distinct())
+                    {
+                        var generalizedSource = replacementDict[Tuple.Create(generation, ee.source.id)];
+                        var generalizedTarget = replacementDict[Tuple.Create(generation, ee.target.id)];
+                        if  (generalizedSource.Any(g => Term.semanticTermComparer.Equals(g, source)) && generalizedTarget.Any(g => Term.semanticTermComparer.Equals(g, target)))
+                        {
+                            eeCollector.Add(Tuple.Create(ee, generation));
+                        }
+                    }
+                }
+                return eeCollector;
+            }).ToList();
 
             var recursionPointFinder = new RecursionPointFinder();
             generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
@@ -1823,19 +1826,19 @@ namespace AxiomProfiler.CycleDetection
 
             public override EqualityExplanation Direct(DirectEqualityExplanation target, object arg)
             {
-                if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
+                if (Term.semanticTermComparer.Equals(target.source, target.target) && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else return target;
             }
 
             public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
             {
-                if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
+                if (Term.semanticTermComparer.Equals(target.source, target.target) && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else return target;
             }
 
             public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, object arg)
             {
-                if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
+                if (Term.semanticTermComparer.Equals(target.source, target.target) && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else
                 {
                     var simplifiedExplanations = new List<EqualityExplanation>();
@@ -1847,7 +1850,7 @@ namespace AxiomProfiler.CycleDetection
                         var skipIndex = reverseIndices.First(idx => {
                             var current = explanation.source;
                             var other = target.equalities[idx].source;
-                            return current.id == other.id && current.iterationOffset == other.iterationOffset;
+                            return Term.semanticTermComparer.Equals(current, other) && current.iterationOffset == other.iterationOffset;
                         });
                         if (skipIndex != i)
                         {
@@ -1875,7 +1878,7 @@ namespace AxiomProfiler.CycleDetection
 
             public override EqualityExplanation Congruence(CongruenceExplanation target, object arg)
             {
-                if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
+                if (Term.semanticTermComparer.Equals(target.source, target.target) && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else
                 {
                     var simplifiedArgumentExplanations = target.sourceArgumentEqualities.Select(ee => visit(ee, arg) ?? new TransitiveEqualityExplanation(ee.source, ee.target, emptyEqualityExplanations)).ToArray();
@@ -1885,7 +1888,7 @@ namespace AxiomProfiler.CycleDetection
 
             public override EqualityExplanation Theory(TheoryEqualityExplanation target, object arg)
             {
-                if (target.source.id == target.target.id && target.source.iterationOffset == target.target.iterationOffset) return null;
+                if (Term.semanticTermComparer.Equals(target.source, target.target) && target.source.iterationOffset == target.target.iterationOffset) return null;
                 else return target;
             }
         }
