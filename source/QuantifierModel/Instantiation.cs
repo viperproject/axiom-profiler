@@ -149,6 +149,7 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("The resulting term:\n\n");
             concreteBody.PrettyPrint(content, format);
+            content.switchToDefaultFormat();
         }
 
         public void printNoMatchdisclaimer(InfoPanelContent content)
@@ -184,8 +185,8 @@ namespace AxiomProfiler.QuantifierModel
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Blamed Terms:\n\n");
             content.switchToDefaultFormat();
-            
-            var termNumberings = new List<Tuple<Term, int>>();
+
+            var termNumbering = 1;
 
             var blameTerms = bindingInfo.getDistinctBlameTerms();
             var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
@@ -194,10 +195,14 @@ namespace AxiomProfiler.QuantifierModel
 
             foreach (var t in distinctBlameTerms)
             {
-                var termNumber = bindingInfo.GetTermNumber(t) + 1;
+                if (!format.termNumbers.TryGetValue(t, out var termNumber))
+                {
+                    termNumber = termNumbering;
+                    ++termNumbering;
+                    format.termNumbers[t] = termNumber;
+                }
                 var numberingString = $"({termNumber}) ";
                 content.Append($"\n{numberingString}");
-                termNumberings.Add(Tuple.Create(t, termNumber));
                 t.PrettyPrint(content, format, numberingString.Length);
                 content.switchToDefaultFormat();
                 content.Append("\n\n");
@@ -212,17 +217,21 @@ namespace AxiomProfiler.QuantifierModel
                 content.switchToDefaultFormat();
 
                 format.printContextSensitive = false;
-                var equalityNumberings = new List<Tuple<IEnumerable<Term>, int>>();
                 foreach (var equality in bindingInfo.equalities)
                 {
                     var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
                     foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
-                        var termNumber = numberOfTopLevelTerms + bindingInfo.GetEqualityNumber(term, effectiveTerm) + 1;
-                        equalityNumberings.Add(new Tuple<IEnumerable<Term>, int>(new Term[] { term, effectiveTerm }, termNumber));
+                        var explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                        if (!format.equalityNumbers.TryGetValue(explanation, out var termNumber))
+                        {
+                            termNumber = termNumbering;
+                            ++termNumbering;
+                            format.equalityNumbers[explanation] = termNumber;
+                        }
+                        
                         if (format.ShowEqualityExplanations)
                         {
-                            var explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
                             explanation.PrettyPrint(content, format, termNumber);
                         }
                         else
@@ -241,7 +250,7 @@ namespace AxiomProfiler.QuantifierModel
                 }
                 format.printContextSensitive = true;
 
-                bindingInfo.PrintEqualitySubstitution(content, format, termNumberings, equalityNumberings);
+                bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);

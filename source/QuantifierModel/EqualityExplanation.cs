@@ -1,11 +1,14 @@
 ﻿using AxiomProfiler.PrettyPrinting;
 using System;
+using System.Collections.Generic;
 
 namespace AxiomProfiler.QuantifierModel
 {
     public abstract class EqualityExplanation
     {
         public readonly Term source, target;
+
+        public readonly List<RecursiveReferenceEqualityExplanation> ReferenceBackPointers = new List<RecursiveReferenceEqualityExplanation>();
 
         protected EqualityExplanation(Term source, Term target)
         {
@@ -238,15 +241,23 @@ namespace AxiomProfiler.QuantifierModel
     public class RecursiveReferenceEqualityExplanation: EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     {
-        public readonly int EqualityNumber;
+        public EqualityExplanation ReferencedExplanation { get;  private set; }
         public readonly int GenerationOffset;
         public readonly bool isPrime;
 
-        public RecursiveReferenceEqualityExplanation(Term source, Term target, int EqualityNumber, int GenerationOffset, bool isPrime = false): base(source, target)
+        public RecursiveReferenceEqualityExplanation(Term source, Term target, EqualityExplanation ReferencedExplanation, int GenerationOffset, bool isPrime = false): base(source, target)
         {
-            this.EqualityNumber = EqualityNumber;
+            this.ReferencedExplanation = ReferencedExplanation;
+            ReferencedExplanation.ReferenceBackPointers.Add(this);
             this.GenerationOffset = GenerationOffset;
             this.isPrime = isPrime;
+        }
+
+        public void UpdateReference(EqualityExplanation newExplanation)
+        {
+            ReferencedExplanation.ReferenceBackPointers.Remove(this);
+            ReferencedExplanation = newExplanation;
+            if (newExplanation != null) newExplanation.ReferenceBackPointers.Add(this);
         }
 
         protected internal override R Accept<R, A>(EqualityExplanationVisitor<R, A> visitor, A arg)
@@ -271,7 +282,7 @@ namespace AxiomProfiler.QuantifierModel
 
             var other = (RecursiveReferenceEqualityExplanation) obj;
 
-            if (EqualityNumber != other.EqualityNumber || GenerationOffset != other.GenerationOffset) return false;
+            if (GenerationOffset != other.GenerationOffset || !ReferencedExplanation.Equals(other.ReferencedExplanation)) return false;
 
             return base.Equals(obj);
         }

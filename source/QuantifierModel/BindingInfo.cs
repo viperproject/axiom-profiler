@@ -108,26 +108,6 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
-        public int GetTermNumber(Term term)
-        {
-            var index = getDistinctBlameTerms().FindIndex(t => Term.semanticTermComparer.Equals(t, term));
-            if (index == -1)
-            {
-                throw new ArgumentException("The specified Term was not a top level blame term for this instantiation.");
-            }
-            return index;
-        }
-
-        public int GetEqualityNumber(Term source, Term target)
-        {
-            var index = Array.FindIndex(EqualityExplanations, ee => ee.source.id == source.id && ee.target.id == target.id);
-            if (index == -1)
-            {
-                throw new ArgumentException("The argument was not an equality used by this instantiation.");
-            }
-            return index;
-        }
-
         public int GetNumberOfTermAndEqualityNumberingsUsed()
         {
             return getDistinctBlameTerms().Count + EqualityExplanations.Length;
@@ -136,7 +116,7 @@ namespace AxiomProfiler.QuantifierModel
         /// <summary>
         /// Prints a section explaining the equality substitutions necessary to obtain a term matching the trigger.
         /// </summary>
-        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Tuple<Term, int>> termNumberings, IEnumerable<Tuple<IEnumerable<Term>, int>> equalityNumberings)
+        public void PrintEqualitySubstitution(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\nSubstituting equalities yields:\n\n");
@@ -156,10 +136,10 @@ namespace AxiomProfiler.QuantifierModel
             {
                 var effectiveTerm = pair.Item1;
                 var usedPattern = pair.Item2;
-                var topLevelTerm = termNumberings.First(numbering => numbering.Item1.isSubterm(effectiveTerm.id));
+                var topLevelTerm = format.termNumbers.First(kv =>kv.Key.isSubterm(effectiveTerm.id));
                 var usedEqualityNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
-                    .Select(b => equalityNumberings.First(numbering => numbering.Item1.Contains(b.Item2)).Item2).Distinct();
-                content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Item2}):\n");
+                    .Select(b => format.equalityNumbers.First(kv => Term.semanticTermComparer.Equals(kv.Key.target, b.Item2)).Value).Distinct();
+                content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Value}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
                 content.switchToDefaultFormat();

@@ -299,6 +299,8 @@ namespace AxiomProfiler.PrettyPrinting
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
         public bool printContextSensitive = true;
+        public Dictionary<Term, int> termNumbers = new Dictionary<Term, int>();
+        public Dictionary<EqualityExplanation, int> equalityNumbers = new Dictionary<EqualityExplanation, int>();
 
         public PrettyPrintFormat NextTermPrintingDepth(Term parent, int childNo)
         {
@@ -313,11 +315,13 @@ namespace AxiomProfiler.PrettyPrinting
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                childIndex = childNo
+                childIndex = childNo,
+                printContextSensitive = printContextSensitive,
+                termNumbers = termNumbers,
+                equalityNumbers = equalityNumbers
             };
             nextFormat.history.AddRange(history);
             nextFormat.history.Add(parent);
-            nextFormat.printContextSensitive = printContextSensitive;
             return nextFormat;
         }
 
@@ -334,9 +338,11 @@ namespace AxiomProfiler.PrettyPrinting
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                childIndex = childIndex
+                childIndex = childIndex,
+                printContextSensitive = printContextSensitive,
+                termNumbers = termNumbers,
+                equalityNumbers = equalityNumbers
             };
-            nextFormat.printContextSensitive = printContextSensitive;
             return nextFormat;
         }
 
@@ -455,6 +461,11 @@ namespace AxiomProfiler.PrettyPrinting
                 }
             }
             originalRulesReplacedByTemp.Clear();
+        }
+
+        public int GetEqualityNumber(Term source, Term target)
+        {
+            return equalityNumbers.First(kv => Term.semanticTermComparer.Equals(source, kv.Key.source) && Term.semanticTermComparer.Equals(target, kv.Key.target)).Value;
         }
     }
 }

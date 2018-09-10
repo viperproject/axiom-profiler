@@ -409,6 +409,7 @@ namespace AxiomProfiler.CycleDetection
             }
             // Equalities for the wrap instantiation are irrelevant since they are never displayed and any information relvant for the generalization substitution
             // is already contained in the first instantiation.
+            generalizedTerms.Last().Item2.EqualityExplanations = new EqualityExplanation[0];
 
             DoGeneralizationSubstitution();
             SimplifyAfterGeneralizationSubstitution();
@@ -424,6 +425,31 @@ namespace AxiomProfiler.CycleDetection
 
                 // These might overwrite each other. That is ok.
                 MarkGeneralizations(genBindings.bindings[boundTo].Item2, wrapBindings.bindings[boundTo].Item2, wrapBindings, Enumerable.Empty<Term>());
+            }
+
+            var genTerms = generalizedTerms.SelectMany(t => t.Item1.GetAllGeneralizationSubterms()
+                .Concat(t.Item2.EqualityExplanations.SelectMany(ee => {
+                    var gens = new List<Term>();
+                    EqualityExplanationTermVisitor.singleton.visit(ee, term => gens.AddRange(term.GetAllGeneralizationSubterms()));
+                    return gens;
+                }))
+                .Concat(t.Item3.SelectMany(term => term.GetAllGeneralizationSubterms())))
+            .Distinct().ToList();
+
+            var remainingGens = new HashSet<int>(genTerms.Select(gen => gen.generalizationCounter));
+            var lookup = genTerms.SelectMany(gen => gen.GetAllGeneralizationSubtermsAndDependencies()).ToLookup(gen => gen.generalizationCounter);
+
+            generalizationTerms.Clear();
+            var genCounter = 1;
+            foreach (var counter in remainingGens.OrderBy(x => x))
+            {
+                foreach (var term in lookup[counter])
+                {
+                    term.generalizationCounter = genCounter;
+                    term.Args = term.Args.Where(gen => remainingGens.Contains(gen.generalizationCounter)).ToArray();
+                    generalizationTerms.Add(term);
+                }
+                ++genCounter;
             }
         }
 
@@ -572,6 +598,17 @@ namespace AxiomProfiler.CycleDetection
                 NonRecursiveEqualityExplanationGeneralizer.singleton.Reset();
                 return result;
             }).ToArray();
+
+            foreach (var pair in generalizedBindingInfo.EqualityExplanations.Zip(equalityExplanations, Tuple.Create))
+            {
+                var generalized = pair.Item1;
+                var concretes = pair.Item2;
+
+                foreach (var recursiveReference in concretes.SelectMany(ee => ee.Item1.ReferenceBackPointers))
+                {
+                    recursiveReference.UpdateReference(generalized);
+                }
+            }
         }
 
         private class RecursionPointFinder: EqualityExplanationVisitor<object, Tuple<List<int>, List<List<EqualityExplanation[]>>>>
@@ -841,17 +878,17 @@ namespace AxiomProfiler.CycleDetection
             return returnValue;
         }
 
-        private class RecursionPointGeneralizer: EqualityExplanationVisitor<EqualityExplanation, Tuple<IEnumerable<int>, Tuple<int, int>>>
+        private class RecursionPointGeneralizer: EqualityExplanationVisitor<EqualityExplanation, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>>>
         {
             public static readonly RecursionPointGeneralizer singleton = new RecursionPointGeneralizer();
 
-            public override EqualityExplanation Direct(DirectEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 var recursionPoint = arg.Item2;
                 return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
             }
 
-            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 var path = arg.Item1;
                 var indicator = path.Take(3).Count();
@@ -889,7 +926,7 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
-            public override EqualityExplanation Congruence(CongruenceExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            public override EqualityExplanation Congruence(CongruenceExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 var path = arg.Item1;
                 if (path.Any())
@@ -911,13 +948,13 @@ namespace AxiomProfiler.CycleDetection
                 }
             }
 
-            public override EqualityExplanation Theory(TheoryEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 var recursionPoint = arg.Item2;
                 return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
             }
 
-            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<int, int>> arg)
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
             }
@@ -949,19 +986,17 @@ namespace AxiomProfiler.CycleDetection
                 var equalitySource = recursionPoint.Value.Item3;
                 var equalityTarget = recursionPoint.Value.Item4;
                 
-                var numberingOffset = loopInstantiationsWorkSpace.Take(recursionTargetQuantifier).Sum(instantiations => instantiations[safeIndex].bindingInfo.GetNumberOfTermAndEqualityNumberingsUsed()) + 1;
-                var numberOfGeneralizedBlameTerms = generalizedTerms[recursionTargetQuantifier].Item3.Count + 1;
-                var equalityNumber = numberingOffset + numberOfGeneralizedBlameTerms + Array.FindIndex(loopInstantiationsWorkSpace[recursionTargetQuantifier][safeIndex].bindingInfo.EqualityExplanations, ee =>
+                var referencedEquality = loopInstantiationsWorkSpace[recursionTargetQuantifier][safeIndex].bindingInfo.EqualityExplanations.First(ee =>
                 {
                     var generalizedSource = replacementDict[Tuple.Create(safeIndex, ee.source.id)];
                     var generalizedTarget = replacementDict[Tuple.Create(safeIndex, ee.target.id)];
                     return generalizedSource.Any(s => equalitySource.Contains(s)) && generalizedTarget.Any(t => equalityTarget.Contains(t));
                 });
 
-                var recursionInfo = Tuple.Create(equalityNumber, recursionTargetIterationOffset);
+                var recursionInfo = Tuple.Create(referencedEquality, recursionTargetIterationOffset);
                 for (int i = 0; i < currentGeneralizations.Length; ++i)
                 {
-                    currentGeneralizations[i] = recursionPointGeneralizer.visit(currentGeneralizations[i], Tuple.Create<IEnumerable<int>, Tuple<int, int>>(recursionPoint.Key, recursionInfo));
+                    currentGeneralizations[i] = recursionPointGeneralizer.visit(currentGeneralizations[i], Tuple.Create<IEnumerable<int>, Tuple<EqualityExplanation, int>>(recursionPoint.Key, recursionInfo));
                 }
             }
             return currentGeneralizations;
@@ -1286,7 +1321,7 @@ namespace AxiomProfiler.CycleDetection
                 var generalizedTarget = GetGeneralizedTerm(generalized.target, other.target, genState, iteration - generalized.GenerationOffset, wrap);
                 generalizedTarget = CopyTermAndSetIterationOffset(generalizedTarget, generalizedTarget.iterationOffset + generalized.GenerationOffset);
 
-                steps.Add(new RecursiveReferenceEqualityExplanation(generalizedSource, generalizedTarget, generalized.EqualityNumber, generalized.GenerationOffset));
+                steps.Add(new RecursiveReferenceEqualityExplanation(generalizedSource, generalizedTarget, generalized.ReferencedExplanation, generalized.GenerationOffset));
 
                 var newTargetTerm = GetGeneralizedTerm(newTarget, other.target, genState, iteration, wrap);
                 if (generalizedTarget.id != newTargetTerm.id)
@@ -1747,7 +1782,7 @@ namespace AxiomProfiler.CycleDetection
             {
                 var newSource = SubstituteGeneralizationsUsingSubstitutionMap(target.source, arg);
                 var newTarget = SubstituteGeneralizationsUsingSubstitutionMap(target.target, arg);
-                return new RecursiveReferenceEqualityExplanation(newSource, newTarget, target.EqualityNumber, target.GenerationOffset, target.isPrime);
+                return new RecursiveReferenceEqualityExplanation(newSource, newTarget, target.ReferencedExplanation, target.GenerationOffset, target.isPrime);
             }
 
             public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Dictionary<int, Term> arg)
@@ -1896,6 +1931,12 @@ namespace AxiomProfiler.CycleDetection
             foreach (var equalityExplanation in bindingInfo.EqualityExplanations)
             {
                 var simplifiedExplanation = EqualityExplanationSimplifier.singleton.visit(equalityExplanation, null);
+                
+                foreach (var recursiveReference in equalityExplanation.ReferenceBackPointers)
+                {
+                    recursiveReference.UpdateReference(simplifiedExplanation);
+                }
+
                 if (simplifiedExplanation != null)
                 {
                     simplifiedEqualityExplanations.Add(simplifiedExplanation);
@@ -2537,30 +2578,11 @@ namespace AxiomProfiler.CycleDetection
         /// </summary>
         public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, BindingInfo bindingInfo, bool last)
         {
-            var genTerms = generalizedTerms.SelectMany(t => t.Item1.GetAllGeneralizationSubterms()
-                .Concat(t.Item2.EqualityExplanations.SelectMany(ee => {
-                    var gens = new List<Term>();
-                    EqualityExplanationTermVisitor.singleton.visit(ee, term => gens.AddRange(term.GetAllGeneralizationSubterms()));
-                    return gens;
-                }))
-                .Concat(t.Item3.SelectMany(term => term.GetAllGeneralizationSubterms())))
-            .Distinct(Term.semanticTermComparer).ToList();
-
-            var genCounter = 1;
-            foreach (var group in genTerms.GroupBy(t => t.generalizationCounter).OrderBy(group => group.Key))
-            {
-                foreach (var term in group)
-                {
-                    term.generalizationCounter = genCounter;
-                }
-                ++genCounter;
-            }
-
             //If only a single generalization term (T_1) exists we print it without the subscript.
-            var onlyOne = !genTerms.Where(gen => gen.Args.Count() == 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
+            var onlyOne = !generalizationTerms.Where(gen => gen.Args.Count() == 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
 
             //Print generalizations and terms that correspond to generalizations when wrapping around the loop in the correct color
-            var allGeneralizations = last ? genTerms.Concat(genReplacementTermsForNextIteration.Values) : genTerms;
+            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Values) : generalizationTerms;
             foreach (var term in allGeneralizations)
             {
                 var rule = format.getPrintRule(term);

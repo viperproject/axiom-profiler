@@ -153,7 +153,7 @@ namespace AxiomProfiler.PrettyPrinting
                 target.source.PrettyPrint(content, format, indent);
             }
             content.switchToDefaultFormat();
-            content.Append($"\n{indentString}= ({target.EqualityNumber}{(target.isPrime ? "'" : "")}){(target.GenerationOffset > 0 ? "-" + target.GenerationOffset : "")}");
+            content.Append($"\n{indentString}= ({format.equalityNumbers[target.ReferencedExplanation]}{(target.isPrime ? "'" : "")}){(target.GenerationOffset > 0 ? "-" + target.GenerationOffset : "")}");
             content.Append($"\n{indentString}");
             target.target.PrettyPrint(content, format, indent);
 

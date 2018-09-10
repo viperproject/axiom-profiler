@@ -25,7 +25,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public readonly string Name;
         public readonly string GenericType;
-        public readonly Term[] Args;
+        public Term[] Args;
         public int id = -1;
         public readonly int size;
         public Instantiation Responsible;
@@ -111,6 +111,18 @@ namespace AxiomProfiler.QuantifierModel
             else
             {
                 return Args.SelectMany(arg => arg.GetAllGeneralizationSubterms());
+            }
+        }
+
+        public IEnumerable<Term> GetAllGeneralizationSubtermsAndDependencies()
+        {
+            if (generalizationCounter >= 0)
+            {
+                return Enumerable.Repeat(this, 1).Concat(Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies()));
+            }
+            else
+            {
+                return Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies());
             }
         }
 
