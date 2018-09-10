@@ -110,7 +110,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public int GetTermNumber(Term term)
         {
-            var index = getDistinctBlameTerms().IndexOf(term);
+            var index = getDistinctBlameTerms().FindIndex(t => Term.semanticTermComparer.Equals(t, term));
             if (index == -1)
             {
                 throw new ArgumentException("The specified Term was not a top level blame term for this instantiation.");

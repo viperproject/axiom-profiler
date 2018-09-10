@@ -1692,7 +1692,6 @@ namespace AxiomProfiler.CycleDetection
             var gensToKeep = SelectGeneralizationsToKeep(eqs).Where(gen => !substitutionMap.ContainsKey(gen)).OrderBy(gen => gen).ToList();
             var newGenCounter = 1;
             var generalizationTermsToKeep = gensToKeep.Select(gen => generalizationTerms.First(t => t.generalizationCounter == gen)).ToList();
-            generalizationTerms.Clear();
             foreach (var generalizationTerm in generalizationTermsToKeep)
             {
                 var newArgs = generalizationTerm.Args.Where(t => gensToKeep.Contains(t.generalizationCounter)).ToArray();
@@ -1702,7 +1701,6 @@ namespace AxiomProfiler.CycleDetection
                 };
                 ++newGenCounter;
                 substitutionMap[generalizationTerm.generalizationCounter] = newGeneralizationTerm;
-                generalizationTerms.Add(newGeneralizationTerm);
             }
 
             var substitutionOptions = eqs.GroupBy(kv => kv.Key.generalizationCounter)
@@ -1780,7 +1778,6 @@ namespace AxiomProfiler.CycleDetection
         {
             var substitutionMap = GenerateGeneralizationSubstitutions();
 
-            var newGenTerms = new List<Tuple<Term, BindingInfo, List<Term>>>();
             for (var i = 0; i < generalizedTerms.Count; ++i)
             {
                 var step = generalizedTerms[i];
@@ -1807,17 +1804,12 @@ namespace AxiomProfiler.CycleDetection
                 {
                     assocTerms = assocTerms.Select(t => SubstituteAndUpdateBindings(t, substitutionMap, bindingInfo)).ToList();
                 }
-
-                newGenTerms.Add(Tuple.Create(substitution, bindingInfo, assocTerms));
                 
                 for (var idx = 0; idx < bindingInfo.EqualityExplanations.Length; ++idx)
                 {
                     bindingInfo.EqualityExplanations[idx] = EqualityExplanationSubstituter.singleton.visit(bindingInfo.EqualityExplanations[idx], substitutionMap);
                 }
             }
-
-            generalizedTerms.Clear();
-            generalizedTerms.AddRange(newGenTerms);
         }
 
         private class EqualityExplanationSimplifier : EqualityExplanationVisitor<EqualityExplanation, object>
@@ -2545,11 +2537,30 @@ namespace AxiomProfiler.CycleDetection
         /// </summary>
         public void tmpHighlightGeneralizedTerm(PrettyPrintFormat format, Term generalizedTerm, BindingInfo bindingInfo, bool last)
         {
+            var genTerms = generalizedTerms.SelectMany(t => t.Item1.GetAllGeneralizationSubterms()
+                .Concat(t.Item2.EqualityExplanations.SelectMany(ee => {
+                    var gens = new List<Term>();
+                    EqualityExplanationTermVisitor.singleton.visit(ee, term => gens.AddRange(term.GetAllGeneralizationSubterms()));
+                    return gens;
+                }))
+                .Concat(t.Item3.SelectMany(term => term.GetAllGeneralizationSubterms())))
+            .Distinct(Term.semanticTermComparer).ToList();
+
+            var genCounter = 1;
+            foreach (var group in genTerms.GroupBy(t => t.generalizationCounter).OrderBy(group => group.Key))
+            {
+                foreach (var term in group)
+                {
+                    term.generalizationCounter = genCounter;
+                }
+                ++genCounter;
+            }
+
             //If only a single generalization term (T_1) exists we print it without the subscript.
-            var onlyOne = !generalizationTerms.Where(gen => gen.Args.Count() == 0 && gen.generalizationCounter >= 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
+            var onlyOne = !genTerms.Where(gen => gen.Args.Count() == 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
 
             //Print generalizations and terms that correspond to generalizations when wrapping around the loop in the correct color
-            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Values) : generalizationTerms;
+            var allGeneralizations = last ? genTerms.Concat(genReplacementTermsForNextIteration.Values) : genTerms;
             foreach (var term in allGeneralizations)
             {
                 var rule = format.getPrintRule(term);
@@ -2597,7 +2608,7 @@ namespace AxiomProfiler.CycleDetection
         public void PrintGeneralizationsForNextIteration(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.switchToDefaultFormat();
-            foreach (var binding in genReplacementTermsForNextIteration.GroupBy(kv => kv.Key.generalizationCounter).Select(group => group.First()))
+            foreach (var binding in genReplacementTermsForNextIteration.GroupBy(kv => kv.Key.generalizationCounter).Select(group => group.First()).OrderBy(kv => kv.Key.generalizationCounter >= 0 ? kv.Key.generalizationCounter : kv.Value.generalizationCounter))
             {
                 content.Append("Where ");
                 binding.Key.PrettyPrint(content, format);
