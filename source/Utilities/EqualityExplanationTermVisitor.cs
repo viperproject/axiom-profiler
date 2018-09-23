@@ -1,7 +1,11 @@
 ﻿using System;
+using AxiomProfiler.QuantifierModel;
 
-namespace AxiomProfiler.QuantifierModel
+namespace AxiomProfiler.Utilities
 {
+    /// <summary>
+    /// Calls the specified action with every term that occurs in an equality explanation as an argument.
+    /// </summary>
     class EqualityExplanationTermVisitor : EqualityExplanationVisitor<object, Action<Term>>
     {
         public static readonly EqualityExplanationTermVisitor singleton = new EqualityExplanationTermVisitor();

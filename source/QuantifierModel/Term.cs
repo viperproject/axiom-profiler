@@ -91,10 +91,10 @@ namespace AxiomProfiler.QuantifierModel
             dependentTerms = new List<Term>(t.dependentTerms);
         }
 
-        public bool ContainsFreeVar()
+        public bool ContainsQuantifiedVar()
         {
             if (id == -1) return true;
-            return Args.Any(arg => arg.ContainsFreeVar());
+            return Args.Any(arg => arg.ContainsQuantifiedVar());
         }
 
         public bool ContainsGeneralization()
@@ -114,6 +114,9 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// Also contains T_1 for T_2(T_1).
+        /// </summary>
         public IEnumerable<Term> GetAllGeneralizationSubtermsAndDependencies()
         {
             if (generalizationCounter >= 0)
@@ -126,6 +129,9 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// Indicates whether the term includes references to any iteration other than the one indicated.
+        /// </summary>
         public bool ReferencesOtherIteration(int iteration = 0)
         {
             return iterationOffset != iteration || Args.Any(arg => arg.ReferencesOtherIteration(iteration));

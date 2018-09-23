@@ -8,9 +8,9 @@ An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/late
 
         hg clone https://bitbucket.org/viperproject/axiom-profiler
         
-2.  Build from Visual Studio (also possible on the command-line): open source/AxiomProfiler.sln solution, and run the default (Debug) Build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2015).
+2.  Build from Visual Studio (also possible on the command-line): open source/AxiomProfiler.sln solution, and run the release build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2015).
         
-3.  Run the tool (either via Visual Studio, or by executing bin/Debug/AxiomProfiler.exe)
+3.  Run the tool (either via Visual Studio, or by executing bin/Release/AxiomProfiler.exe)
 
 ## Using on Ubuntu
 
@@ -30,11 +30,11 @@ An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/late
 
 5.  Compile project:
 
-        xbuild source/AxiomProfiler.sln
+        xbuild /p:Configuration=Release source/AxiomProfiler.sln
 
 6.  Run Axiom Profiler:
 
-        mono bin/Debug/AxiomProfiler.exe
+        mono bin/Release/AxiomProfiler.exe
 
 ## Obtaining Z3 logs from various verification back-ends
 

@@ -11,25 +11,10 @@ using AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
 using Size = System.Drawing.Size;
+using AxiomProfiler.Utilities;
 
 namespace AxiomProfiler
 {
-    //TODO: move elsewhere
-    public static class RepeatIndefinietely
-    {
-        public static IEnumerable<T> RepeatIndefinietly<T>(this IEnumerable<T> source)
-        {
-            var list = source.ToList();
-            while (true)
-            {
-                foreach (var item in list)
-                {
-                    yield return item;
-                }
-            }
-        }
-    }
-
     public partial class DAGView : UserControl
     {
 
@@ -607,6 +592,8 @@ namespace AxiomProfiler
             return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.NumberOfDistinctQuantifierFingerprints();
         }
 
+        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
+        // build a path from the best segments.
         private static readonly int pathSegmentSize = 8;
 
         private InstantiationPath BestDownPath(Node node)

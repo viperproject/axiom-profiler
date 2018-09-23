@@ -53,6 +53,9 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    /// <summary>
+    /// An equality step that holds because of an equality term (produced by a quantifier or asserted).
+    /// </summary>
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class DirectEqualityExplanation : EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
@@ -89,6 +92,13 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    /// <summary>
+    /// A series of steps that explain the equality between the two terms.
+    /// </summary>
+    /// <remarks>
+    /// TransitiveEqualityExplanations with no steps are used when the equality is trivial (identity) or not known
+    /// (this may for example happen during generalization).
+    /// </remarks>
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class TransitiveEqualityExplanation : EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
@@ -132,6 +142,9 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    /// <summary>
+    /// An equality that holds because both terms represent the same function and all their arguments are equal.
+    /// </summary>
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class CongruenceExplanation : EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
@@ -198,6 +211,9 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    /// <summary>
+    /// An equality that was added by a theory solver.
+    /// </summary>
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class TheoryEqualityExplanation: EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
@@ -237,6 +253,10 @@ namespace AxiomProfiler.QuantifierModel
         }
     }
 
+    /// <summary>
+    /// Used in generalized explanations to reference a previously introduced equality and show how the explanations
+    /// structure changes across iterations.
+    /// </summary>
 #pragma warning disable CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()
     public class RecursiveReferenceEqualityExplanation: EqualityExplanation
 #pragma warning restore CS0659 // Type overrides Object.Equals(object o) but does not override Object.GetHashCode()

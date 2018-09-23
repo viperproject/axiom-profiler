@@ -43,7 +43,7 @@ namespace AxiomProfiler
             { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
             "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
             "der", "quant-inst", "hypothesis", "lemma", "unit-resolution", "iff-true", "iff-false", "commutativity", "def-axiom", "intro-def",
-            "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res" };
+            "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res", "proof-bind" };
 
         public readonly Model model = new Model();
 
@@ -503,27 +503,13 @@ namespace AxiomProfiler
             return args;
         }
 
-        private IEnumerable<string> SplitEqualities(string explanation)
-        {
-            var start = 0;
-            var depth = 0;
-            var len = explanation.Length;
-            for (var i = 0; i < len; ++i)
-            {
-                if (explanation[i] == '(')
-                {
-                    if (depth == 0) start = i+1;
-                    ++depth;
-                }
-                else if (explanation[i] == ')')
-                {
-                    --depth;
-                    if (depth == 0) yield return explanation.Substring(start, i - start - 1);
-                    else if (depth < 0) break;
-                }
-            }
-        }
-
+        /// <summary>
+        /// Generates a binding info from a [new-match] line.
+        /// </summary>
+        /// <param name="logInfo"> The [new-match] line split at spaces. </param>
+        /// <param name="off"> Index at which relvant information starts (after semicolon). </param>
+        /// <param name="pattern"> The pattern term that was matched. </param>
+        /// <param name="bindings"> The terms bound to the quantified variables. </param>
         private BindingInfo GetBindingInfoFromMatch(string[] logInfo, int off, Term pattern, Term[] bindings)
         {
             int endIndex = logInfo.Length;
@@ -549,6 +535,9 @@ namespace AxiomProfiler
             return new BindingInfo(pattern, bindingsRoots, topLevelTerms, explanations.Where(ee => ee.source.id != ee.target.id).Distinct());
         }
 
+        /// <summary>
+        /// Inserts explanations of argument equalities into congruence explanations.
+        /// </summary>
         private class ExplanationFinalizer : EqualityExplanationVisitor<EqualityExplanation, LogProcessor>
         {
             public override EqualityExplanation Direct(DirectEqualityExplanation target, LogProcessor arg)
@@ -578,6 +567,13 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Reverses the steps in an equality explanation.
+        /// </summary>
+        /// <remarks>
+        /// The explanation from the target to the root must be reversed before concatenating the explanation from the
+        /// source to the root with it.
+        /// </remarks>
         private class ExplanationReverser : EqualityExplanationVisitor<EqualityExplanation, object>
         {
             public override EqualityExplanation Direct(DirectEqualityExplanation target, object arg)
@@ -624,6 +620,9 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Flattens equality explanations.
+        /// </summary>
         private class ExplanationExtractor : EqualityExplanationVisitor<IEnumerable<EqualityExplanation>, object>
         {
             public override IEnumerable<EqualityExplanation> Direct(DirectEqualityExplanation target, object arg)
@@ -658,6 +657,9 @@ namespace AxiomProfiler
 
         private readonly Dictionary<string, EqualityExplanation> equalityExplanationCache = new Dictionary<string, EqualityExplanation>();
 
+        /// <summary>
+        /// Follows the equality explanation steps to the root of the specified term's equivalence class.
+        /// </summary>
         private EqualityExplanation GetExplanationToRoot(int id)
         {
             var explanations = new List<EqualityExplanation>();
@@ -676,6 +678,13 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// The body of a quantifier as reported by z3 has the shape Forall ... ==> body. This method extracts the body
+        /// from that term.
+        /// </summary>
+        /// <param name="isSinglyReferenced">
+        /// Indicates whether there may be other instantitations / terms that have a reference to the body term.
+        /// </param>
         private static Term GetBodyFromImplication(Term quantImpliesBody, out bool isSinglyReferenced)
         {
             isSinglyReferenced = false;
@@ -706,11 +715,18 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Generates an explanation for the equality between the indicated terms.
+        /// </summary>
+        /// <param name="sourceId"> The term the explanation starts from. </param>
+        /// <param name="targetId"> The term the explanation should reach. </param>
+        /// <returns></returns>
         private EqualityExplanation GetExplanation(int sourceId, int targetId)
         {
             var key = $"{sourceId}, {targetId}";
             if (equalityExplanationCache.TryGetValue(key, out var existing)) return existing;
 
+            // Follow steps from the source.
             EqualityExplanation knownExplanation = null;
             var sourceExplanations = new List<EqualityExplanation>();
             for (int sourceIterator = sourceId; model.equalityExplanations.TryGetValue(sourceIterator, out var equalityExplanation); sourceIterator = equalityExplanation.target.id)
@@ -721,12 +737,18 @@ namespace AxiomProfiler
                     knownExplanation = new TransitiveEqualityExplanation(targetTerm, targetTerm, emptyEqualityExplanation);
                     break;
                 }
+
+                // Stop if we know the rest of the explanation.
                 if (equalityExplanationCache.TryGetValue($"{sourceIterator}, {targetId}", out knownExplanation)) break;
+
                 sourceExplanations.Add(equalityExplanation);
             }
+
             var targetExplanations = new List<EqualityExplanation>();
             if (knownExplanation == null)
             {
+
+                // Follow steps from the target.
                 for (int targetIterator = targetId; model.equalityExplanations.TryGetValue(targetIterator, out var equalityExplanation); targetIterator = equalityExplanation.target.id)
                 {
                     if (targetIterator == sourceId)
@@ -735,11 +757,15 @@ namespace AxiomProfiler
                         knownExplanation = new TransitiveEqualityExplanation(sourceTerm, sourceTerm, emptyEqualityExplanation);
                         break;
                     }
+
+                    // Stop if we know the rest of the explanation.
                     if (equalityExplanationCache.TryGetValue($"{sourceId}, {targetIterator}", out knownExplanation)) break;
+
                     targetExplanations.Add(equalityExplanation);
                 }
             }
 
+            // Build from partially cached explanation.
             if (knownExplanation != null)
             {
                 if (knownExplanation.source.id == sourceId)
@@ -761,24 +787,19 @@ namespace AxiomProfiler
             sourceExplanations.Reverse();
             targetExplanations.Reverse();
 
+            // Make sure terms are in same equivalence class, i.e. have the same root.
             var sourceCheck = sourceExplanations.Any() ? sourceExplanations.First().target.id : sourceId;
             var targetCheck = targetExplanations.Any() ? targetExplanations.First().target.id : targetId;
             if (sourceCheck != targetCheck) throw new ArgumentException("The terms provided to GetExplanation() were not equal");
 
-            var numSource = sourceExplanations.Count;
-            var numTarget = targetExplanations.Count;
-            if (numSource < numTarget)
-            {
-                sourceExplanations.AddRange(Enumerable.Repeat<EqualityExplanation>(null, numTarget - numSource));
-            }
-            else
-            {
-                targetExplanations.AddRange(Enumerable.Repeat<EqualityExplanation>(null, numSource - numTarget));
-            }
+            // In general the explanations may converge at some term before they reach the root. After reaching that term
+            // they follow the same steps to reach the root. We remove this redundancy from our explanation.
+            // This is in particular necessary to avoid looping on congruence explanations (see GoogleDoc).
+            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1.Equals(t.Item2));
+            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse();
+            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Select(e => explanationReverser.visit(e, null));
 
-            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1 != null && t.Item1.Equals(t.Item2));
-            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse().Where(e => e != null);
-            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Where(e => e != null).Select(e => explanationReverser.visit(e, null));
+            // Build the explanation.
             var explanationPath = relevantSourceExplanations.Concat(relevantTargetExplanations).Select(e => explanationFinalizer.visit(e, this));
             if (explanationPath.Take(2).Count() == 1)
             {
@@ -829,13 +850,14 @@ namespace AxiomProfiler
 
                 case "[mk-app]":
                     {
-                        //TODO: remove once lambda expressions end up in the log, add as proof rule
-                        Term[] args = GetArgs(words, words[2] == "proof-bind" ? 4 : 3);
+                        Term[] args = GetArgs(words, 3);
 
                         //We are only interested in the result of a proof step (i.e. the last argument)
                         if (proofRuleNames.Contains(words[2]))
                         {
                             var t = args.Last();
+
+                            // We want to be able to undo these later on, if necessary.
                             if (words[2] == "rewrite" || words[2] == "rewrite*" || words[2] == "unit-resolution")
                             {
                                 Term from, to;
@@ -852,13 +874,14 @@ namespace AxiomProfiler
                                         if (equality.id == -1) return;
                                         throw new Exception("Unexpected result term for rewrite proof step.");
                                     }
-                                    //TODO: result always rhs?
                                     from = GetOrIdTransitive(reverseRewriteClosure, equality.Args[0]);
                                     to = equality.Args[1];
                                 }
                                 reverseRewriteClosure[to] = from;
                             }
 
+                            // We use thse to figgure out which new terms we got as the result of a quantifier instantiation.
+                            // e.g. if we have A ==> B, and we get A from a quantifier instantiation, this would include B.
                             foreach (var prerequisite in args.Take(args.Length - 1))
                             {
                                 proofStepClosures[prerequisite] = t;
@@ -1234,12 +1257,15 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Follows the key through the dictionary until it finds a leaf.
+        /// </summary>
         private static T GetOrIdTransitive<T>(Dictionary<T, T> dict, T key)
         {
             var returnValue = key;
             while (dict.TryGetValue(key, out var found))
             {
-                if (Object.ReferenceEquals(returnValue, found)) break;
+                if (ReferenceEquals(returnValue, found)) break;
                 returnValue = found;
             }
             return returnValue;

@@ -108,11 +108,6 @@ namespace AxiomProfiler.QuantifierModel
             return effectiveTerm;
         }
 
-        public int GetNumberOfTermAndEqualityNumberingsUsed()
-        {
-            return getDistinctBlameTerms().Count + EqualityExplanations.Length;
-        }
-
         /// <summary>
         /// Prints a section explaining the equality substitutions necessary to obtain a term matching the trigger.
         /// </summary>
@@ -212,11 +207,23 @@ namespace AxiomProfiler.QuantifierModel
             _patternMatchContext[term.id].AddRange(context);
         }
 
+        /// <summary>
+        /// Tries to match the specified term against the specified subpattern.
+        /// </summary>
+        /// <param name="pattern"> The subpattern. </param>
+        /// <param name="match"> A term that should be matched against that subpattern. </param>
+        /// <param name="usedEquality"> The lhs (term that occured in the parent term) of the equality that was used or null. </param>
+        /// <param name="context"> Match context under which this term was reached. </param>
+        /// <param name="toMatch"> Other matches that still need to be processed. </param>
+        /// <param name="multipatternArg"> The index of the term of a multi-pattern that is currently being matched. </param>
+        /// <returns> Boolean indicating wether the match and all subsequent matches were successful or not. </returns>
         private bool AddPatternMatch(Term pattern, Term match, Term usedEquality, IEnumerable<Term> context, IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch, int multipatternArg)
         {
+            // Backup so we can backtrack later.
             var origBindings = copyBindings(_bindings);
             var origEqualities = copyEqualities(_equalities);
 
+            // Update binding info.
             if (usedEquality != null)
             {
                 if (!_equalities.TryGetValue(pattern, out var eqs))
@@ -235,6 +242,7 @@ namespace AxiomProfiler.QuantifierModel
             }
             existingBinding.Item1.Add(context.ToList());
             
+            // Continue with arguments.
             var nextContext = context.Concat(Enumerable.Repeat(match, 1));
             var nextMatches = pattern.Args.Zip(match.Args, (p, m) => Tuple.Create(p, m, nextContext)).Concat(toMatch);
             if (DoNextMatch(nextMatches, multipatternArg))
@@ -251,6 +259,7 @@ namespace AxiomProfiler.QuantifierModel
 
         private bool DoNextMatch(IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch, int multipatternArg)
         {
+            // Done with one term in multi-pattern.
             if (!toMatch.Any())
             {
                 return ProcessMultipatternArg(multipatternArg + 1);
@@ -262,10 +271,12 @@ namespace AxiomProfiler.QuantifierModel
             var matchedTerm = match.Item2;
             var context = match.Item3;
 
+            // Quantified variable?
             if (patternTerm.id == -1)
             {
                 if (_bindings.TryGetValue(patternTerm, out var existingBinding))
                 {
+                    // Make sure same term was bound to quantified variable in both cases.
                     Term equality = null;
                     if (existingBinding.Item2.id != matchedTerm.id)
                     {
@@ -283,10 +294,13 @@ namespace AxiomProfiler.QuantifierModel
                 }
                 else
                 {
+                    // Try without equality first.
                     if (AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
                     {
                         return true;
                     }
+
+                    // If that fails try equalities.
                     var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id);
                     foreach (var equalityExplanation in feasibleEqualities)
                     {
@@ -300,10 +314,14 @@ namespace AxiomProfiler.QuantifierModel
             }
             else
             {
-                if (patternTerm.Name == matchedTerm.Name && patternTerm.Args.Count() == matchedTerm.Args.Count() && AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
+                // Try without equality first.
+                if (patternTerm.Name == matchedTerm.Name && patternTerm.Args.Count() == matchedTerm.Args.Count() &&
+                    AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
                 {
                     return true;
                 }
+
+                // If that fails try equalities.
                 var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id && ee.target.Name == patternTerm.Name && ee.target.Args.Count() == patternTerm.Args.Count());
                 foreach (var equalityExplanation in feasibleEqualities)
                 {
@@ -316,8 +334,13 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// There are some properties we require that we can only check once a pattern match is complete (e.g. wheter
+        /// all equalities were used). This method checks these properties.
+        /// </summary>
         private bool IsValid()
         {
+            // Bindings match with those reported by z3.
             var qVarBindings = _bindings.Where(kv => kv.Key.id == -1).Select(kv => kv.Value);
             if (!qVarBindings.All(binding => BoundTerms.Any(o => o.id == binding.Item2.id)))
             {
@@ -328,6 +351,8 @@ namespace AxiomProfiler.QuantifierModel
                 return false;
             }
 
+
+            // All equalities reported by z3 used.
             var resolvedEqualities = new Dictionary<int, ISet<int>>();
             foreach (var kv in _equalities)
             {
@@ -349,6 +374,9 @@ namespace AxiomProfiler.QuantifierModel
             });
         }
 
+        /// <summary>
+        /// Process the next term in a multi-pattern or validate if we have processed the entire trigger.
+        /// </summary>
         private bool ProcessMultipatternArg(int index)
         {
             if (index >= fullPattern.Args.Length)
@@ -370,6 +398,9 @@ namespace AxiomProfiler.QuantifierModel
             return false;
         }
 
+        /// <summary>
+        /// Find the pattern match.
+        /// </summary>
         private void Process()
         {
             if (processed) return;
@@ -379,6 +410,9 @@ namespace AxiomProfiler.QuantifierModel
             AddPatternPathconditions();
         }
 
+        /// <summary>
+        /// Adds the path conditions for highlighting the pattern term itself.
+        /// </summary>
         private void AddPatternPathconditions()
         {
             var patternStack = new Stack<Term>();
@@ -407,6 +441,13 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// Terms needed for the pattern match that have no parent, i.e. are not subterms of other blame terms.
+        /// </summary>
+        /// <remarks>
+        /// These are either terms that were matched against the top level structure of a trigger or rhs (a term
+        /// substitued for the original subterm of some higher level structure) of equalities.
+        /// </remarks>
         public List<Term> getDistinctBlameTerms()
         {
             var blameTerms = bindings

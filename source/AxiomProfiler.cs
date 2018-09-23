@@ -535,9 +535,16 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Prints a message in the left panel.
+        /// </summary>
+        /// <param name="message"> The message to be displayed </param>
         public void DisplayMessage(string message)
         {
+            // We have an additional UI update
             Interlocked.Increment(ref workCounter);
+
+            // Must run on the main (UI) thread
             if (InvokeRequired)
             {
                 Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
@@ -547,15 +554,24 @@ namespace AxiomProfiler
                 uiUpdateTimer.Start();
             }
 
+            // Enqueue the message
             var messageContent = new InfoPanelContent();
             messageContent.Append(message);
             messageContent.finalize();
             infoPanelQueue.Enqueue(messageContent);
         }
 
+        /// <summary>
+        /// Displays a printable.
+        /// </summary>
+        /// <param name="c"> The printable to be displayed. </param>
+        /// <ramarks> Calls to this method are synchronized, i.e. it will finish displaying one printable before displaying the next. </remarks>
         public void UpdateSync(IPrintable c)
         {
+            // We have an additional UI update
             Interlocked.Increment(ref workCounter);
+
+            //Must run on the main (UI) thread
             if (InvokeRequired)
             {
                 Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
@@ -573,6 +589,7 @@ namespace AxiomProfiler
 #endif
                     DisplayMessage("busy...");
 
+                    // Update
                     var content = new InfoPanelContent();
                     c.InfoPanelText(content, getFormatFromGUI());
                     content.finalize();
@@ -582,6 +599,7 @@ namespace AxiomProfiler
                 }
                 catch (Exception e)
                 {
+                    // Notify user
                     Interlocked.Decrement(ref workCounter);
                     DisplayMessage($"Something went wrong: {e.Message}");
                 }
@@ -771,19 +789,24 @@ namespace AxiomProfiler
 
         private void congruenceDepthUD_ValueChanged(object sender, EventArgs e)
         {
+            // Print with new format
             SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private void showEqualityExplanationsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
+            // Print with new format
             SetInfoPanel(currentInfoPanelPrintable);
         }
 
         private void largeTextToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            // Set and save
             var largeTextMode = largeTextToolStripMenuItem.Checked;
             Properties.Settings.Default.LargeTextMode = largeTextMode;
             Properties.Settings.Default.Save();
+
+            // Update UI
             PrintConstants.LargeTextMode = largeTextMode;
             SetInfoPanel(currentInfoPanelPrintable);
             z3AxiomTree.Font = PrintConstants.DefaultFont;

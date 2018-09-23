@@ -4,6 +4,7 @@ using System.Linq;
 using AxiomProfiler.CycleDetection;
 using AxiomProfiler.PrettyPrinting;
 using System;
+using AxiomProfiler.Utilities;
 
 namespace AxiomProfiler.QuantifierModel
 {
@@ -56,6 +57,9 @@ namespace AxiomProfiler.QuantifierModel
             pathInstantiations.AddRange(other.pathInstantiations.GetRange(joinIdx, other.pathInstantiations.Count - joinIdx));
         }
 
+        /// <summary>
+        /// Provides some statistics about how often each quantifier occurs in the path.
+        /// </summary>
         public IEnumerable<Tuple<Tuple<Quantifier, Term, Term>, int>> Statistics()
         {
             return pathInstantiations.Zip(pathInstantiations.Skip(1), Tuple.Create)
@@ -64,6 +68,10 @@ namespace AxiomProfiler.QuantifierModel
                     .GroupBy(x => x).Select(group => Tuple.Create(group.Key, group.Count()));
         }
 
+        /// <summary>
+        /// Indicates the number of different quantifiers in the path, also distinguishing them by type of incomming edge
+        /// (what part of the trigger the result of the preceeding instantiation matched).
+        /// </summary>
         public int NumberOfDistinctQuantifierFingerprints()
         {
             if (!pathInstantiations.Any()) return 0;
@@ -80,6 +88,8 @@ namespace AxiomProfiler.QuantifierModel
             }
             var orderedStats = stats.OrderByDescending(kv => kv.Value);
 
+            // We basically select fingerprints greedily until we have at least one fingerprint for each
+            // instantiation.
             var firstInstantiation = pathInstantiations.First();
             var firstQuant = orderedStats.FirstOrDefault(stat => stat.Key.Item1 == firstInstantiation.Quant &&
                 stat.Key.Item2 == firstInstantiation.bindingInfo.fullPattern).Key;
@@ -389,6 +399,9 @@ namespace AxiomProfiler.QuantifierModel
             return termNumbering;
         }
 
+        /// <summary>
+        /// Returns the iteration offset used by an equality explanation.
+        /// </summary>
         private class EqualityExplanationShiftCollector: EqualityExplanationVisitor<int, object>
         {
             public static readonly EqualityExplanationShiftCollector singleton = new EqualityExplanationShiftCollector();
@@ -451,6 +464,12 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// The explanations produced during generalization reference equalities backwards. We want to display them
+        /// such that we show how we construct the next equality from the current one. We, therefore, need to shift
+        /// the iteration offsets accordingly. Additionally we introduce primes instead of the iteration offset for the
+        /// next equality.
+        /// </summary>
         private class EqualityExplanationShifter: EqualityExplanationVisitor<EqualityExplanation, int>
         {
             public static readonly EqualityExplanationShifter singleton = new EqualityExplanationShifter();
@@ -663,7 +682,10 @@ namespace AxiomProfiler.QuantifierModel
                         var equalityNumber = equalityExplanation.Item1;
                         var shiftedEqualityExplanation = EqualityExplanationShifter.singleton.visit(equalityExplanation.Item2, group.Key);
 
-                        var newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(shiftedEqualityExplanation, null)
+                        var newlyIntroducedGeneralizationTerms = new List<Term>();
+                        EqualityExplanationTermVisitor.singleton.visit(shiftedEqualityExplanation, t => newlyIntroducedGeneralizationTerms.AddRange(t.GetAllGeneralizationSubterms()));
+
+                        var newlyIntroducedGeneralizations = newlyIntroducedGeneralizationTerms
                                    .GroupBy(gen => gen.generalizationCounter).Select(g => g.First())
                                    .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
                         PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
@@ -692,6 +714,9 @@ namespace AxiomProfiler.QuantifierModel
             content.Append("\n\n");
         }
 
+        /// <summary>
+        /// Prints a description for the T terms used in a term.
+        /// </summary>
         private static void PrintNewlyIntroducedGeneralizations(InfoPanelContent content, PrettyPrintFormat format, IEnumerable<Term> newlyIntroducedGeneralizations)
         {
             if (newlyIntroducedGeneralizations.Any())
@@ -737,6 +762,10 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        /// <summary>
+        /// Checks wheter an equality explanation references another iteration and should, therefore, be explained after
+        /// the generalized iteration.
+        /// </summary>
         private class EqualityExplanationIsRecursiveVisitor: EqualityExplanationVisitor<bool, object>
         {
             public static readonly EqualityExplanationIsRecursiveVisitor singleton = new EqualityExplanationIsRecursiveVisitor();
@@ -769,44 +798,6 @@ namespace AxiomProfiler.QuantifierModel
             public override bool RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
             {
                 return true;
-            }
-        }
-
-        private class GeneralizationCollector : EqualityExplanationVisitor<IEnumerable<Term>, object>
-        {
-            public static readonly GeneralizationCollector singleton = new GeneralizationCollector();
-
-            public override IEnumerable<Term> Direct(DirectEqualityExplanation target, object arg)
-            {
-                return target.source.GetAllGeneralizationSubterms()
-                    .Concat(target.equality.GetAllGeneralizationSubterms())
-                    .Concat(target.target.GetAllGeneralizationSubterms());
-            }
-
-            public override IEnumerable<Term> Transitive(TransitiveEqualityExplanation target, object arg)
-            {
-                return target.source.GetAllGeneralizationSubterms()
-                    .Concat(target.equalities.SelectMany(ee => visit(ee, arg)))
-                    .Concat(target.target.GetAllGeneralizationSubterms());
-            }
-
-            public override IEnumerable<Term> Congruence(CongruenceExplanation target, object arg)
-            {
-                return target.source.GetAllGeneralizationSubterms()
-                    .Concat(target.sourceArgumentEqualities.SelectMany(ee => visit(ee, arg)))
-                    .Concat(target.target.GetAllGeneralizationSubterms());
-            }
-
-            public override IEnumerable<Term> Theory(TheoryEqualityExplanation target, object arg)
-            {
-                return target.source.GetAllGeneralizationSubterms()
-                    .Concat(target.target.GetAllGeneralizationSubterms());
-            }
-
-            public override IEnumerable<Term> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
-            {
-                return target.source.GetAllGeneralizationSubterms()
-                    .Concat(target.target.GetAllGeneralizationSubterms());
             }
         }
 
@@ -879,7 +870,10 @@ namespace AxiomProfiler.QuantifierModel
 
                             if (format.ShowEqualityExplanations && !isRecursive)
                             {
-                                newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(explanation, null)
+                                var newlyIntroducedGeneralizationTerms = new List<Term>();
+                                EqualityExplanationTermVisitor.singleton.visit(explanation, u => newlyIntroducedGeneralizationTerms.AddRange(u.GetAllGeneralizationSubterms()));
+
+                                newlyIntroducedGeneralizations = newlyIntroducedGeneralizationTerms
                                     .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
                                     .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
                                 PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
@@ -935,7 +929,10 @@ namespace AxiomProfiler.QuantifierModel
 
                             if (format.ShowEqualityExplanations && !isRecursive)
                             {
-                                newlyIntroducedGeneralizations = GeneralizationCollector.singleton.visit(explanation, null)
+                                var newlyIntroducedGeneralizationTerms = new List<Term>();
+                                EqualityExplanationTermVisitor.singleton.visit(explanation, u => newlyIntroducedGeneralizationTerms.AddRange(u.GetAllGeneralizationSubterms()));
+
+                                newlyIntroducedGeneralizations = newlyIntroducedGeneralizationTerms
                                     .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
                                     .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
                                 PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
