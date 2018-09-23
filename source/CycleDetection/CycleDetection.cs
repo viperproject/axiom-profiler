@@ -635,8 +635,9 @@ namespace AxiomProfiler.CycleDetection
             {
                 var generalized = pair.Item1;
                 var concretes = pair.Item2;
+                var backPointers = concretes.SelectMany(ee => ee.Item1.ReferenceBackPointers).ToList();
 
-                foreach (var recursiveReference in concretes.SelectMany(ee => ee.Item1.ReferenceBackPointers))
+                foreach (var recursiveReference in backPointers)
                 {
                     recursiveReference.UpdateReference(generalized);
                 }
