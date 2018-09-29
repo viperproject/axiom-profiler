@@ -455,6 +455,7 @@ namespace AxiomProfiler.QuantifierModel
             return blameTerms
                 .Where(t1 => t1.Item1.Any(l => l.Count == 0))
                 .Select(t => t.Item2)
+                .Distinct(Term.semanticTermComparer)
                 .ToList();
         }
 
