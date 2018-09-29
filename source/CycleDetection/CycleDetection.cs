@@ -125,7 +125,7 @@ namespace AxiomProfiler.CycleDetection
                         foreach (var fingerprint in instantiationFingerprints) {
                             perStepFingerprints[index][fingerprint] = perStepFingerprints[index].TryGetValue(fingerprint, out var prevSum) ? prevSum + 1 : 1;
                         }
-                        index = index + 1 % perStepFingerprints.Length;
+                        index = (index + 1) % perStepFingerprints.Length;
                     }
 
                     for (var i = 0; i < perStepFingerprints.Length; ++i)
@@ -2286,7 +2286,7 @@ namespace AxiomProfiler.CycleDetection
         {
 
             // Update bindings
-            var relevantBindings = bindingInfo.bindings.Where(kv => kv.Value.Item2.id == originalTerm.id && constraintsSat(history, kv.Value.Item1)).ToList();
+            var relevantBindings = bindingInfo.bindings.Where(kv => kv.Value.Item2.id == originalTerm.id && (constraintsSat(history, kv.Value.Item1) || constraintsSat(newHistory, kv.Value.Item1))).ToList();
             foreach (var binding in relevantBindings) {
                 bindingInfo.bindings[binding.Key] = Tuple.Create(binding.Value.Item1, newTerm);
             }
