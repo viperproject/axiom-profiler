@@ -580,15 +580,25 @@ namespace AxiomProfiler.CycleDetection
                 // Check for which explanations the recursion points can be used. There may be some explanations at the beginning that
                 // don't follow the general pattern, yet (e.g. if they have no predecessors).
                 var validationFilter = ValidateRecursionPoints(recursionPoints, list);
-                var validExplanations = list.Zip(validationFilter, Tuple.Create).Where(filter => filter.Item2).Select(filter => filter.Item1);
-                //TODO: warn if very few remain
+                IEnumerable<Tuple<EqualityExplanation, int>> reversed;
+                if (validationFilter.Count(b => b) > 1)
+                {
+                    var validExplanations = list.Zip(validationFilter, Tuple.Create).Where(filter => filter.Item2).Select(filter => filter.Item1);
 
-                // We insert RecursiveReferenceEqualityExplanation. If the explanations truly follow the same pattern they should
-                // match structurally after this step.
-                var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPoints, validExplanations.Select(pair => pair.Item1));
+                    // We insert RecursiveReferenceEqualityExplanation. If the explanations truly follow the same pattern they should
+                    // match structurally after this step.
+                    var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPoints, validExplanations.Select(pair => pair.Item1));
+
+                    reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create).Reverse();
+                }
+                else
+                {
+
+                    // If the recursion points are only valid for a single explanation we discard them.
+                    reversed = list.AsEnumerable().Reverse();
+                }
 
                 // Now we generalize. If the explanations already match structurally this simply replaces all terms with their generalizations.
-                var reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create).Reverse();
                 var result = reversed.Skip(1).Aggregate(reversed.First().Item1, (gen, conc) => EqualityExplanationGeneralizer(gen, conc, false));
 
                 // We set all other generalizations that we could have chosen equal to the ones we actually chose.
