@@ -365,7 +365,7 @@ namespace AxiomProfiler.CycleDetection
                     var instantiations = loopInstantiationsWorkSpace[j].Skip(isWrapInstantiation ? 1 : 0).ToList();
                     var terms = instantiations.Select(inst => inst.bindingInfo.bindings[boundTo].Item2);
                     var otherGenTerm = generalizeTerms(terms, instantiations, nextBindingInfo, false, isWrapInstantiation);
-                    otherGenTerm.Responsible = loopInstantiationsWorkSpace[i].First();
+                    otherGenTerm.Responsible = terms.Last().Responsible;
                     otherGenTerm.dependentInstantiationsBlame.Add(loopInstantiationsWorkSpace[j].First());
 
                     //only a finite prefix of terms may be produced outside of the loop
