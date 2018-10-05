@@ -202,28 +202,10 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static void highlightGens(Term[] potGens, PrettyPrintFormat format, GeneralizationState generalization) 
-        {
-            foreach (var term in potGens)
-            {
-                if (term is Term && generalization.IsReplacedByGeneralization(term.id))
-                {
-                    term.highlightTemporarily(format, PrintConstants.generalizationColor);
-                }
-                else
-                {
-                    highlightGens(term.Args, format, generalization);
-                }
-            }
-        }
-
         private static int printInstantiationWithPredecessor(InfoPanelContent content, PrettyPrintFormat format,
             Instantiation current, Instantiation previous, CycleDetection.CycleDetection cycDetect, int termNumbering)
         {
             current.tempHighlightBlameBindTerms(format);
-            var potGens = previous.concreteBody.Args;
-            var generalization = cycDetect.getGeneralization();
-            highlightGens(potGens, format, generalization);
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("\n\nThis instantiation yields:\n\n");
@@ -327,8 +309,7 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             current.tempHighlightBlameBindTerms(format);
             var blameTerms = current.bindingInfo.getDistinctBlameTerms();
-            var distinctBlameTerms = blameTerms.Where(bt => blameTerms.All(super => bt == super || !super.isSubterm(bt)))
-                .Where(req => !current.bindingInfo.equalities.SelectMany(eq => eq.Value.Select(t => t.Item2)).Contains(req))
+            var distinctBlameTerms = blameTerms
                 .Where(req => current.bindingInfo.equalities.Keys.All(k => current.bindingInfo.bindings[k].Item2 != req));
             foreach (var distinctBlameTerm in distinctBlameTerms)
             {
