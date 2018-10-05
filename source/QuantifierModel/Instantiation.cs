@@ -11,6 +11,8 @@ namespace AxiomProfiler.QuantifierModel
         public Quantifier Quant;
         public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
+        public readonly Dictionary<string, List<Term>> TheoryConstraintsDependentTerms = new Dictionary<string, List<Term>>(); // Indicates which terms were added by which theory after instantiating the quantifier.
+        public readonly Dictionary<string, List<Term>> TheoryConstraintsEqualities = new Dictionary<string, List<Term>>(); // Equalities added through theory constraints.
         public int LineNo;
         public double Cost;
         public readonly List<Instantiation> ResponsibleInstantiations = new List<Instantiation>();
@@ -60,11 +62,20 @@ namespace AxiomProfiler.QuantifierModel
 
         public Instantiation CopyForBindingInfoModification()
         {
-            return new Instantiation(bindingInfo.Clone())
+            var copy = new Instantiation(bindingInfo.Clone())
             {
                 Quant = Quant,
                 concreteBody = concreteBody
             };
+            foreach (var kv in TheoryConstraintsDependentTerms)
+            {
+                copy.TheoryConstraintsDependentTerms[kv.Key] = kv.Value;
+            }
+            foreach (var kv in TheoryConstraintsEqualities)
+            {
+                copy.TheoryConstraintsEqualities[kv.Key] = kv.Value;
+            }
+            return copy;
         }
 
         public int Depth
@@ -276,7 +287,38 @@ namespace AxiomProfiler.QuantifierModel
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("The resulting term:\n\n");
             content.switchToDefaultFormat();
+            HightlightConstraintEqualities(format);
             concreteBody.PrettyPrint(content, format);
+
+            if (TheoryConstraintsDependentTerms.Any())
+            {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\n\nAdded Theory Constraints:");
+                content.switchToDefaultFormat();
+                foreach (var kv in TheoryConstraintsDependentTerms)
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append($"\n\nConstraints Added by the {kv.Key} theory:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var term in kv.Value)
+                    {
+                        var constraintExplanation = GetTheoryConstraintExplanation(term, kv.Key);
+                        if (constraintExplanation == null)
+                        {
+                            term.PrettyPrint(content, format);
+                        }
+                        else
+                        {
+                            constraintExplanation.PrettyPrint(content, format);
+                        }
+                        content.switchToDefaultFormat();
+                        content.Append("\n\n");
+                    }
+                }
+            }
+
+            format.restoreAllOriginalRules();
         }
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
@@ -311,6 +353,58 @@ namespace AxiomProfiler.QuantifierModel
             content.Append('\n').Append(Quant.PrintName).Append('\n');
             content.Append("Depth: " + depth).Append('\n');
             content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
+        }
+
+        private void HightlightConstraintEqualities(PrettyPrintFormat format)
+        {
+            foreach (var term in TheoryConstraintsEqualities.Values.SelectMany(l => l.SelectMany(t => t.Args)).Distinct().Where(t => concreteBody.isSubterm(t.id)))
+            {
+                term.highlightTemporarily(format, PrintConstants.equalityColor);
+            }
+        }
+
+        public EqualityExplanation GetTheoryConstraintExplanation(Term t, string theory)
+        {
+            var eqs = TheoryConstraintsEqualities[theory];
+
+            var pathsTodoQueue = new Queue<List<Term>>();
+            pathsTodoQueue.Enqueue(new List<Term>() { t });
+            List<Term> resultPath = null;
+            do
+            {
+                var path = pathsTodoQueue.Dequeue();
+                var edge = path.Last();
+                var continuations = eqs.Where(eq => eq.Args.Contains(edge)).SelectMany(eq => eq.Args).Where(term => !path.Contains(term));
+
+                var solution = continuations.FirstOrDefault(term => concreteBody.isSubterm(term.id));
+                if (solution != null)
+                {
+                    resultPath = path;
+                    resultPath.Add(solution);
+                    break;
+                }
+
+                foreach (var continuation in continuations)
+                {
+                    var newPath = new List<Term>(path);
+                    newPath.Add(continuation);
+                    pathsTodoQueue.Enqueue(newPath);
+                }
+            } while (pathsTodoQueue.Any());
+
+            if (resultPath == null) return null;
+
+            resultPath.Reverse();
+            var explanationSteps = resultPath.Zip(resultPath.Skip(1), (from, to) => new TheoryEqualityExplanation(from, to, theory)).ToArray();
+
+            if (explanationSteps.Length == 1)
+            {
+                return explanationSteps.First();
+            }
+            else
+            {
+                return new TransitiveEqualityExplanation(explanationSteps.First().source, explanationSteps.Last().target, explanationSteps);
+            }
         }
 
         public override IEnumerable<Common> Children()

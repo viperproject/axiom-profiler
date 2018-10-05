@@ -43,9 +43,9 @@ namespace AxiomProfiler.QuantifierModel
             return Term.semanticTermComparer.GetHashCode(source);
         }
 
-        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int eqNumber)
+        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int eqNumber = -1)
         {
-            var numberingString = $"({eqNumber}) ";
+            var numberingString = eqNumber == -1 ? "" : $"({eqNumber}) ";
             content.switchToDefaultFormat();
             content.Append(numberingString);
             source.PrettyPrint(content, format, numberingString.Length);

@@ -11,6 +11,7 @@ namespace AxiomProfiler.PrettyPrinting
 
         private static string getIndentString(PrettyPrintFormat format, int descriptionIndent)
         {
+            if (descriptionIndent < 2) return "";
             var descriptionIndentString = PrintConstants.indentDiff + String.Join("", Enumerable.Repeat(" ", descriptionIndent - 2));
             var explanationIndentString = String.Join("", Enumerable.Repeat(PrintConstants.indentDiff, format.CurrentEqualityExplanationPrintingDepth));
             return descriptionIndentString + explanationIndentString;

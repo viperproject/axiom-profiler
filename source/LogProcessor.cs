@@ -24,6 +24,7 @@ namespace AxiomProfiler
         private Conflict curConfl;
         private readonly List<Literal> cnflResolveLits = new List<Literal>();
         private Instantiation lastInst;
+        private readonly Stack<string> currentTheoryConstraints = new Stack<string>();
         private Term decideClause;
         private static readonly Term[] EmptyTerms = new Term[0];
         private readonly Dictionary<string, List<string>> boogieFiles = new Dictionary<string, List<string>>();
@@ -894,6 +895,17 @@ namespace AxiomProfiler
                             var t = new Term(words[2], args);
                             model.terms[parseIdentifier(words[1])] = t;
                             t.id = parseIdentifier(words[1]);
+
+                            if ((t.Name == "=" || t.Name == "iff" || t.Name == "~") && lastInst != null && currentTheoryConstraints.Any())
+                            {
+                                var theoryName = currentTheoryConstraints.Peek();
+                                if (!lastInst.TheoryConstraintsEqualities.TryGetValue(theoryName, out var equalities))
+                                {
+                                    equalities = new List<Term>();
+                                    lastInst.TheoryConstraintsEqualities[theoryName] = equalities;
+                                }
+                                equalities.Add(t);
+                            }
                         }
                     }
                     break;
@@ -902,17 +914,28 @@ namespace AxiomProfiler
                     {
                         Term t = GetTerm(words[1]);
                         int gen = int.Parse(words[2]);
-                        if (lastInst != null && t.Responsible != null && t.Responsible != lastInst)
+                        if (lastInst != null && t.Responsible != lastInst)
                         {
-                            // make a copy of the term, since we are overriding the Responsible field
-                            //TODO: shallow copy
-                            t = new Term(t);
-                            model.terms[parseIdentifier(words[1])] = t;
-                        }
-                        else if (lastInst != null)
-                        {
+                            if (t.Responsible != null)
+                            {
+                                // make a copy of the term, since we are overriding the Responsible field
+                                //TODO: shallow copy
+                                t = new Term(t);
+                                model.terms[parseIdentifier(words[1])] = t;
+                            }
+
                             t.Responsible = lastInst;
                             lastInst.dependentTerms.Add(t);
+                            if (currentTheoryConstraints.Any() && t.Name != "=" && t.Name != "iff" && t.Name != "~")
+                            {
+                                var theoryName = currentTheoryConstraints.Peek();
+                                if (!lastInst.TheoryConstraintsDependentTerms.TryGetValue(theoryName, out var constraitTerms))
+                                {
+                                    constraitTerms = new List<Term>();
+                                    lastInst.TheoryConstraintsDependentTerms[theoryName] = constraitTerms;
+                                }
+                                constraitTerms.Add(t);
+                            }
                         }
                     }
                     break;
@@ -1036,6 +1059,10 @@ namespace AxiomProfiler
                     }
                     break;
                 case "[end-of-instance]": lastInst = null; break;
+
+                case "[theory-constraints]": currentTheoryConstraints.Push(words[1]); break;
+
+                case "[end-theory-constraints]": currentTheoryConstraints.Pop(); break;
 
                 case "[decide-and-or]":
                     if (!interestedInCurrentCheck) break;
