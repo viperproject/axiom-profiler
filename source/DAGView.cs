@@ -612,8 +612,7 @@ namespace AxiomProfiler
         private InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
         {
             var curNode = node;
-            var curPath = new InstantiationPath();
-            curPath.append((Instantiation)node.UserData);
+            var curPath = downPath;
             while (curNode.InEdges.Any())
             {
                 curPath = AllUpPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path =>

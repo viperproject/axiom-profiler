@@ -75,6 +75,10 @@ namespace AxiomProfiler.QuantifierModel
             {
                 copy.TheoryConstraintsEqualities[kv.Key] = kv.Value;
             }
+            foreach (var dependentTerm in dependentTerms)
+            {
+                copy.dependentTerms.Add(dependentTerm);
+            }
             return copy;
         }
 
