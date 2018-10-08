@@ -1321,7 +1321,7 @@ namespace AxiomProfiler
                     foreach (var inst in quant.Instances)
                     {
                         inst.Quant = collectedPatterns.Item1;
-                        collectedPatterns.Item1.Instances.Add(inst);
+                       if (collectedPatterns.Item1 != quant) collectedPatterns.Item1.Instances.Add(inst);
                     }
                     collectedPatterns.Item2.UnionWith(separation[true]);
                 }
