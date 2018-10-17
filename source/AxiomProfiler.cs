@@ -32,6 +32,7 @@ namespace AxiomProfiler
         private IPrintable currentInfoPanelPrintable;
         private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private ParameterConfiguration parameterConfiguration;
+        private ScriptingTasks scriptingTasks = new ScriptingTasks();
         private DAGView dagView;
         public Model model;
 
@@ -67,11 +68,13 @@ namespace AxiomProfiler
         }
 
 
-        private void AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
+        private void AxiomProfiler_Load(object sender, EventArgs e)
         {
             if (parameterConfiguration == null) return;
             loadModel(parameterConfiguration);
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
+
+            ScriptingSupport.RunScriptingTasks(model, scriptingTasks);
         }
 
         private void LoadZ3Logfile_Click(object sender, EventArgs e)
@@ -138,6 +141,56 @@ namespace AxiomProfiler
                     else if (args[idx] == "/s")
                     {
                         config.skipDecisions = true;
+                    }
+                    else if (args[idx].StartsWith("/loops:"))
+                    {
+                        if (Int32.TryParse(args[idx].Substring(7), out var numPaths))
+                        {
+                            if (numPaths <= 0)
+                            {
+                                error = "Invalid command line argument: number of paths to check for matching loops must be >= 1.";
+                                return false;
+                            }
+                            scriptingTasks.NumPathsToExplore = numPaths;
+                        }
+                        else
+                        {
+                            error = "Invalid command line argument: specified number of paths to check for matching loops was not a number.";
+                            return false;
+                        }
+                    }
+                    else if (args[idx] == "/showNumChecks")
+                    {
+                        scriptingTasks.ShowNumChecks = true;
+                    }
+                    else if (args[idx] == "/showQuantStatistics")
+                    {
+                        scriptingTasks.ShowQuantStatistics = true;
+                    }
+                    else if (args[idx].StartsWith("/findHighBranching:"))
+                    {
+                        if (Int32.TryParse(args[idx].Substring(19), out var threshold))
+                        {
+                            if (threshold < 0)
+                            {
+                                error = "Invalid command line argument: high branching threshold must be non-negative.";
+                                return false;
+                            }
+                            scriptingTasks.FindHighBranchingThreshold = threshold;
+                        }
+                        else
+                        {
+                            error = "Invalid command line argument: specified high branching threshold was not a number.";
+                            return false;
+                        }
+                    }
+                    else if (args[idx].StartsWith("/outPrefix:"))
+                    {
+                        scriptingTasks.OutputFilePrefix = args[idx].Substring(11);
+                    }
+                    else if (args[idx] == "/autoQuit")
+                    {
+                        scriptingTasks.QuitOnCompletion = true;
                     }
                     else
                     {

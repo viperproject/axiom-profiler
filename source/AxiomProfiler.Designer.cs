@@ -155,52 +155,52 @@ namespace AxiomProfiler
             // loadZ3TraceLogToolStripMenuItem
             // 
             this.loadZ3TraceLogToolStripMenuItem.Name = "loadZ3TraceLogToolStripMenuItem";
-            this.loadZ3TraceLogToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.loadZ3TraceLogToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.loadZ3TraceLogToolStripMenuItem.Text = "&Load Z3 Output File";
             this.loadZ3TraceLogToolStripMenuItem.Click += new System.EventHandler(this.LoadZ3Logfile_Click);
             // 
             // searchToolStripMenuItem
             // 
             this.searchToolStripMenuItem.Name = "searchToolStripMenuItem";
-            this.searchToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.searchToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.searchToolStripMenuItem.Text = "&Search";
             this.searchToolStripMenuItem.Click += new System.EventHandler(this.searchToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(264, 6);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(229, 6);
             // 
             // colorVisualizationToolStripMenuItem
             // 
             this.colorVisualizationToolStripMenuItem.Name = "colorVisualizationToolStripMenuItem";
-            this.colorVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.colorVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.colorVisualizationToolStripMenuItem.Text = "&Color Visualization";
             this.colorVisualizationToolStripMenuItem.Click += new System.EventHandler(this.colorVisualizationToolStripMenuItem_Click);
             // 
             // searchTreeVisualizationToolStripMenuItem
             // 
             this.searchTreeVisualizationToolStripMenuItem.Name = "searchTreeVisualizationToolStripMenuItem";
-            this.searchTreeVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.searchTreeVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.searchTreeVisualizationToolStripMenuItem.Text = "Search &Tree Visualization";
             this.searchTreeVisualizationToolStripMenuItem.Click += new System.EventHandler(this.searchTreeVisualizationToolStripMenuItem_Click);
             // 
             // quantifierBlameVisualizationToolStripMenuItem
             // 
             this.quantifierBlameVisualizationToolStripMenuItem.Name = "quantifierBlameVisualizationToolStripMenuItem";
-            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
             this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(264, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(229, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.exitToolStripMenuItem.Text = "&Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.Exit_Click);
             // 
@@ -275,7 +275,7 @@ namespace AxiomProfiler
             // 
             this.largeTextToolStripMenuItem.CheckOnClick = true;
             this.largeTextToolStripMenuItem.Name = "largeTextToolStripMenuItem";
-            this.largeTextToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.largeTextToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
             this.largeTextToolStripMenuItem.Text = "Large Text";
             this.largeTextToolStripMenuItem.Click += new System.EventHandler(this.largeTextToolStripMenuItem_Click);
             // 
@@ -452,6 +452,7 @@ namespace AxiomProfiler
             this.Controls.Add(this.menuStrip1);
             this.Name = "AxiomProfiler";
             this.Text = "Axiom Profiler";
+            this.Load += new System.EventHandler(this.AxiomProfiler_Load);
             this.splitContainer1.Panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
