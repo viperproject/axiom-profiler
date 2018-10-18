@@ -1300,6 +1300,8 @@ namespace AxiomProfiler
 
         public void Finish()
         {
+            model.NumChecks = beginCheckSeen;
+
             //add reverse rewrites to terms
             foreach (var reverseRewrite in reverseRewriteClosure)
             {

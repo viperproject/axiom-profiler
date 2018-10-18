@@ -74,7 +74,10 @@ namespace AxiomProfiler
             loadModel(parameterConfiguration);
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
 
-            ScriptingSupport.RunScriptingTasks(model, scriptingTasks);
+            if (ScriptingSupport.RunScriptingTasks(model, scriptingTasks))
+            {
+                Environment.Exit(0);
+            }
         }
 
         private void LoadZ3Logfile_Click(object sender, EventArgs e)

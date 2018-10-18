@@ -59,6 +59,9 @@ namespace AxiomProfiler.QuantifierModel
         // Source of the model.
         public string LogFileName;
 
+        // Number of checks in the log file
+        public int NumChecks;
+
         // Literal to mark a scope as done.
         internal static readonly Literal MarkerLiteral = new Literal
         {
