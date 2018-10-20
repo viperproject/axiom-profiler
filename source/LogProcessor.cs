@@ -954,7 +954,15 @@ namespace AxiomProfiler
                         switch (words[2])
                         {
                             case "lit":
-                                model.equalityExplanations[fromId] = new DirectEqualityExplanation(fromTerm, toTerm, GetTerm(words[3]));
+                                var litTerm = GetTerm(words[3]);
+                                if (fromTerm == litTerm)
+                                {
+                                    model.equalityExplanations[fromId] = new TheoryEqualityExplanation(fromTerm, toTerm, "smt");
+                                }
+                                else
+                                {
+                                    model.equalityExplanations[fromId] = new DirectEqualityExplanation(fromTerm, toTerm, litTerm);
+                                }
                                 break;
                             case "cg":
                                 var equalitiesRegex = new Regex("\\((#[0-9]+) (#[0-9]+)\\) ");

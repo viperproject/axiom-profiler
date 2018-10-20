@@ -675,13 +675,13 @@ namespace AxiomProfiler.CycleDetection
                     // match structurally after this step.
                     var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPoints, validExplanations.Select(pair => pair.Item1));
 
-                    reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create).Reverse();
+                    reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create);
                 }
                 else
                 {
 
                     // If the recursion points are only valid for a single explanation we discard them.
-                    reversed = list.AsEnumerable().Reverse();
+                    reversed = list;
                 }
 
                 // Now we generalize. If the explanations already match structurally this simply replaces all terms with their generalizations.
@@ -1199,7 +1199,7 @@ namespace AxiomProfiler.CycleDetection
                         {
                             if (t1.id >= 0)
                             {
-                                if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 > iteration - offset && kv.Value.Any(g => g.id == generalization.id)))
+                                if (genState.replacementDict.Any(kv => kv.Key.Item2 == t1.id && kv.Key.Item1 < iteration - offset && kv.Value.Any(g => g.id == generalization.id)))
                                 {
                                     t1 = generalization;
                                     t2 = generalization;
@@ -1209,7 +1209,7 @@ namespace AxiomProfiler.CycleDetection
                             else
                             {
                                 // within a single iteration replacementDict is injective => we get the correct concrete terms
-                                var alternativePreviousGeneralizations = genState.replacementDict.Where(kv => kv.Key.Item1 > iteration - offset && kv.Value.Any(t => t.id == t1.id)).Select(kv => kv.Value);
+                                var alternativePreviousGeneralizations = genState.replacementDict.Where(kv => kv.Key.Item1 < iteration - offset && kv.Value.Any(t => t.id == t1.id)).Select(kv => kv.Value);
                                 if (alternativePreviousGeneralizations.All(alts => alts.Any(t => t.id == generalization.id)))
                                 {
                                     t1 = generalization;
@@ -1232,7 +1232,7 @@ namespace AxiomProfiler.CycleDetection
                             newGen = new Term(t1.Name, generalizedArgs)
                             {
                                 id = genState.idCounter,
-                                Responsible = t1.Responsible.Quant == t2.Responsible.Quant ? t1.Responsible : null
+                                Responsible = t1.Responsible?.Quant == t2.Responsible?.Quant ? t1.Responsible : null
                             };
                             --genState.idCounter;
                         }

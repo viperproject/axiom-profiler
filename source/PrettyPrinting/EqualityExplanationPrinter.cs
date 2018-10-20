@@ -133,7 +133,14 @@ namespace AxiomProfiler.PrettyPrinting
                 target.source.PrettyPrint(content, format, indent);
             }
             content.switchToDefaultFormat();
-            content.Append($"\n{indentString}= ({target.TheoryName} theory)\n{indentString}");
+            if (target.TheoryName == "smt")
+            {
+                content.Append($"\n{indentString}= (smt choice)\n{indentString}");
+            }
+            else
+            {
+                content.Append($"\n{indentString}= ({target.TheoryName} theory)\n{indentString}");
+            }
             target.target.PrettyPrint(content, format, indent);
 
             return null;
