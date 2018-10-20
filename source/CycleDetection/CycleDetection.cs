@@ -1564,8 +1564,82 @@ namespace AxiomProfiler.CycleDetection
                 return null;
             }
 
+            private static bool CanAssumeCongruenceEqs(Term t1, Term t2)
+            {
+                if (t1.generalizationCounter >= 0 || t2.generalizationCounter >= 0) return true;
+                if (t1.Name != t2.Name || t1.GenericType != t2.GenericType || t1.Args.Length != t2.Args.Length) return false;
+                return t1.Args.Zip(t2.Args, CanAssumeCongruenceEqs).All(x => x);
+            }
+
+            private static void AssumeCongruenceEqs(Term t1, Term t2, Dictionary<Term, List<Term>> eqs)
+            {
+                if (t1.generalizationCounter >= 0)
+                {
+                    if (eqs.TryGetValue(t1, out var existingEqualTos))
+                    {
+                        existingEqualTos.Add(t2);
+                    }
+                    else
+                    {
+                        eqs[t1] = new List<Term>() { t2 };
+                    }
+                }
+                if (t2.generalizationCounter >= 0)
+                {
+                    if (eqs.TryGetValue(t2, out var existingEqualTos))
+                    {
+                        existingEqualTos.Add(t1);
+                    }
+                    else
+                    {
+                        eqs[t2] = new List<Term>() { t1 };
+                    }
+                }
+
+                if (t1.generalizationCounter < 0 && t2.generalizationCounter < 0)
+                {
+                    for (var i = 0; i < t1.Args.Length; ++i)
+                    {
+                        AssumeCongruenceEqs(t1.Args[i], t2.Args[i], eqs);
+                    }
+                }
+            } 
+
             public override object Transitive(TransitiveEqualityExplanation target, Dictionary<Term, List<Term>> arg)
             {
+                if (target.equalities.Length == 0)
+                {
+                    if (target.source.generalizationCounter >= 0)
+                    {
+                        if (arg.TryGetValue(target.source, out var existingEqualTos))
+                        {
+                            existingEqualTos.Add(target.target);
+                        }
+                        else
+                        {
+                            arg[target.source] = new List<Term>() { target.target };
+                        }
+                    }
+                    if (target.target.generalizationCounter >= 0)
+                    {
+                        if (arg.TryGetValue(target.target, out var existingEqualTos))
+                        {
+                            existingEqualTos.Add(target.source);
+                        }
+                        else
+                        {
+                            arg[target.target] = new List<Term>() { target.source };
+                        }
+                    }
+
+                    if (target.source.generalizationCounter < 0 && target.target.generalizationCounter < 0 && CanAssumeCongruenceEqs(target.source, target.target))
+                    {
+                        AssumeCongruenceEqs(target.source, target.target, arg);
+                    }
+
+                    return null;
+                }
+
                 var equalToTerms = target.equalities.Select(ee => ee.source).ToList();
                 equalToTerms.Add(target.source);
                 equalToTerms.Add(target.target);
