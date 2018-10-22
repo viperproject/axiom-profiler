@@ -1,4 +1,5 @@
 ﻿using AxiomProfiler.QuantifierModel;
+using System;
 using System.IO;
 using System.Linq;
 
@@ -27,60 +28,76 @@ namespace AxiomProfiler
         {
             var basePath = Path.Combine(new string[] { Directory.GetCurrentDirectory(), tasks.OutputFilePrefix });
 
-            // Output basic information
-            var basicFileExists = false;
-            if (tasks.ShowNumChecks)
+            try
             {
-                basicFileExists = true;
-                using (var writer = new StreamWriter(basePath + ".basic", false))
+                // Output basic information
+                var basicFileExists = false;
+                if (tasks.ShowNumChecks)
                 {
-                    writer.WriteLine("checks, " + model.NumChecks);
-                }
-            }
-            if (tasks.ShowQuantStatistics)
-            {
-                using (var writer = new StreamWriter(basePath + ".basic", basicFileExists))
-                {
-                    writer.WriteLine("num quantifiers, " + model.quantifiers.Count());
-                    writer.WriteLine("tot number instantiations, " + model.instances.Count());
-                    foreach (var quant in model.quantifiers.Values)
+                    basicFileExists = true;
+                    using (var writer = new StreamWriter(basePath + ".basic", false))
                     {
-                        writer.WriteLine(quant.PrintName + ", " + quant.Instances.Count());
+                        writer.WriteLine("checks, " + model.NumChecks);
                     }
                 }
-            }
-
-            // Check logest paths for potential loops
-            var pathsToCheck = model.instances.Where(inst => inst.Depth == 1)
-                .OrderByDescending(inst => inst.DeepestSubpathDepth)
-                .Take(tasks.NumPathsToExplore)
-                .Select(inst => deepestPathStartingFrom(inst)).ToList();
-            if (pathsToCheck.Any())
-            {
-                using (var writer = new StreamWriter(basePath + ".loops", false))
+                if (tasks.ShowQuantStatistics)
                 {
-                    writer.WriteLine("# repetitions, repeating pattern");
-                    foreach (var path in pathsToCheck)
+                    using (var writer = new StreamWriter(basePath + ".basic", basicFileExists))
                     {
-                        var cycleDetection = new CycleDetection.CycleDetection(path.getInstantiations(), 3);
-                        if (cycleDetection.hasCycle())
+                        writer.WriteLine("num quantifiers, " + model.quantifiers.Count());
+                        writer.WriteLine("tot number instantiations, " + model.instances.Count());
+                        foreach (var quant in model.quantifiers.Values)
                         {
-                            writer.WriteLine(cycleDetection.GetNumRepetitions() + ", " + string.Join(" -> ", cycleDetection.getCycleQuantifiers().Select(quant => quant.PrintName)));
+                            writer.WriteLine(quant.PrintName + ", " + quant.Instances.Count());
+                        }
+                    }
+                }
+
+                // Check logest paths for potential loops
+                var pathsToCheck = model.instances.Where(inst => inst.Depth == 1)
+                    .OrderByDescending(inst => inst.DeepestSubpathDepth)
+                    .Take(tasks.NumPathsToExplore)
+                    .Select(inst => deepestPathStartingFrom(inst)).ToList();
+                if (pathsToCheck.Any())
+                {
+                    using (var writer = new StreamWriter(basePath + ".loops", false))
+                    {
+                        writer.WriteLine("# repetitions, repeating pattern");
+                        foreach (var path in pathsToCheck)
+                        {
+                            var cycleDetection = new CycleDetection.CycleDetection(path.getInstantiations(), 3);
+                            if (cycleDetection.hasCycle())
+                            {
+                                writer.WriteLine(cycleDetection.GetNumRepetitions() + ", " + string.Join(" -> ", cycleDetection.getCycleQuantifiers().Select(quant => quant.PrintName)));
+                            }
+                        }
+                    }
+                }
+
+                // High branching analysis
+                var highBranchingInsts = model.instances.Where(inst => inst.DependantInstantiations.Count() >= tasks.FindHighBranchingThreshold).ToList();
+                if (highBranchingInsts.Any())
+                {
+                    using (var writer = new StreamWriter(basePath + ".branching"))
+                    {
+                        writer.WriteLine($"Quantifier, # instances with ≥ {tasks.FindHighBranchingThreshold} direct children");
+                        foreach (var quant in highBranchingInsts.GroupBy(inst => inst.Quant))
+                        {
+                            writer.WriteLine(quant.Key.PrintName + ", " + quant.Count());
                         }
                     }
                 }
             }
-
-            // High branching analysis
-            var highBranchingInsts = model.instances.Where(inst => inst.DependantInstantiations.Count() >= tasks.FindHighBranchingThreshold).ToList();
-            if (highBranchingInsts.Any())
+            catch (Exception e)
             {
-                using (var writer = new StreamWriter(basePath + ".branching"))
+                const int ERROR_HANDLE_DISK_FULL = 0x27;
+                const int ERROR_DISK_FULL = 0x70;
+                int win32ErrorCode = e.HResult & 0xFFFF;
+                if (win32ErrorCode != ERROR_HANDLE_DISK_FULL && win32ErrorCode != ERROR_DISK_FULL)
                 {
-                    writer.WriteLine($"Quantifier, # instances with ≥ {tasks.FindHighBranchingThreshold} direct children");
-                    foreach (var quant in highBranchingInsts.GroupBy(inst => inst.Quant))
+                    using (var writer = new StreamWriter(basePath + ".error", false))
                     {
-                        writer.WriteLine(quant.Key.PrintName + ", " + quant.Count());
+                        writer.WriteLine(e.Message);
                     }
                 }
             }
