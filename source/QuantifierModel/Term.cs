@@ -9,20 +9,43 @@ namespace AxiomProfiler.QuantifierModel
 {
     public class Term : Common
     {
+        public class SemanticTermComparer : IEqualityComparer<Term>
+        {
+            public bool Equals(Term t1, Term t2)
+            {
+                return t1.generalizationCounter >= 0 ? t1.generalizationCounter == t2.generalizationCounter : t1.id == t2.id && t1.Name == t2.Name && t1.isPrime == t2.isPrime && t1.iterationOffset == t2.iterationOffset;
+            }
+
+            public int GetHashCode(Term t)
+            {
+                return t.generalizationCounter >= 0 ? t.generalizationCounter : t.id;
+            }
+        }
+        public static readonly SemanticTermComparer semanticTermComparer = new SemanticTermComparer();
+
         public readonly string Name;
         public readonly string GenericType;
-        public readonly Term[] Args;
+        public Term[] Args;
         public int id = -1;
         public readonly int size;
         public Instantiation Responsible;
         public readonly List<Term> dependentTerms = new List<Term>();
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
-        private static string indentDiff = "¦ ";
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
+        public Term reverseRewrite = null;
+        public int generalizationCounter = -1;
 
-        public Term(string name, Term[] args)
+        // isPrime and generationOffset represent a similar concept: they indicate that a generalized term is written in terms of a different
+        // (generalized) loop iteration than the one we are currently in. iterationOffset is used by the algorithms whereas isPrime is used for
+        // printing. Furthermore an iterationOffset > 0 indicates that the term comes from a preceeding iteration whereas isPrime is usually used
+        // indicate a term from a future iteration.
+        public int iterationOffset = 0;
+        public bool isPrime = false;
+
+        public Term(string name, Term[] args, int generalizationCounter = -1)
         {
+            this.generalizationCounter = generalizationCounter;
             Match typeMatch = TypeRegex.Match(name);
             if (typeMatch.Success)
             {
@@ -35,6 +58,7 @@ namespace AxiomProfiler.QuantifierModel
                 GenericType = "";
             }
             Args = args;
+            reverseRewrite = this;
 
             // Note: the null check was added to have it easier to construct the
             // generalized terms top down.
@@ -48,14 +72,74 @@ namespace AxiomProfiler.QuantifierModel
             size += 1;
         }
 
-        public Term(Term t)
+        public Term(Term t, Term[] newArgs = null)
         {
             Name = t.Name;
-            Args = t.Args;
+            Args = newArgs ?? (Term[]) t.Args.Clone();
             Responsible = t.Responsible;
             id = t.id;
             size = t.size;
             GenericType = t.GenericType;
+            if (ReferenceEquals(t.reverseRewrite, t))
+            {
+                reverseRewrite = this;
+            }
+            else
+            {
+                reverseRewrite = t.reverseRewrite;
+            }
+            generalizationCounter = t.generalizationCounter;
+            iterationOffset = t.iterationOffset;
+
+            dependentInstantiationsBlame = new List<Instantiation>(t.dependentInstantiationsBlame);
+            dependentInstantiationsBind = new List<Instantiation>(t.dependentInstantiationsBind);
+            dependentTerms = new List<Term>(t.dependentTerms);
+        }
+
+        public bool ContainsQuantifiedVar()
+        {
+            if (id == -1) return true;
+            return Args.Any(arg => arg.ContainsQuantifiedVar());
+        }
+
+        public bool ContainsGeneralization()
+        {
+            return GetAllGeneralizationSubterms().Any();
+        }
+
+        public IEnumerable<Term> GetAllGeneralizationSubterms()
+        {
+            if (generalizationCounter >= 0)
+            {
+                return Enumerable.Repeat(this, 1);
+            }
+            else
+            {
+                return Args.SelectMany(arg => arg.GetAllGeneralizationSubterms());
+            }
+        }
+
+        /// <summary>
+        /// Also contains T_1 for T_2(T_1).
+        /// </summary>
+        public IEnumerable<Term> GetAllGeneralizationSubtermsAndDependencies()
+        {
+            if (generalizationCounter >= 0)
+            {
+                return Enumerable.Repeat(this, 1).Concat(Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies()));
+            }
+            else
+            {
+                return Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies());
+            }
+        }
+
+        /// <summary>
+        /// Indicates whether the term includes references to any iteration other than the one indicated.
+        /// </summary>
+        public bool ReferencesOtherIteration(int iteration = 0)
+        {
+            return iterationOffset != iteration || Args.Any(arg => arg.ReferencesOtherIteration(iteration));
         }
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color)
@@ -65,18 +149,46 @@ namespace AxiomProfiler.QuantifierModel
             format.addTemporaryRule(id + "", tmp);
         }
 
-        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<List<Term>> pathConstraints)
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<Term> pathConstraint)
         {
-            var tmp = format.getPrintRule(this).Clone();
-            tmp.color = color;
-            tmp.historyConstraints.AddRange(pathConstraints);
-            if (id == -1)
+            highlightTemporarily(format, color, Enumerable.Repeat(pathConstraint, 1));
+        }
+
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, IEnumerable<List<Term>> pathConstraints)
+        {
+            var baseRule = format.getPrintRule(this);
+            IEnumerable<PrintRule> newRules;
+            if (pathConstraints.Any())
             {
-                format.addTemporaryRule(Name, tmp);
+                newRules = pathConstraints.Select(constraint =>
+                {
+                    var tmp = baseRule.Clone();
+                    tmp.color = color;
+                    tmp.historyConstraints = constraint;
+                    return tmp;
+                });
             }
             else
             {
-                format.addTemporaryRule(id + "", tmp);
+                var tmp = baseRule.Clone();
+                tmp.color = color;
+                tmp.historyConstraints = new List<Term>();
+                newRules = Enumerable.Repeat(tmp, 1);
+            }
+
+            if (id == -1)
+            {
+                foreach (var tmp in newRules)
+                {
+                    format.addTemporaryRule(Name, tmp);
+                }
+            }
+            else
+            {
+                foreach (var tmp in newRules)
+                {
+                    format.addTemporaryRule(id + "", tmp);
+                }
             }
         }
 
@@ -105,16 +217,31 @@ namespace AxiomProfiler.QuantifierModel
             return false;
         }
 
+        public bool isSubterm(int subtermId)
+        {
+            if (id == subtermId) return true;
+            return Args.Any(t => t.isSubterm(subtermId));
+        }
+
         public void printName(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.Append(Name);
             if (format.showType) content.Append(GenericType);
-            if (format.showTermId) content.Append("[" + id + "]");
+            if (iterationOffset > 0) content.Append("_-" + iterationOffset);
+            if (format.showTermId) content.Append("[" + (id >= 0 ? id.ToString() : "g" + -id) + (isPrime ? "'" : "") + "]");
         }
 
-        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format)
+        public void PrettyPrint(InfoPanelContent content, PrettyPrintFormat format, int indent = 0)
         {
-            PrettyPrint(content, new Stack<Color>(), format);
+            var indentColors = Enumerable.Empty<Color>();
+            if (indent >= 2)
+            {
+                indentColors = indentColors.Concat(Enumerable.Repeat(PrintConstants.defaultTextColor, 1));
+                indentColors = indentColors.Concat(Enumerable.Repeat(Color.Transparent, indent - 2));
+            }
+            indentColors = indentColors.Concat(Enumerable.Repeat(PrintConstants.defaultTextColor, format.CurrentEqualityExplanationPrintingDepth));
+                
+            PrettyPrint(content, new Stack<Color>(indentColors), format);
         }
 
         private bool PrettyPrint(InfoPanelContent content, Stack<Color> indentFormats, PrettyPrintFormat format)
@@ -126,12 +253,20 @@ namespace AxiomProfiler.QuantifierModel
             var startLength = content.Length;
             var needsParenthesis = this.needsParenthesis(format, printRule, parentRule);
 
-            content.switchFormat(InfoPanelContent.DefaultFont, printRule.color);
+            content.switchFormat(printRule.font ?? PrintConstants.DefaultFont, printRule.color);
 
             // check for cutoff
-            if (format.maxDepth == 1)
+            if (format.MaxTermPrintingDepth == 1)
             {
-                content.Append("...");
+                if (ContainsGeneralization())
+                {
+                    content.switchFormat(printRule.font ?? PrintConstants.DefaultFont, PrintConstants.generalizationColor);
+                    content.Append(">...<");
+                }
+                else
+                {
+                    content.Append("...");
+                }
                 return false;
             }
 
@@ -146,7 +281,7 @@ namespace AxiomProfiler.QuantifierModel
                     var t = Args[i];
 
                     // Note: DO NOT CHANGE ORDER (-> short circuit)
-                    isMultiline = t.PrettyPrint(content, indentFormats, format.nextDepth(this, i))
+                    isMultiline = t.PrettyPrint(content, indentFormats, format.NextTermPrintingDepth(this, i))
                                   || isMultiline;
 
                     if (i < Args.Length - 1)
@@ -185,15 +320,15 @@ namespace AxiomProfiler.QuantifierModel
                 case PrintRule.ParenthesesSetting.Precedence:
                     if (format.history.Count == 0) return false;
                     if (parentRule.precedence < rule.precedence) return false;
-                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.suffix))
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix(false)))
                     { return false; }
-                    if (!string.IsNullOrWhiteSpace(parentRule.prefix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.infix) &&
+                    if (!string.IsNullOrWhiteSpace(parentRule.prefix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.infix(false)) &&
                         format.childIndex == 0)
                     { return false; }
-                    if (!string.IsNullOrWhiteSpace(parentRule.infix) &&
-                        !string.IsNullOrWhiteSpace(parentRule.suffix) &&
+                    if (!string.IsNullOrWhiteSpace(parentRule.infix(false)) &&
+                        !string.IsNullOrWhiteSpace(parentRule.suffix(false)) &&
                         format.childIndex == format.history.Last().Args.Length - 1)
                     { return false; }
                     return format.history.Last().Name != Name || !rule.associative;
@@ -231,46 +366,48 @@ namespace AxiomProfiler.QuantifierModel
                 // add the indents
                 foreach (var color in indentColors)
                 {
-                    content.Insert(breakIndices[i] + offset, indentDiff, InfoPanelContent.DefaultFont, color);
+                    content.Insert(breakIndices[i] + offset, color == Color.Transparent ? " " : PrintConstants.indentDiff, PrintConstants.DefaultFont, color);
                     offset += content.Length - oldLength;
                     oldLength = content.Length;
                 }
             }
         }
 
-        private static void addPrefix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addPrefix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.Append(rule.prefix);
-            if (!string.IsNullOrWhiteSpace(rule.prefix) &&
+            var prefix = rule.prefix(isPrime);
+            content.Append(prefix);
+            if (!string.IsNullOrWhiteSpace(prefix) &&
                 rule.prefixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(content.Length);
             }
         }
 
-        private static void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addInfix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
+            content.switchFormat(PrintConstants.DefaultFont, rule.color);
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
             }
-            content.Append(rule.infix);
+            content.Append(rule.infix(isPrime));
             if (rule.infixLineBreak == PrintRule.LineBreakSetting.After)
             {
                 breakIndices.Add(content.Length);
             }
         }
 
-        private static void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
+        private void addSuffix(PrintRule rule, InfoPanelContent content, ICollection<int> breakIndices)
         {
-            content.switchFormat(InfoPanelContent.DefaultFont, rule.color);
-            if (!string.IsNullOrWhiteSpace(rule.suffix) &&
+            var suffix = rule.suffix(isPrime);
+            content.switchFormat(rule.font ?? PrintConstants.DefaultFont, rule.color);
+            if (!string.IsNullOrWhiteSpace(suffix) &&
                 rule.suffixLineBreak == PrintRule.LineBreakSetting.Before)
             {
                 breakIndices.Add(content.Length);
             }
-            content.Append(rule.suffix);
+            content.Append(suffix);
         }
 
         private bool printChildren(PrettyPrintFormat format, PrintRule rule)
@@ -328,7 +465,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Term Info:\n");
             content.switchToDefaultFormat();
             content.Append("\nIdentifier: " + id).Append('\n');

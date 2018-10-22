@@ -101,7 +101,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.instantiationTitleColor);
             content.Append("Quantifier Info:\n");
             content.switchToDefaultFormat();
             content.Append("\nPrint name: ").Append(PrintName).Append('\n');

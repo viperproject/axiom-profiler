@@ -17,7 +17,6 @@ namespace AxiomProfiler
     {
       this.loader = loader;
       InitializeComponent();
-      runningZ3.Text = String.Format("Running Z3");
     }
 
     private void LoadingProgressForm_Load(object sender, EventArgs e)
@@ -42,41 +41,18 @@ namespace AxiomProfiler
       loader.Cancel();
     }
 
-    private void loaderProgressChanged(int perc, int a)
+    private void loaderProgressChanged(int perc)
     {
-      backgroundWorker1.ReportProgress(perc, a);
+      backgroundWorker1.ReportProgress(perc);
     }
+
     private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
     {
-      int a = (int)e.UserState;
       if (e.ProgressPercentage != 0) {
         progressBar1.Style = ProgressBarStyle.Blocks;
         int perc = e.ProgressPercentage;
         if (perc <= progressBar1.Maximum)
           progressBar1.Value = perc;
-      }
-      switch (a)
-      {
-        case 0:
-          runningBoogie.Checked = false;
-          runningZ3.Checked = false;
-          runningParser.Checked = false;
-          break;
-        case 1:
-          runningBoogie.Checked = true;
-          runningZ3.Checked = false;
-          runningParser.Checked = false;
-          break;
-        case 2:
-          runningBoogie.Checked = true;
-          runningZ3.Checked = true;
-          runningParser.Checked = false;
-          break;
-        case 3:
-          runningBoogie.Checked = true;
-          runningZ3.Checked = true;
-          runningParser.Checked = true;
-          break;
       }
     }
   }

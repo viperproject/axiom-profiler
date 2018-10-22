@@ -27,9 +27,9 @@ namespace AxiomProfiler
 
             // text
             matchTextBox.Text = match;
-            prefixTextBox.Text = editRule.prefix;
-            infixTextBox.Text = editRule.infix;
-            suffixTextBox.Text = editRule.suffix;
+            prefixTextBox.Text = editRule.prefix(false);
+            infixTextBox.Text = editRule.infix(false);
+            suffixTextBox.Text = editRule.suffix(false);
 
             // colors
             colorButton.BackColor = editRule.color;
@@ -143,9 +143,9 @@ namespace AxiomProfiler
         {
             return new PrintRule
             {
-                prefix = prefixTextBox.Text,
-                infix = infixTextBox.Text,
-                suffix = suffixTextBox.Text,
+                prefix = new Func<bool, string>(_ => prefixTextBox.Text),
+                infix = new Func<bool, string>(_ => infixTextBox.Text),
+                suffix = new Func<bool, string>(_ => suffixTextBox.Text),
                 color = colorButton.BackColor,
                 printChildren = printChildrenCB.Checked,
                 prefixLineBreak = PrintRule.lineBreakSettingFromString((string)prefixLinebreakCB.SelectedItem),
@@ -155,7 +155,7 @@ namespace AxiomProfiler
                 indent = indentCB.Checked,
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
                 precedence = (int)precedenceUD.Value,
-                historyConstraints = new List<List<Term>>(),
+                historyConstraints = new List<Term>(),
                 isDefault = false,
                 isUserdefined = true
             };

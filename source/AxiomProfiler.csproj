@@ -65,6 +65,15 @@
   <PropertyGroup>
     <StartupObject />
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug Default|AnyCPU'">
+    <OutputPath>bin\Debug Default\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Msagl">
       <HintPath>..\lib\Msagl\Microsoft.Msagl.dll</HintPath>
@@ -136,18 +145,6 @@
     <Compile Include="LoadingProgressForm.Designer.cs">
       <DependentUpon>LoadingProgressForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="LoadBoogieForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="LoadBoogieForm.Designer.cs">
-      <DependentUpon>LoadBoogieForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="LoadZ3Form.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="LoadZ3Form.Designer.cs">
-      <DependentUpon>LoadZ3Form.cs</DependentUpon>
-    </Compile>
     <Compile Include="LoadZ3LogForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -158,6 +155,10 @@
     <Compile Include="Plotting.cs" />
     <Compile Include="PrettyPrinting\InfoPanelContent.cs" />
     <Compile Include="PrettyPrinting\IPrintable.cs" />
+    <Compile Include="PrettyPrinting\EqualityExplanationPrinter.cs" />
+    <Compile Include="ScriptingSupport.cs" />
+    <Compile Include="Utilities\EqualityExplanationTermVisitor.cs" />
+    <Compile Include="QuantifierModel\EqualityExplanation.cs" />
     <Compile Include="QuantifierModel\Common.cs" />
     <Compile Include="QuantifierModel\Conflict.cs" />
     <Compile Include="QuantifierModel\FunApp.cs" />
@@ -199,6 +200,8 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities\LambdaEqualityComparer.cs" />
+    <Compile Include="Utilities\RepeatIndefinietly.cs" />
     <EmbeddedResource Include="AboutBox.resx">
       <DependentUpon>AboutBox.cs</DependentUpon>
       <SubType>Designer</SubType>
@@ -222,14 +225,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="LoadingProgressForm.resx">
       <DependentUpon>LoadingProgressForm.cs</DependentUpon>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="LoadBoogieForm.resx">
-      <DependentUpon>LoadBoogieForm.cs</DependentUpon>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-    <EmbeddedResource Include="LoadZ3Form.resx">
-      <DependentUpon>LoadZ3Form.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="LoadZ3LogForm.resx">

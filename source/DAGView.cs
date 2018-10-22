@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 using Microsoft.Msagl.Core.Routing;
 using Microsoft.Msagl.GraphViewerGdi;
 using Microsoft.Msagl.Drawing;
@@ -10,6 +11,7 @@ using AxiomProfiler.QuantifierModel;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
 using Size = System.Drawing.Size;
+using AxiomProfiler.Utilities;
 
 namespace AxiomProfiler
 {
@@ -19,20 +21,21 @@ namespace AxiomProfiler
         private readonly AxiomProfiler _z3AxiomProfiler;
         private readonly GViewer _viewer;
         private Graph graph;
-        private static int newNodeWarningThreshold = 40;
+        private static readonly int newNodeWarningThreshold = 200;
+        private static readonly int numberOfInitialNodes = 40;
 
         //Define the colors
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
                 Color.Green, Color.LawnGreen, Color.Orange, Color.DarkKhaki, Color.DarkGray, Color.Moccasin,
                 Color.DarkSeaGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
-                Color.ForestGreen, Color.Beige, Color.AliceBlue, Color.MediumTurquoise, Color.Tomato
+                Color.ForestGreen, Color.Beige, Color.AliceBlue, Color.MediumTurquoise, Color.Tomato,
+                Color.Black
                 };
 
         private static readonly Color selectionColor = Color.Red;
         private static readonly Color parentColor = Color.DarkOrange;
 
         private readonly Dictionary<Quantifier, Color> colorMap = new Dictionary<Quantifier, Color>();
-        private int currColorIdx;
 
         public DAGView(AxiomProfiler profiler)
         {
@@ -62,7 +65,7 @@ namespace AxiomProfiler
             if (_z3AxiomProfiler.model == null) return;
             var newNodeInsts = _z3AxiomProfiler.model.instances
                                        .Where(inst => inst.Depth <= maxRenderDepth.Value)
-                                       .OrderByDescending(inst => inst.Cost)
+                                       .OrderByDescending(inst => inst.DeepestSubpathDepth)
                                        .ToList();
 
             drawGraphWithInstantiations(newNodeInsts);
@@ -72,17 +75,23 @@ namespace AxiomProfiler
         {
             var newNodeInsts = _z3AxiomProfiler.model.instances
                                        .Where(inst => inst.Depth <= maxRenderDepth.Value)
-                                       .OrderByDescending(inst => inst.Cost)
-                                       .Take(newNodeWarningThreshold)
+                                       .OrderByDescending(inst => inst.DeepestSubpathDepth)
+                                       .Take(numberOfInitialNodes)
                                        .ToList();
 
             drawGraphWithInstantiations(newNodeInsts);
         }
 
+        public void Clear()
+        {
+            drawGraphWithInstantiations(new List<Instantiation>());
+        }
+
         private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts)
         {
-            colorMap.Clear();
-            currColorIdx = 0;
+            var usedQuants = newNodeInsts.Select(inst => inst.Quant).Distinct().ToList();
+            var removedQuants = colorMap.Keys.Where(quant => !usedQuants.Contains(quant)).ToList();
+            foreach (var removedQuant in removedQuants) colorMap.Remove(removedQuant);
 
             var edgeRoutingSettings = new EdgeRoutingSettings
             {
@@ -104,7 +113,11 @@ namespace AxiomProfiler
 
             if (checkNumNodesWithDialog(ref newNodeInsts)) return;
 
-            foreach (var node in newNodeInsts.Select(connectToVisibleNodes))
+            // Sorting helps ensure that the most common quantifiers end up with different colors
+            var prioritySortedNewNodeInsts = newNodeInsts.GroupBy(inst => inst.Quant)
+                .OrderByDescending(group => group.Count())
+                .SelectMany(group => group);
+            foreach (var node in prioritySortedNewNodeInsts.Select(connectToVisibleNodes))
             {
                 formatNode(node);
             }
@@ -136,15 +149,13 @@ namespace AxiomProfiler
 
         private Color getColor(Quantifier quant)
         {
-            if (!colorMap.ContainsKey(quant) && currColorIdx >= colors.Count)
+            if (!colorMap.TryGetValue(quant, out var color))
             {
-                return Color.Black;
+                color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
+                colorMap[quant] = color;
             }
-            if (colorMap.ContainsKey(quant)) return colorMap[quant];
 
-            colorMap[quant] = colors[currColorIdx];
-            currColorIdx++;
-            return colorMap[quant];
+            return color;
         }
 
         private int oldX = -1;
@@ -188,7 +199,7 @@ namespace AxiomProfiler
 
         private void selectNode(Node node)
         {
-            if (previouslySelectedNode != null)
+            if (previouslySelectedNode != null || highlightedNodes.Count != 0)
             {
                 unselectNode();
             }
@@ -220,9 +231,9 @@ namespace AxiomProfiler
 
         public void unselectNode()
         {
-            if (previouslySelectedNode == null) return;
+            if (previouslySelectedNode == null && highlightedNodes.Count == 0) return;
             // restore old node
-            formatNode(previouslySelectedNode);
+            if (previouslySelectedNode != null) formatNode(previouslySelectedNode);
 
             // plus all parents
             foreach (var node in highlightedNodes)
@@ -349,6 +360,15 @@ namespace AxiomProfiler
                     .Aggregate((i1, i2) => i1.DeepestSubpathDepth > i2.DeepestSubpathDepth ? i1 : i2);
 
                 pathInstantiations.Add(current);
+
+                //make sure that all instantiations causing this path are visible and can be explored by the user
+                foreach (var responsibleInst in current.ResponsibleInstantiations)
+                {
+                    if (!pathInstantiations.Contains(responsibleInst))
+                    {
+                        pathInstantiations.Add(responsibleInst);
+                    }
+                }
             }
             pathInstantiations = pathInstantiations.Where(inst => graph.FindNode(inst.uniqueID) == null).ToList();
             if (checkNumNodesWithDialog(ref pathInstantiations)) return;
@@ -434,42 +454,238 @@ namespace AxiomProfiler
                 return;
             }
 
-            // building path downwards:
-            var bestDownPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, true);
-            var bestUpPath = buildPathDepthFirst(new InstantiationPath(), previouslySelectedNode, false);
-            bestUpPath.appendWithOverlap(bestDownPath);
-            highlightPath(bestUpPath);
-            _z3AxiomProfiler.SetInfoPanel(bestUpPath);
+            Task.Run(() =>
+            {
+                // During debugging we want VS to catch exceptions so we can inspect the program state at the point where the exception was thrown.
+                // For release builds we catch the execption here and display a message so the user knows that that they shouldn't wait for a path to be found.
+#if !DEBUG
+                try
+                {
+#endif
+                    _z3AxiomProfiler.DisplayMessage("Finding best path for generalization...");
+
+                    // building path downwards:
+                    var bestDownPath = BestDownPath(previouslySelectedNode);
+                    InstantiationPath bestUpPath;
+                    if (bestDownPath.TryGetLoop(out var loop))
+                    {
+                        bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
+                        if (bestUpPath == null)
+                        {
+                            bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                        }
+                    }
+                    else
+                    {
+                        bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                    }
+
+                    if (bestUpPath.TryGetCyclePath(out var cyclePath))
+                    {
+                        highlightPath(cyclePath);
+                        _z3AxiomProfiler.UpdateSync(cyclePath);
+                    }
+                    else
+                    {
+                        highlightPath(bestUpPath);
+                        _z3AxiomProfiler.UpdateSync(bestUpPath);
+                    }
+#if !DEBUG
+                }
+                catch (Exception exception)
+                {
+                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {exception.Message}");
+                }
+#endif
+            });
         }
 
-        private InstantiationPath buildPathDepthFirst(InstantiationPath basePath, Node node, bool down)
+        // These factors were determined experimentally
+        private static readonly double outlierThreshold = 0.3;
+        private static readonly double incomingEdgePenalizationFactor = 0.5;
+
+        /// <summary>
+        /// Assigns a score to instantiation paths based on the predicted likelyhood that it conatins a matching loop.
+        /// </summary>
+        /// <returns>Higher values indicate a higher likelyhood of the path containing a matching loop.</returns>
+        /// <remarks>All constants were determined experimentally.</remarks>
+        private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
-            basePath = new InstantiationPath(basePath);
-            if (down)
-            {
-                basePath.append((Instantiation)node.UserData);
-            }
-            else
-            {
-                basePath.prepend((Instantiation)node.UserData);
-            }
+            //There may be some "outiers" before or after a matching loop.
+            //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
+            var nonEliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term, Term>>(statistics
+                .Where(dp => dp.Item2 > eliminationTreshhold)
+                .Select(dp => dp.Item1));
 
-            var relevantEdges = down ? node.OutEdges : node.InEdges;
-            var returnPath = basePath;
-            foreach (var edge in relevantEdges)
-            {
-                var pathCandidate = buildPathDepthFirst(basePath, down ? edge.TargetNode : edge.SourceNode, down);
+            //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
+            var pathInstantiations = instantiationPath.getInstantiations();
+            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) =>
+                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
+                .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
 
-                if (pathCandidate.Cost() >= returnPath.Cost())
+            var maxStartIndex = 0;
+            var maxLength = 0;
+            var lastMaxStartIndex = 0;
+
+            var firstKept = nonEliminatableQuantifiers.Any(q => q.Item1 == pathInstantiations.First().Quant && q.Item2 == pathInstantiations.First().bindingInfo.fullPattern);
+            var curStartIndex = firstKept ? 0 : 1;
+            var curLength = firstKept ? 1 : 0;
+            for (var i = 0; i < instantiations.Count(); ++i)
+            {
+                if (instantiations[i].Any(q => nonEliminatableQuantifiers.Contains(q)))
                 {
-                    returnPath = pathCandidate;
+                    ++curLength;
+                }
+                else
+                {
+                    if (curLength > maxLength)
+                    {
+                        maxStartIndex = curStartIndex;
+                        lastMaxStartIndex = curStartIndex;
+                        maxLength = curLength;
+                    }
+                    else if (curLength == maxLength)
+                    {
+                        lastMaxStartIndex = curStartIndex;
+                    }
+                    curStartIndex = i + 2;
+                    curLength = 0;
                 }
             }
-            return returnPath;
+            if (curLength > maxLength)
+            {
+                maxStartIndex = curStartIndex;
+                lastMaxStartIndex = curStartIndex;
+                maxLength = curLength;
+            }
+            else if (curLength == maxLength)
+            {
+                lastMaxStartIndex = curStartIndex;
+            }
+
+            //...and eliminate the prefix/postfix of that subsequence
+            var remainingStart = eliminatePrefix ? maxStartIndex : 0;
+            var remainingLength = (eliminatePostfix ? lastMaxStartIndex + maxLength : instantiations.Count()) - remainingStart;
+            var remainingInstantiations = instantiationPath.getInstantiations().ToList().GetRange(remainingStart, remainingLength);
+
+            if (remainingInstantiations.Count() == 0) return -1;
+
+            var remainingPath = new InstantiationPath();
+            foreach (var inst in remainingInstantiations)
+            {
+                remainingPath.append(inst);
+            }
+
+            /* We count the number of incoming edges (responsible instantiations that are not part of the path) and penalize them.
+             * This ensures that we choose the best path. E.g. in the triangular case (A -> B, A -> C, B -> C) we want to choose A -> B -> C
+             * and not A -> B which would have an incoming edge (B -> C).
+             */
+            var numberIncomingEdges = 0;
+            foreach (var inst in remainingInstantiations)
+            {
+                numberIncomingEdges += inst.ResponsibleInstantiations.Where(i => !instantiationPath.getInstantiations().Contains(i)).Count();
+            }
+
+            /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
+             * which is an approximation for the number of repetitions of a matching loop occuring in that path.
+             */
+            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.NumberOfDistinctQuantifierFingerprints();
+        }
+
+        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
+        // build a path from the best segments.
+        private static readonly int pathSegmentSize = 8;
+
+        private InstantiationPath BestDownPath(Node node)
+        {
+            var curNode = node;
+            var curPath = new InstantiationPath();
+            curPath.append((Instantiation)node.UserData);
+            while (curNode.OutEdges.Any())
+            {
+                curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
+                curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
+            }
+            return curPath;
+        }
+
+        private InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
+        {
+            var curNode = node;
+            var curPath = downPath;
+            while (curNode.InEdges.Any())
+            {
+                curPath = AllUpPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path =>
+                {
+                    path.appendWithOverlap(downPath);
+                    return InstantiationPathScoreFunction(path, true, true);
+                }).First();
+                curNode = graph.FindNode(curPath.getInstantiations().First().uniqueID);
+            }
+            return curPath;
+        }
+
+        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node, int nodesToGo)
+        {
+            if (nodesToGo <= 0 || !node.OutEdges.Any()) return Enumerable.Repeat(basePath, 1);
+            return node.OutEdges.SelectMany(e => {
+                var copy = new InstantiationPath(basePath);
+                copy.append((Instantiation)e.TargetNode.UserData);
+                return AllDownPaths(copy, e.TargetNode, nodesToGo - 1);
+            });
+        }
+
+        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node, int nodesToGo)
+        {
+            if (nodesToGo <= 0 || !node.InEdges.Any()) return Enumerable.Repeat(basePath, 1);
+            return node.InEdges.SelectMany(e => {
+                var copy = new InstantiationPath(basePath);
+                copy.prepend((Instantiation)e.SourceNode.UserData);
+                return AllUpPaths(copy, e.SourceNode, nodesToGo - 1);
+            });
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
+        {
+            var nodeInst = (Instantiation)node.UserData;
+            if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
+            loop = loop.Reverse().RepeatIndefinietly();
+            loop = loop.SkipWhile(inst => inst.Item1 != nodeInst.Quant || inst.Item2 != nodeInst.bindingInfo.fullPattern);
+            var res = ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
+            res.appendWithOverlap(downPath);
+            return res;
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
+        {
+            if (!instantiations.Any()) return path;
+            var instantiation = instantiations.First();
+            var nodeInst = (Instantiation)node.UserData;
+            if (instantiation.Item1 != nodeInst.Quant || nodeInst.bindingInfo == null || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
+            var extendedPath = new InstantiationPath(path);
+            extendedPath.prepend(nodeInst);
+            var bestPath = extendedPath;
+            var remainingInstantiations = instantiations.Skip(1);
+            foreach (var predecessor in node.InEdges)
+            {
+                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, predecessor.SourceNode);
+                if (candidatePath.Length() > bestPath.Length())
+                {
+                    bestPath = candidatePath;
+                }
+            }
+            return bestPath;
         }
 
         private void highlightPath(InstantiationPath path)
         {
+            if (previouslySelectedNode != null || highlightedNodes.Count != 0)
+            {
+                unselectNode();
+            }
+
             foreach (var instantiation in path.getInstantiations())
             {
                 highlightNode(graph.FindNode(instantiation.uniqueID));

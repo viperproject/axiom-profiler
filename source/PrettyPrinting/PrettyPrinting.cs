@@ -7,11 +7,52 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler.PrettyPrinting
 {
+    public class PrintConstants
+    {
+        public static bool LargeTextMode = false;
+
+        //colors
+        public static readonly Color patternMatchColor = Color.LimeGreen;
+        public static readonly Color blameColor = Color.Goldenrod;
+        public static readonly Color bindColor = Color.DeepSkyBlue;
+        public static readonly Color equalityColor = Color.DarkViolet;
+        public static readonly Color generalizationColor = Color.OrangeRed;
+        public static readonly Color defaultTextColor = Color.Black;
+        public static readonly Color defaultTermColor = Color.DarkSlateGray;
+        public static readonly Color warningTextColor = Color.Red;
+        public static readonly Color sectionTitleColor = Color.DarkCyan;
+        public static readonly Color instantiationTitleColor = Color.DarkRed;
+
+        //fonts
+        private static readonly Font RegDefaultFont = new Font("Consolas", 9, FontStyle.Regular);
+        private static readonly Font RegTitleFont = new Font("Consolas", 9, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font RegSubtitleFont = new Font("Consolas", 9, FontStyle.Underline);
+        private static readonly Font RegBoldFont = new Font(DefaultFont, FontStyle.Bold);
+        private static readonly Font RegItalicFont = new Font(DefaultFont, FontStyle.Italic);
+
+        private static readonly Font BigDefaultFont = new Font("Consolas", 23, FontStyle.Bold);
+        private static readonly Font BigTitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigSubtitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigBoldFont = new Font(DefaultFont, FontStyle.Bold);
+        private static readonly Font BigItalicFont = new Font(DefaultFont, FontStyle.Italic | FontStyle.Bold);
+
+        public static Font DefaultFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font TitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font SubtitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font BoldFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font ItalicFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+
+        //strings
+        public static readonly string indentDiff = "¦ ";
+
+        private PrintConstants() {}
+    }
+
     public class PrintRuleDictionary
     {
-        private readonly Dictionary<string, PrintRule> termTranslations = new Dictionary<string, PrintRule>();
+        private readonly Dictionary<string, List<PrintRule>> termTranslations = new Dictionary<string, List<PrintRule>>();
 
-        public PrintRule getRewriteRule(Term t)
+        public IEnumerable<PrintRule> getRewriteRules(Term t)
         {
             if (termTranslations.ContainsKey(t.id + ""))
             {
@@ -28,7 +69,7 @@ namespace AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
-        public PrintRule getRewriteRule(string match)
+        public IEnumerable<PrintRule> getRewriteRules(string match)
         {
             if (termTranslations.ContainsKey(match))
             {
@@ -54,16 +95,6 @@ namespace AxiomProfiler.PrettyPrinting
             throw new KeyNotFoundException($"No rewrite rule for term {t}!");
         }
 
-        public KeyValuePair<string, PrintRule> getGeneralTermTranslationPair(Term t)
-        {
-            if (termTranslations.ContainsKey(t.Name + t.GenericType))
-            {
-                return new KeyValuePair<string, PrintRule>(t.Name + t.GenericType, termTranslations[t.Name + t.GenericType]);
-            }
-
-            return new KeyValuePair<string, PrintRule>(t.Name, termTranslations[t.Name]);
-        }
-
         public bool hasRule(Term t)
         {
             return termTranslations.ContainsKey(t.id + "") ||
@@ -83,12 +114,19 @@ namespace AxiomProfiler.PrettyPrinting
 
         public void addRule(string ruleMatch, PrintRule rule)
         {
-            termTranslations[ruleMatch] = rule;
+            if (!termTranslations.ContainsKey(ruleMatch))
+            {
+                termTranslations[ruleMatch] = new List<PrintRule>();
+            }
+            if (!termTranslations[ruleMatch].Contains(rule))
+            {
+                termTranslations[ruleMatch].Add(rule);
+            }
         }
 
         public IEnumerable<KeyValuePair<string, PrintRule>> getAllRules()
         {
-            return termTranslations.OrderBy(kvPair => kvPair.Key);
+            return termTranslations.OrderBy(kvPair => kvPair.Key).SelectMany(kv => kv.Value.Select(rule => new KeyValuePair<string, PrintRule>(kv.Key, rule)));
         }
 
         public PrintRuleDictionary()
@@ -98,7 +136,10 @@ namespace AxiomProfiler.PrettyPrinting
 
         private PrintRuleDictionary(PrintRuleDictionary other)
         {
-            termTranslations = new Dictionary<string, PrintRule>(other.termTranslations);
+            foreach (var kv in other.termTranslations)
+            {
+                termTranslations[kv.Key] = new List<PrintRule>(kv.Value);
+            }
         }
 
         public PrintRuleDictionary clone()
@@ -112,10 +153,11 @@ namespace AxiomProfiler.PrettyPrinting
 
     public class PrintRule
     {
-        public string prefix;
-        public string infix;
-        public string suffix;
+        public Func<bool, string> prefix;
+        public Func<bool, string> infix;
+        public Func<bool, string> suffix;
         public Color color;
+        public Font font;
         public bool printChildren;
         public bool associative;
         public bool indent;
@@ -126,29 +168,31 @@ namespace AxiomProfiler.PrettyPrinting
         public ParenthesesSetting parentheses;
         public bool isDefault;
         public bool isUserdefined;
-        public List<List<Term>> historyConstraints;
+        public List<Term> historyConstraints;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
         public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
 
         public static PrintRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
-            var prefix = t.Name +
+            var prefix = new Func<bool, string>(isPrime => t.Name +
                 (format.showType ? t.GenericType : "") +
-                (format.showTermId && t.id >= 0 ? "[" + t.id + "]" : "") +
-                "(";
+                (t.generalizationCounter >= 0 ? (isPrime ? "'" : "") + "_" + t.generalizationCounter : "") +
+                (t.iterationOffset > 0 ? "_-" + t.iterationOffset : "") +
+                (format.showTermId && t.generalizationCounter < 0 && t.id != -1 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (isPrime ? "'" : "") + "]" : "") +
+                "(");
             return new PrintRule
             {
                 prefix = prefix,
-                infix = ", ",
-                suffix = ")",
-                color = Color.DarkSlateGray,
+                infix = new Func<bool, string>(_ => ", "),
+                suffix = new Func<bool, string>(_ => ")"),
+                color = PrintConstants.defaultTermColor,
                 printChildren = true,
                 associative = false,
                 indent = true,
                 isDefault = true,
                 precedence = 0,
-                historyConstraints = new List<List<Term>>(),
+                historyConstraints = new List<Term>(),
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,
                 suffixLineBreak = LineBreakSetting.Before,
@@ -230,7 +274,7 @@ namespace AxiomProfiler.PrettyPrinting
                 infixLineBreak = infixLineBreak,
                 suffixLineBreak = suffixLineBreak,
                 associative = associative,
-                historyConstraints = new List<List<Term>>(historyConstraints),
+                historyConstraints = new List<Term>(historyConstraints),
                 indent = indent,
                 isDefault = isDefault,
                 parentheses = parentheses,
@@ -243,7 +287,10 @@ namespace AxiomProfiler.PrettyPrinting
     public class PrettyPrintFormat
     {
         public int maxWidth;
-        public int maxDepth;
+        public int MaxTermPrintingDepth;
+        public int MaxEqualityExplanationPrintingDepth;
+        public int CurrentEqualityExplanationPrintingDepth = 0;
+        public bool ShowEqualityExplanations;
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
@@ -251,21 +298,51 @@ namespace AxiomProfiler.PrettyPrinting
         public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
+        public bool printContextSensitive = true;
+        public Dictionary<Term, int> termNumbers = new Dictionary<Term, int>();
+        public Dictionary<EqualityExplanation, int> equalityNumbers = new Dictionary<EqualityExplanation, int>();
 
-        public PrettyPrintFormat nextDepth(Term parent, int childNo)
+        public PrettyPrintFormat NextTermPrintingDepth(Term parent, int childNo)
         {
             var nextFormat = new PrettyPrintFormat
             {
                 maxWidth = maxWidth,
-                maxDepth = maxDepth == 0 ? 0 : maxDepth - 1,
+                MaxTermPrintingDepth = MaxTermPrintingDepth == 0 ? 0 : MaxTermPrintingDepth - 1,
+                MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
+                CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth,
+                ShowEqualityExplanations = ShowEqualityExplanations,
                 showTermId = showTermId,
                 showType = showType,
                 rewritingEnabled = rewritingEnabled,
                 printRuleDict = printRuleDict,
-                childIndex = childNo
+                childIndex = childNo,
+                printContextSensitive = printContextSensitive,
+                termNumbers = termNumbers,
+                equalityNumbers = equalityNumbers
             };
             nextFormat.history.AddRange(history);
             nextFormat.history.Add(parent);
+            return nextFormat;
+        }
+
+        public PrettyPrintFormat NextEqualityExplanationPrintingDepth()
+        {
+            var nextFormat = new PrettyPrintFormat
+            {
+                maxWidth = maxWidth,
+                MaxTermPrintingDepth = MaxTermPrintingDepth,
+                MaxEqualityExplanationPrintingDepth = MaxEqualityExplanationPrintingDepth,
+                CurrentEqualityExplanationPrintingDepth = CurrentEqualityExplanationPrintingDepth + 1,
+                ShowEqualityExplanations = ShowEqualityExplanations,
+                showTermId = showTermId,
+                showType = showType,
+                rewritingEnabled = rewritingEnabled,
+                printRuleDict = printRuleDict,
+                childIndex = childIndex,
+                printContextSensitive = printContextSensitive,
+                termNumbers = termNumbers,
+                equalityNumbers = equalityNumbers
+            };
             return nextFormat;
         }
 
@@ -274,7 +351,9 @@ namespace AxiomProfiler.PrettyPrinting
             return new PrettyPrintFormat
             {
                 maxWidth = 80,
-                maxDepth = 0,
+                MaxTermPrintingDepth = 0,
+                MaxEqualityExplanationPrintingDepth = 1,
+                ShowEqualityExplanations = true,
                 showTermId = true,
                 showType = true,
                 rewritingEnabled = false,
@@ -288,12 +367,19 @@ namespace AxiomProfiler.PrettyPrinting
             // no rule -> default
             if (!printRuleDict.hasRule(t)) return PrintRule.DefaultRewriteRule(t, this);
 
-            var rule = printRuleDict.getRewriteRule(t);
+            IEnumerable<PrintRule> rules = printRuleDict.getRewriteRules(t);
 
             // userdefined & disabled --> default
-            if (!rewritingEnabled && rule.isUserdefined) return PrintRule.DefaultRewriteRule(t, this);
+            if (!rewritingEnabled)
+            {
+                rules = rules.Where(rule => !rule.isUserdefined);
+            }
+            rules = rules.Reverse().OrderByDescending(rule => rule.historyConstraints.Count);
             // history constraint ok --> rule ok
-            if (historyConstraintSatisfied(rule)) return rule;
+
+            if (!printContextSensitive) return rules.FirstOrDefault() ?? PrintRule.DefaultRewriteRule(t, this);
+            var contextRule = rules.FirstOrDefault(rule => historyConstraintSatisfied(rule));
+            if (contextRule != null) return contextRule;
 
             // freeVar --> no usable id, therefore specific rule is on name
             // there is therefore no generale rule to fall back on.
@@ -301,9 +387,9 @@ namespace AxiomProfiler.PrettyPrinting
 
             // history constraint violated --> find less specific rules (but more specific than default)
             if (printRuleDict.hasRule(t.Name + t.GenericType))
-                return printRuleDict.getRewriteRule(t.Name + t.GenericType);
+                return printRuleDict.getRewriteRules(t.Name + t.GenericType).Single();
             return printRuleDict.hasRule(t.Name) ?
-                printRuleDict.getRewriteRule(t.Name) : PrintRule.DefaultRewriteRule(t, this);
+                printRuleDict.getRewriteRules(t.Name).Single() : PrintRule.DefaultRewriteRule(t, this);
         }
 
         public PrintRule GetParentPrintRule()
@@ -315,14 +401,11 @@ namespace AxiomProfiler.PrettyPrinting
         private bool historyConstraintSatisfied(PrintRule rule)
         {
             if (rule.historyConstraints.Count == 0) return true;
-            foreach (var constraint in rule.historyConstraints)
-            {
-                if (constraint.Count > history.Count) continue;
-                var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
-                var intermediate = slice.Zip(constraint, (term1, term2) => term1.id == term2.id);
-                if (intermediate.All(val => val)) return true;
-            }
-            return false;
+            var constraint = rule.historyConstraints;
+            if (constraint.Count > history.Count) return false;
+            var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
+            var intermediate = slice.Zip(constraint, (term1, term2) => term1.id == term2.id);
+            return intermediate.All(val => val);
         }
 
         public void addTemporaryRule(string match, PrintRule rule)
@@ -332,7 +415,7 @@ namespace AxiomProfiler.PrettyPrinting
             PrintRule oldRule = null;
             if (printRuleDict.hasRule(match))
             {
-                oldRule = printRuleDict.getRewriteRule(match);
+                oldRule = printRuleDict.getRewriteRules(match).FirstOrDefault();
             }
             // save original rule only if it was not already a temporary rule.
             if (!originalRulesReplacedByTemp.ContainsKey(match))
@@ -378,6 +461,11 @@ namespace AxiomProfiler.PrettyPrinting
                 }
             }
             originalRulesReplacedByTemp.Clear();
+        }
+
+        public int GetEqualityNumber(Term source, Term target)
+        {
+            return equalityNumbers.First(kv => Term.semanticTermComparer.Equals(source, kv.Key.source) && Term.semanticTermComparer.Equals(target, kv.Key.target)).Value;
         }
     }
 }

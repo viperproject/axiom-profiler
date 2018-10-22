@@ -122,6 +122,9 @@ namespace AxiomProfiler
                 case "Cost (desc)":
                     ordFunc = inst => -inst.Cost;
                     break;
+                case "Starting Longest Path":
+                    ordFunc = inst => -inst.DeepestSubpathDepth;
+                    break;
                 default:
                     ordFunc = inst => inst.LineNo;
                     break;

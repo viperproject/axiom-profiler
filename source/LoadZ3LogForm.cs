@@ -38,12 +38,15 @@ namespace AxiomProfiler
         public void setParameterConfiguration(ParameterConfiguration config)
         {
             logFilePath.Text = (config.z3LogFile == null) ? "" : config.z3LogFile;
+            checkFilteringEnabled.Checked = config.checkToConsider != 0;
+            checkFilteringNumber.Value = config.checkToConsider == 0 ? 1 : config.checkToConsider;
         }
 
         public ParameterConfiguration GetParameterConfiguration()
         {
             ParameterConfiguration config = ParameterConfiguration.loadParameterConfigurationFromSettings();
             config.z3LogFile = logFilePath.Text;
+            config.checkToConsider = checkFilteringEnabled.Checked ? (int) checkFilteringNumber.Value : 0;
             return config;
         }
 

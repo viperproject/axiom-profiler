@@ -20,6 +20,9 @@ namespace AxiomProfiler.QuantifierModel
         // dict with all terms seen so far.
         public readonly Dictionary<int, Term> terms = new Dictionary<int, Term>();
 
+        // dict with equality explanations to a term's equivalence class' root (in z3)
+        public readonly Dictionary<int, EqualityExplanation> equalityExplanations = new Dictionary<int, EqualityExplanation>();
+
         // dict with all quanitfiers seen so far.
         public readonly Dictionary<string, Quantifier> quantifiers = new Dictionary<string, Quantifier>();
 
@@ -55,6 +58,9 @@ namespace AxiomProfiler.QuantifierModel
 
         // Source of the model.
         public string LogFileName;
+
+        // Number of checks in the log file
+        public int NumChecks;
 
         // Literal to mark a scope as done.
         internal static readonly Literal MarkerLiteral = new Literal

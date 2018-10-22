@@ -32,6 +32,7 @@ namespace AxiomProfiler
         private IPrintable currentInfoPanelPrintable;
         private PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private ParameterConfiguration parameterConfiguration;
+        private ScriptingTasks scriptingTasks = new ScriptingTasks();
         private DAGView dagView;
         public Model model;
 
@@ -59,31 +60,24 @@ namespace AxiomProfiler
             uiUpdateTimer.Interval = 5;
             uiUpdateTimer.Tick += treeUiUpdateTimerTick;
             uiUpdateTimer.Tick += InfoPanelUpdateTick;
+
+            var largeTextMode = Properties.Settings.Default.LargeTextMode;
+            largeTextToolStripMenuItem.Checked = largeTextMode;
+            PrintConstants.LargeTextMode = largeTextMode;
+            z3AxiomTree.Font = PrintConstants.DefaultFont;
         }
 
 
-        private void AxiomProfiler_OnLoadEvent(object sender, EventArgs e)
+        private void AxiomProfiler_Load(object sender, EventArgs e)
         {
             if (parameterConfiguration == null) return;
-
-            Loader.LoaderTask task = Loader.LoaderTask.LoaderTaskBoogie;
-
-            if (!string.IsNullOrEmpty(parameterConfiguration.z3LogFile))
-            {
-                task = Loader.LoaderTask.LoaderTaskParse;
-            }
-            loadModel(parameterConfiguration, task);
+            loadModel(parameterConfiguration);
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-        }
 
-        private void LoadBoogie_Click(object sender, EventArgs e)
-        {
-            loadModelFromBoogie();
-        }
-
-        private void LoadZ3_Click(object sender, EventArgs e)
-        {
-            loadModelFromZ3();
+            if (ScriptingSupport.RunScriptingTasks(model, scriptingTasks))
+            {
+                Environment.Exit(0);
+            }
         }
 
         private void LoadZ3Logfile_Click(object sender, EventArgs e)
@@ -113,7 +107,6 @@ namespace AxiomProfiler
 
             ParameterConfiguration config = new ParameterConfiguration();
 
-            config.boogieOptions = "/bv:z /trace";
             error = "";
 
             for (idx = 0; idx < args.Length; idx++)
@@ -123,25 +116,11 @@ namespace AxiomProfiler
                 if (args[idx].StartsWith("/") && !File.Exists(args[idx]))
                 {
                     // parse command line parameter switches
-                    if (args[idx].StartsWith("/f:"))
-                    {
-                        config.functionName = args[idx].Substring(3);
-                    }
-                    else if (args[idx].StartsWith("/l:"))
+                    if (args[idx].StartsWith("/l:"))
                     {
                         config.z3LogFile = args[idx].Substring(3);
                         // minimum requirements have been fulfilled.
                         retval = true;
-                    }
-                    else if (args[idx].StartsWith("/t:"))
-                    {
-                        uint timeout;
-                        if (!uint.TryParse(args[idx].Substring(3), out timeout))
-                        {
-                            error = $"Cannot parse timeout duration \"{args[idx].Substring(3)}\"";
-                            return false;
-                        }
-                        config.timeout = (int)timeout;
                     }
                     else if (args[idx].StartsWith("/c:"))
                     {
@@ -165,6 +144,56 @@ namespace AxiomProfiler
                     else if (args[idx] == "/s")
                     {
                         config.skipDecisions = true;
+                    }
+                    else if (args[idx].StartsWith("/loops:"))
+                    {
+                        if (Int32.TryParse(args[idx].Substring(7), out var numPaths))
+                        {
+                            if (numPaths <= 0)
+                            {
+                                error = "Invalid command line argument: number of paths to check for matching loops must be >= 1.";
+                                return false;
+                            }
+                            scriptingTasks.NumPathsToExplore = numPaths;
+                        }
+                        else
+                        {
+                            error = "Invalid command line argument: specified number of paths to check for matching loops was not a number.";
+                            return false;
+                        }
+                    }
+                    else if (args[idx] == "/showNumChecks")
+                    {
+                        scriptingTasks.ShowNumChecks = true;
+                    }
+                    else if (args[idx] == "/showQuantStatistics")
+                    {
+                        scriptingTasks.ShowQuantStatistics = true;
+                    }
+                    else if (args[idx].StartsWith("/findHighBranching:"))
+                    {
+                        if (Int32.TryParse(args[idx].Substring(19), out var threshold))
+                        {
+                            if (threshold < 0)
+                            {
+                                error = "Invalid command line argument: high branching threshold must be non-negative.";
+                                return false;
+                            }
+                            scriptingTasks.FindHighBranchingThreshold = threshold;
+                        }
+                        else
+                        {
+                            error = "Invalid command line argument: specified high branching threshold was not a number.";
+                            return false;
+                        }
+                    }
+                    else if (args[idx].StartsWith("/outPrefix:"))
+                    {
+                        scriptingTasks.OutputFilePrefix = args[idx].Substring(11);
+                    }
+                    else if (args[idx] == "/autoQuit")
+                    {
+                        scriptingTasks.QuitOnCompletion = true;
                     }
                     else
                     {
@@ -193,16 +222,6 @@ namespace AxiomProfiler
                         config.z3LogFile = args[idx];
                         retval = true;
                     }
-                    else if (config.preludeBplFileInfo == null)
-                    {
-                        config.preludeBplFileInfo = new FileInfo(args[idx]);
-                    }
-                    else if (config.codeBplFileInfo == null)
-                    {
-                        config.codeBplFileInfo = new FileInfo(args[idx]);
-                        // minimum requirements have been fulfilled.
-                        retval = true;
-                    }
                     else
                     {
                         error = "Multiple inputs files specified.";
@@ -216,50 +235,6 @@ namespace AxiomProfiler
                 parameterConfiguration = config;
             }
             return true;
-        }
-
-        private void loadModelFromBoogie()
-        {
-            LoadBoogieForm loadform = new LoadBoogieForm();
-            if (parameterConfiguration != null)
-            {
-                loadform.setParameterConfiguration(parameterConfiguration);
-            }
-            else
-            {
-                loadform.reloadParameterConfiguration();
-            }
-
-            var dialogResult = loadform.ShowDialog();
-            if (dialogResult != DialogResult.OK)
-                return;
-
-            parameterConfiguration = loadform.GetParameterConfiguration();
-            ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskBoogie);
-        }
-
-        private void loadModelFromZ3()
-        {
-            LoadZ3Form loadform = new LoadZ3Form();
-            if (parameterConfiguration != null)
-            {
-                loadform.setParameterConfiguration(parameterConfiguration);
-            }
-            else
-            {
-                loadform.reloadParameterConfiguration();
-            }
-
-            var dialogResult = loadform.ShowDialog();
-            if (dialogResult != DialogResult.OK)
-                return;
-
-            parameterConfiguration = loadform.GetParameterConfiguration();
-            ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
-
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskZ3);
         }
 
         private void loadModelFromZ3Logfile()
@@ -281,15 +256,15 @@ namespace AxiomProfiler
             parameterConfiguration = loadform.GetParameterConfiguration();
             ParameterConfiguration.saveParameterConfigurationToSettings(parameterConfiguration);
 
-            loadModel(parameterConfiguration, Loader.LoaderTask.LoaderTaskParse);
+            loadModel(parameterConfiguration);
         }
 
-        private void loadModel(ParameterConfiguration config, Loader.LoaderTask task)
+        private void loadModel(ParameterConfiguration config)
         {
             resetProfiler();
 
             // Create a new loader and LoadingProgressForm and execute the loading
-            Loader loader = new Loader(config, task);
+            Loader loader = new Loader(config);
             LoadingProgressForm lprogf = new LoadingProgressForm(loader);
             lprogf.ShowDialog();
 
@@ -305,6 +280,7 @@ namespace AxiomProfiler
 
             // reset everything
             model = null;
+            Model.MarkerLiteral.Cause = null; //The cause may be a term in the old model, preventing the GC from freeing some resources untill a new cause is set in the new model
             z3AxiomTree.Nodes.Clear();
             toolTipBox.Clear();
             printRuleDict = new PrintRuleDictionary();
@@ -314,6 +290,13 @@ namespace AxiomProfiler
 
             // clear history
             historyNode.Nodes.Clear();
+
+            dagView.Clear(); //The dagView keeps references to the instances represented by visible nodes. Clearing it allows these resources to be freed.
+
+            /* The entire model can be garbage collected now. Most of it will have aged into generation 2 of the garbage collection algorithm by now
+             * which might take a while (~10s) until it is executed regularly. Giving the hint is, therefore, a good idea.
+             */
+            GC.Collect(2, GCCollectionMode.Optimized);
         }
 
         private void loadTree()
@@ -608,20 +591,85 @@ namespace AxiomProfiler
             }
         }
 
+        /// <summary>
+        /// Prints a message in the left panel.
+        /// </summary>
+        /// <param name="message"> The message to be displayed </param>
+        public void DisplayMessage(string message)
+        {
+            // We have an additional UI update
+            Interlocked.Increment(ref workCounter);
+
+            // Must run on the main (UI) thread
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
+            }
+            else
+            {
+                uiUpdateTimer.Start();
+            }
+
+            // Enqueue the message
+            var messageContent = new InfoPanelContent();
+            messageContent.Append(message);
+            messageContent.finalize();
+            infoPanelQueue.Enqueue(messageContent);
+        }
+
+        /// <summary>
+        /// Displays a printable.
+        /// </summary>
+        /// <param name="c"> The printable to be displayed. </param>
+        /// <ramarks> Calls to this method are synchronized, i.e. it will finish displaying one printable before displaying the next. </remarks>
+        public void UpdateSync(IPrintable c)
+        {
+            // We have an additional UI update
+            Interlocked.Increment(ref workCounter);
+
+            //Must run on the main (UI) thread
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)delegate { uiUpdateTimer.Start(); });
+            }
+            else
+            {
+                uiUpdateTimer.Start();
+            }
+
+            lock (this)
+            {
+                // During debugging we want VS to catch exceptions so we can inspect the program state at the point where the exception was thrown.
+                // For release builds we catch the execption here and display a message so the user knows that that they shouldn't wait for the generalization.
+#if !DEBUG
+                try
+                {
+#endif
+                    DisplayMessage("busy...");
+
+                    // Update
+                    var content = new InfoPanelContent();
+                    c.InfoPanelText(content, getFormatFromGUI());
+                    content.finalize();
+                    currentInfoPanelPrintable = c;
+                    infoPanelQueue.Enqueue(content);
+#if !DEBUG
+                }
+                catch (Exception e)
+                {
+                    // Notify user
+                    Interlocked.Decrement(ref workCounter);
+                    DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {e.Message}");
+                }
+#endif
+            }
+        }
+
         public void SetInfoPanel(IPrintable c)
         {
             if (c == null) return;
 
-            currentInfoPanelPrintable = c;
-            Interlocked.Increment(ref workCounter);
-            uiUpdateTimer.Start();
-            Task.Run(() =>
-            {
-                var content = new InfoPanelContent();
-                c.InfoPanelText(content, getFormatFromGUI());
-                content.finalize();
-                infoPanelQueue.Enqueue(content);
-            });
+            Task.Run(() => UpdateSync(c));
         }
 
         private PrettyPrintFormat getFormatFromGUI()
@@ -631,7 +679,9 @@ namespace AxiomProfiler
                 showType = showTypesCB.Checked,
                 showTermId = showTermIdCB.Checked,
                 maxWidth = (int)maxTermWidthUD.Value,
-                maxDepth = (int)maxTermDepthUD.Value,
+                MaxTermPrintingDepth = (int)maxTermDepthUD.Value,
+                MaxEqualityExplanationPrintingDepth = (int)congruenceDepthUD.Value,
+                ShowEqualityExplanations = showEqualityExplanationsCheckBox.Checked,
                 rewritingEnabled = enableRewritingCB.Checked,
                 printRuleDict = printRuleDict.clone()
             };
@@ -740,8 +790,7 @@ namespace AxiomProfiler
         {
             if (model != null)
             {
-                var fInfo = parameterConfiguration?.preludeBplFileInfo;
-                GraphVizualization.DumpGraph(model, fInfo?.FullName ?? "<unknown>");
+                GraphVizualization.DumpGraph(model, "<unknown>");
             }
         }
 
@@ -794,6 +843,31 @@ namespace AxiomProfiler
         private void z3AxiomTree_Leave(object sender, EventArgs e)
         {
             z3AxiomTree.SelectedNode = null;
+        }
+
+        private void congruenceDepthUD_ValueChanged(object sender, EventArgs e)
+        {
+            // Print with new format
+            SetInfoPanel(currentInfoPanelPrintable);
+        }
+
+        private void showEqualityExplanationsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            // Print with new format
+            SetInfoPanel(currentInfoPanelPrintable);
+        }
+
+        private void largeTextToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // Set and save
+            var largeTextMode = largeTextToolStripMenuItem.Checked;
+            Properties.Settings.Default.LargeTextMode = largeTextMode;
+            Properties.Settings.Default.Save();
+
+            // Update UI
+            PrintConstants.LargeTextMode = largeTextMode;
+            SetInfoPanel(currentInfoPanelPrintable);
+            z3AxiomTree.Font = PrintConstants.DefaultFont;
         }
     }
 }

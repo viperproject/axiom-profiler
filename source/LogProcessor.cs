@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //
 // Copyright (C) Microsoft Corporation.  All Rights Reserved.
 //
@@ -24,6 +24,7 @@ namespace AxiomProfiler
         private Conflict curConfl;
         private readonly List<Literal> cnflResolveLits = new List<Literal>();
         private Instantiation lastInst;
+        private readonly Stack<string> currentTheoryConstraints = new Stack<string>();
         private Term decideClause;
         private static readonly Term[] EmptyTerms = new Term[0];
         private readonly Dictionary<string, List<string>> boogieFiles = new Dictionary<string, List<string>>();
@@ -36,7 +37,18 @@ namespace AxiomProfiler
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
 
+        //TODO: estimate capacity based on file size
+        private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
+        private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000); //keeps track of term rewritings by z3
+        private static readonly String[] proofRuleNames =
+            { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
+            "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
+            "der", "quant-inst", "hypothesis", "lemma", "unit-resolution", "iff-true", "iff-false", "commutativity", "def-axiom", "intro-def",
+            "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res", "proof-bind" };
+
         public readonly Model model = new Model();
+
+        private readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
@@ -193,10 +205,6 @@ namespace AxiomProfiler
         {
             if (key == ";") return null;
             int id = parseIdentifier(RemoveParen(key));
-            if (!model.terms.ContainsKey(id))
-            {
-                model.terms[id] = new Term("free_var_" + id, EmptyTerms);
-            }
             return model.terms[id];
         }
 
@@ -207,12 +215,13 @@ namespace AxiomProfiler
             return key;
         }
 
-        Term[] GetArgs(int off, string[] words)
+        Term[] GetArgs(string[] words, int off, int endExclusive = int.MaxValue)
         {
             if (words.Length <= off)
                 return EmptyTerms;
-            Term[] args = new Term[words.Length - off];
-            for (int i = 0; i < args.Length; ++i)
+            var exploreEnd = Math.Min(words.Length, endExclusive);
+            Term[] args = new Term[exploreEnd - off];
+            for (int i = 0; i + off < exploreEnd; ++i)
                 args[i] = GetTerm(words[i + off]);
             return args;
         }
@@ -281,10 +290,6 @@ namespace AxiomProfiler
             line = SanitizeInputLine(line);
             string[] words = line.Split(sep, StringSplitOptions.RemoveEmptyEntries);
 
-            if (ParseProofStep(words))
-            {
-                return;
-            }
             if (ParseModelLine(words))
             {
                 return;
@@ -499,13 +504,326 @@ namespace AxiomProfiler
             return args;
         }
 
+        /// <summary>
+        /// Generates a binding info from a [new-match] line.
+        /// </summary>
+        /// <param name="logInfo"> The [new-match] line split at spaces. </param>
+        /// <param name="off"> Index at which relvant information starts (after semicolon). </param>
+        /// <param name="pattern"> The pattern term that was matched. </param>
+        /// <param name="bindings"> The terms bound to the quantified variables. </param>
+        private BindingInfo GetBindingInfoFromMatch(string[] logInfo, int off, Term pattern, Term[] bindings)
+        {
+            int endIndex = logInfo.Length;
+            int i = off;
+            var topLevelTerms = new List<Term>();
+            var explanations = bindings.Select(b => GetExplanationToRoot(b.id)).ToList();
+            var bindingsRoots = explanations.Select(e => e.target).ToArray();
+            while (i < endIndex)
+            {
+                if (logInfo[i][0] == '#')
+                {
+                    topLevelTerms.Add(GetTerm(logInfo[i]));
+                    ++i;
+                }
+                else
+                {
+                    var sourceId = parseIdentifier(logInfo[i].Substring(1));
+                    var targetId = parseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1));
+                    explanations.Add(GetExplanation(sourceId, targetId));
+                    i += 2;
+                }
+            }
+            return new BindingInfo(pattern, bindingsRoots, topLevelTerms, explanations.Where(ee => ee.source.id != ee.target.id).Distinct());
+        }
+
+        /// <summary>
+        /// Inserts explanations of argument equalities into congruence explanations.
+        /// </summary>
+        private class ExplanationFinalizer : EqualityExplanationVisitor<EqualityExplanation, LogProcessor>
+        {
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, LogProcessor arg)
+            {
+                var argumentExplanations = target.sourceArgumentEqualities.Select(e => arg.GetExplanation(e.source.id, e.target.id));
+                return new CongruenceExplanation(target.source, target.target, argumentExplanations.ToArray());
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, LogProcessor arg)
+            {
+                return target;
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, LogProcessor arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        /// <summary>
+        /// Reverses the steps in an equality explanation.
+        /// </summary>
+        /// <remarks>
+        /// The explanation from the target to the root must be reversed before concatenating the explanation from the
+        /// source to the root with it.
+        /// </remarks>
+        private class ExplanationReverser : EqualityExplanationVisitor<EqualityExplanation, object>
+        {
+            public override EqualityExplanation Direct(DirectEqualityExplanation target, object arg)
+            {
+                return new DirectEqualityExplanation(target.target, target.source, target.equality);
+            }
+
+            public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                var numEqualities = target.equalities.Length;
+                var reversedChildren = new EqualityExplanation[numEqualities];
+                for (var i = 0; i < numEqualities; ++i)
+                {
+                    reversedChildren[i] = visit(target.equalities[numEqualities - i - 1], arg);
+                }
+                return new TransitiveEqualityExplanation(target.target, target.source, reversedChildren);
+            }
+
+            public override EqualityExplanation Congruence(CongruenceExplanation target, object arg)
+            {
+                var reversedChildren = new EqualityExplanation[target.sourceArgumentEqualities.Length];
+                foreach (var equality in target.sourceArgumentEqualities)
+                {
+                    for (var newIndex = Array.FindIndex(target.target.Args, t => t.id == equality.target.id); newIndex != -1; newIndex = Array.FindIndex(target.target.Args, newIndex + 1, t => t.id == equality.target.id))
+                    {
+                        if (reversedChildren[newIndex] == null)
+                        {
+                            reversedChildren[newIndex] = visit(equality, arg);
+                            break;
+                        }
+                    }
+                }
+                return new CongruenceExplanation(target.target, target.source, reversedChildren);
+            }
+
+            public override EqualityExplanation Theory(TheoryEqualityExplanation target, object arg)
+            {
+                return new TheoryEqualityExplanation(target.target, target.source, target.TheoryName);
+            }
+
+            public override EqualityExplanation RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        /// <summary>
+        /// Flattens equality explanations.
+        /// </summary>
+        private class ExplanationExtractor : EqualityExplanationVisitor<IEnumerable<EqualityExplanation>, object>
+        {
+            public override IEnumerable<EqualityExplanation> Direct(DirectEqualityExplanation target, object arg)
+            {
+                yield return target;
+            }
+
+            public override IEnumerable<EqualityExplanation> Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                return target.equalities;
+            }
+
+            public override IEnumerable<EqualityExplanation> Congruence(CongruenceExplanation target, object arg)
+            {
+                yield return target;
+            }
+
+            public override IEnumerable<EqualityExplanation> Theory(TheoryEqualityExplanation target, object arg)
+            {
+                yield return target;
+            }
+
+            public override IEnumerable<EqualityExplanation> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg)
+            {
+                throw new InvalidOperationException("Equality explanation shouldn't already be generalized!");
+            }
+        }
+
+        private readonly ExplanationFinalizer explanationFinalizer = new ExplanationFinalizer();
+        private readonly ExplanationReverser explanationReverser = new ExplanationReverser();
+        private readonly ExplanationExtractor explanationExtractor = new ExplanationExtractor();
+
+        private readonly Dictionary<string, EqualityExplanation> equalityExplanationCache = new Dictionary<string, EqualityExplanation>();
+
+        /// <summary>
+        /// Follows the equality explanation steps to the root of the specified term's equivalence class.
+        /// </summary>
+        private EqualityExplanation GetExplanationToRoot(int id)
+        {
+            var explanations = new List<EqualityExplanation>();
+            int it;
+            for (it = id; model.equalityExplanations.TryGetValue(it, out var explanation); it = explanation.target.id)
+            {
+                explanations.Add(explanation);
+            }
+            if (explanations.Count() == 1)
+            {
+                return explanations.Single();
+            }
+            else
+            {
+                return new TransitiveEqualityExplanation(model.terms[id], model.terms[it], explanations.Select(ee => explanationFinalizer.visit(ee, this)).ToArray());
+            }
+        }
+
+        /// <summary>
+        /// The body of a quantifier as reported by z3 has the shape Forall ... ==> body. This method extracts the body
+        /// from that term.
+        /// </summary>
+        /// <param name="isSinglyReferenced">
+        /// Indicates whether there may be other instantitations / terms that have a reference to the body term.
+        /// </param>
+        private static Term GetBodyFromImplication(Term quantImpliesBody, out bool isSinglyReferenced)
+        {
+            isSinglyReferenced = false;
+
+            var bodyChildren = new List<Term>();
+            foreach (var child in quantImpliesBody.Args)
+            {
+                if (child.Name != "not" || child.Args.First().Name != "FORALL")
+                {
+                    bodyChildren.Add(child);
+                }
+            }
+            if (bodyChildren.Count == 0)
+            {
+                throw new Exception("Body couldn't be found");
+            }
+            else if (bodyChildren.Count == 1)
+            {
+                return bodyChildren.First();
+            }
+            else
+            {
+                isSinglyReferenced = true;
+                return new Term("or", bodyChildren.ToArray())
+                {
+                    id = quantImpliesBody.id
+                };
+            }
+        }
+
+        /// <summary>
+        /// Generates an explanation for the equality between the indicated terms.
+        /// </summary>
+        /// <param name="sourceId"> The term the explanation starts from. </param>
+        /// <param name="targetId"> The term the explanation should reach. </param>
+        /// <returns></returns>
+        private EqualityExplanation GetExplanation(int sourceId, int targetId)
+        {
+            var key = $"{sourceId}, {targetId}";
+            if (equalityExplanationCache.TryGetValue(key, out var existing)) return existing;
+
+            // Follow steps from the source.
+            EqualityExplanation knownExplanation = null;
+            var sourceExplanations = new List<EqualityExplanation>();
+            for (int sourceIterator = sourceId; model.equalityExplanations.TryGetValue(sourceIterator, out var equalityExplanation); sourceIterator = equalityExplanation.target.id)
+            {
+                if (sourceIterator == targetId)
+                {
+                    var targetTerm = model.terms[targetId];
+                    knownExplanation = new TransitiveEqualityExplanation(targetTerm, targetTerm, emptyEqualityExplanation);
+                    break;
+                }
+
+                // Stop if we know the rest of the explanation.
+                if (equalityExplanationCache.TryGetValue($"{sourceIterator}, {targetId}", out knownExplanation)) break;
+
+                sourceExplanations.Add(equalityExplanation);
+            }
+
+            var targetExplanations = new List<EqualityExplanation>();
+            if (knownExplanation == null)
+            {
+
+                // Follow steps from the target.
+                for (int targetIterator = targetId; model.equalityExplanations.TryGetValue(targetIterator, out var equalityExplanation); targetIterator = equalityExplanation.target.id)
+                {
+                    if (targetIterator == sourceId)
+                    {
+                        var sourceTerm = model.terms[sourceId];
+                        knownExplanation = new TransitiveEqualityExplanation(sourceTerm, sourceTerm, emptyEqualityExplanation);
+                        break;
+                    }
+
+                    // Stop if we know the rest of the explanation.
+                    if (equalityExplanationCache.TryGetValue($"{sourceId}, {targetIterator}", out knownExplanation)) break;
+
+                    targetExplanations.Add(equalityExplanation);
+                }
+            }
+
+            // Build from partially cached explanation.
+            if (knownExplanation != null)
+            {
+                if (knownExplanation.source.id == sourceId)
+                {
+                    var explanations = explanationExtractor.visit(knownExplanation, null).Concat(targetExplanations.Select(e => explanationReverser.visit(e, null)).Select(e => explanationFinalizer.visit(e, this)).Reverse());
+                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    equalityExplanationCache[key] = explanation;
+                    return explanation;
+                }
+                else
+                {
+                    var explanations = sourceExplanations.Select(e => explanationFinalizer.visit(e, this)).Concat(explanationExtractor.visit(knownExplanation, null));
+                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    equalityExplanationCache[key] = explanation;
+                    return explanation;
+                }
+            }
+
+            sourceExplanations.Reverse();
+            targetExplanations.Reverse();
+
+            // Make sure terms are in same equivalence class, i.e. have the same root.
+            var sourceCheck = sourceExplanations.Any() ? sourceExplanations.First().target.id : sourceId;
+            var targetCheck = targetExplanations.Any() ? targetExplanations.First().target.id : targetId;
+            if (sourceCheck != targetCheck) throw new ArgumentException("The terms provided to GetExplanation() were not equal");
+
+            // In general the explanations may converge at some term before they reach the root. After reaching that term
+            // they follow the same steps to reach the root. We remove this redundancy from our explanation.
+            // This is in particular necessary to avoid looping on congruence explanations (see GoogleDoc).
+            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1.Equals(t.Item2));
+            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse();
+            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Select(e => explanationReverser.visit(e, null));
+
+            // Build the explanation.
+            var explanationPath = relevantSourceExplanations.Concat(relevantTargetExplanations).Select(e => explanationFinalizer.visit(e, this));
+            if (explanationPath.Take(2).Count() == 1)
+            {
+                var explanation = explanationPath.Single();
+                equalityExplanationCache[key] = explanation;
+                return explanation;
+            }
+            else
+            {
+                var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanationPath.ToArray());
+                equalityExplanationCache[key] = explanation;
+                return explanation;
+            }
+        }
+
         private void ParseTraceLine(string line, string[] words)
         {
             switch (words[0])
             {
                 case "[mk-quant]":
+                case "[mk-lambda]":
                     {
-                        Term[] args = GetArgs(3, words);
+                        Term[] args = GetArgs(words, 3);
                         Term t = new Term("FORALL", args)
                         {
                             id = parseIdentifier(words[1])
@@ -524,29 +842,152 @@ namespace AxiomProfiler
                     }
                     break;
 
-                case "[mk-app]":
+                case "[mk-var]":
                     {
-                        Term[] args = GetArgs(3, words);
-                        Term t = new Term(words[2], args);
-                        model.terms[parseIdentifier(words[1])] = t;
-                        t.id = parseIdentifier(words[1]);
+                        var id = parseIdentifier(words[1]);
+                        model.terms[id] = new Term("qvar_" + id, EmptyTerms);
                     }
                     break;
 
+                case "[mk-app]":
+                    {
+                        Term[] args = GetArgs(words, 3);
+
+                        //We are only interested in the result of a proof step (i.e. the last argument)
+                        if (proofRuleNames.Contains(words[2]))
+                        {
+                            var t = args.Last();
+
+                            // We want to be able to undo these later on, if necessary.
+                            if (words[2] == "rewrite" || words[2] == "rewrite*" || words[2] == "unit-resolution")
+                            {
+                                Term from, to;
+                                if (words[2] == "unit-resolution")
+                                {
+                                    from = args.First();
+                                    to = t;
+                                }
+                                else
+                                {
+                                    var equality = args.Last();
+                                    if ((equality.Name != "=" && equality.Name != "iff" && equality.Name != "~") || equality.Args.Count() != 2)
+                                    {
+                                        if (equality.id == -1) return;
+                                        throw new Exception("Unexpected result term for rewrite proof step.");
+                                    }
+                                    from = GetOrIdTransitive(reverseRewriteClosure, equality.Args[0]);
+                                    to = equality.Args[1];
+                                }
+                                reverseRewriteClosure[to] = from;
+                            }
+
+                            // We use thse to figgure out which new terms we got as the result of a quantifier instantiation.
+                            // e.g. if we have A ==> B, and we get A from a quantifier instantiation, this would include B.
+                            foreach (var prerequisite in args.Take(args.Length - 1))
+                            {
+                                proofStepClosures[prerequisite] = t;
+                            }
+
+                            model.terms[parseIdentifier(words[1])] = t;
+                        }
+                        else
+                        {
+                            var t = new Term(words[2], args);
+                            model.terms[parseIdentifier(words[1])] = t;
+                            t.id = parseIdentifier(words[1]);
+
+                            if ((t.Name == "=" || t.Name == "iff" || t.Name == "~") && lastInst != null && currentTheoryConstraints.Any())
+                            {
+                                var theoryName = currentTheoryConstraints.Peek();
+                                if (!lastInst.TheoryConstraintsEqualities.TryGetValue(theoryName, out var equalities))
+                                {
+                                    equalities = new List<Term>();
+                                    lastInst.TheoryConstraintsEqualities[theoryName] = equalities;
+                                }
+                                equalities.Add(t);
+                            }
+                        }
+                    }
+                    break;
+                    
                 case "[attach-enode]":
                     {
                         Term t = GetTerm(words[1]);
                         int gen = int.Parse(words[2]);
                         if (lastInst != null && t.Responsible != lastInst)
                         {
-                            // make a copy of the term, since we are overriding the Responsible field
-                            t = new Term(t);
-                            model.terms[parseIdentifier(words[1])] = t;
-                        }
-                        if (lastInst != null)
-                        {
+                            if (t.Responsible != null)
+                            {
+                                // make a copy of the term, since we are overriding the Responsible field
+                                //TODO: shallow copy
+                                t = new Term(t);
+                                model.terms[parseIdentifier(words[1])] = t;
+                            }
+
                             t.Responsible = lastInst;
                             lastInst.dependentTerms.Add(t);
+                            if (currentTheoryConstraints.Any() && t.Name != "=" && t.Name != "iff" && t.Name != "~")
+                            {
+                                var theoryName = currentTheoryConstraints.Peek();
+                                if (!lastInst.TheoryConstraintsDependentTerms.TryGetValue(theoryName, out var constraitTerms))
+                                {
+                                    constraitTerms = new List<Term>();
+                                    lastInst.TheoryConstraintsDependentTerms[theoryName] = constraitTerms;
+                                }
+                                constraitTerms.Add(t);
+                            }
+                        }
+                    }
+                    break;
+
+                case "[eq-expl]":
+                    {
+                        var fromId = parseIdentifier(words[1]);
+                        if (model.equalityExplanations.ContainsKey(fromId)) equalityExplanationCache.Clear();
+                        if (words[2] == "root")
+                        {
+                            model.equalityExplanations.Remove(fromId);
+                            break;
+                        }
+                        var fromTerm = model.terms[fromId];
+                        var toTerm = GetTerm(words.Last());
+                        switch (words[2])
+                        {
+                            case "lit":
+                                var litTerm = GetTerm(words[3]);
+                                if (fromTerm == litTerm)
+                                {
+                                    model.equalityExplanations[fromId] = new TheoryEqualityExplanation(fromTerm, toTerm, "smt");
+                                }
+                                else
+                                {
+                                    model.equalityExplanations[fromId] = new DirectEqualityExplanation(fromTerm, toTerm, litTerm);
+                                }
+                                break;
+                            case "cg":
+                                var equalitiesRegex = new Regex("\\((#[0-9]+) (#[0-9]+)\\) ");
+                                var matches = equalitiesRegex.Matches(line).Cast<Match>();
+                                if (matches.Any())
+                                {
+                                    var argumentEqualities = matches.Select(match => new TransitiveEqualityExplanation(GetTerm(match.Groups[1].Value), GetTerm(match.Groups[2].Value), emptyEqualityExplanation)).ToArray();
+                                    model.equalityExplanations[fromId] = new CongruenceExplanation(fromTerm, toTerm, argumentEqualities);
+                                }
+                                else
+                                {
+                                    Console.Out.WriteLine($"Congruence equality explanation had unexpected shape (line: {curlineNo})");
+                                    model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                }
+                                break;
+                            case "ax":
+                                model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                break;
+                            case "th":
+                                model.equalityExplanations[fromId] = new TheoryEqualityExplanation(fromTerm, toTerm, words[3]);
+                                break;
+                            default:
+                                Console.Out.WriteLine($"Unexpected equality explanation: {words[2]} (line: {curlineNo})");
+                                model.equalityExplanations[fromId] = new TransitiveEqualityExplanation(fromTerm, toTerm, emptyEqualityExplanation);
+                                break;
                         }
                     }
                     break;
@@ -555,23 +996,16 @@ namespace AxiomProfiler
                     {
                         if (!interestedInCurrentCheck) break;
                         if (words.Length < 3) break;
-                        Instantiation inst = new Instantiation();
-                        Term[] args = GetArgs(3, words);
-                        int firstNull = Array.IndexOf(args, null);
-                        if (firstNull < 0)
+                        var separationIndex = Array.FindIndex(words, el => el == ";");
+                        Term[] args = GetArgs(words, 4, separationIndex);
+                        var quant = model.quantifiers[words[2]];
+                        var pattern = GetTerm(words[3]);
+                        if (pattern.Name != "pattern") throw new InvalidOperationException($"Expected pattern but found {pattern}.");
+                        var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
+                        Instantiation inst = new Instantiation(bindingInfo)
                         {
-                            inst.Bindings = args;
-                            inst.Responsible = EmptyTerms;
-                        }
-                        else
-                        {
-                            inst.Bindings = new Term[firstNull];
-                            inst.Responsible = new Term[args.Length - firstNull - 1];
-                            Array.Copy(args, 0, inst.Bindings, 0, inst.Bindings.Length);
-                            Array.Copy(args, firstNull + 1, inst.Responsible, 0, inst.Responsible.Length);
-                        }
-
-                        inst.Quant = CreateQuantifier(words[2], words[2]);
+                            Quant = quant
+                        };
                         model.fingerprints[words[1]] = inst;
                     }
                     break;
@@ -587,17 +1021,37 @@ namespace AxiomProfiler
                         }
                         if (inst.LineNo != 0)
                         {
-                            var tmp = new Instantiation();
-                            inst.CopyTo(tmp);
-                            inst = tmp;
+                            inst = inst.Copy();
                         }
-                        AddInstance(inst);
                         int pos = 2;
                         if (words.Length > pos && words[pos] != ";")
                         {
                             long id = GetId(words[pos]);
-                            model.proofSteps[id] = inst;
+                            var t = model.terms[(int)id];
+                            var originalBody = model.terms[(int)id];
+                            var body = GetOrIdTransitive(proofStepClosures, originalBody);
+                            var isSinglyReferenced = false;
+
+                            if (body.Name == "or")
+                            {
+                                body = GetBodyFromImplication(body, out isSinglyReferenced);
+                            }
+                            if (originalBody.Name == "or")
+                            {
+                                originalBody = GetBodyFromImplication(originalBody, out _);
+                                if (!isSinglyReferenced)
+                                {
+                                    body = new Term(body);
+                                }
+                            }
+
+                            body.reverseRewrite = originalBody;
+                            inst.concreteBody = body;
                             pos++;
+                        }
+                        else
+                        {
+                            throw new OldLogFormatException();
                         }
                         if (words.Length - 1 > pos && words[pos] == ";")
                         {
@@ -609,9 +1063,14 @@ namespace AxiomProfiler
                         {
                             inst.Z3Generation = -1;
                         }
+                        AddInstance(inst);
                     }
                     break;
                 case "[end-of-instance]": lastInst = null; break;
+
+                case "[theory-constraints]": currentTheoryConstraints.Push(words[1]); break;
+
+                case "[end-theory-constraints]": currentTheoryConstraints.Pop(); break;
 
                 case "[decide-and-or]":
                     if (!interestedInCurrentCheck) break;
@@ -747,7 +1206,7 @@ namespace AxiomProfiler
                             break;
                         }
                         words = StripGeneration(words, out generation);
-                        Term[] args = GetArgs(3, words);
+                        Term[] args = GetArgs(words, 3);
                         Term t;
                         if (lastInst == null &&
                             model.terms.TryGetValue(parseIdentifier(words[1]), out t) &&
@@ -773,7 +1232,7 @@ namespace AxiomProfiler
                 case "[create]":
                     {
                         if (words.Length < 4) break;
-                        Term[] args = GetArgs(4, words);
+                        Term[] args = GetArgs(words, 4);
                         Term t = new Term(args.Length == 0 ? words[3] : words[3].Substring(1), args);
                         t.Responsible = lastInst;
                         lastInst?.dependentTerms.Add(t);
@@ -781,38 +1240,10 @@ namespace AxiomProfiler
                         t.id = parseIdentifier(words[1]);
                     }
                     break;
-                case "[fingerprint]":
-                    {
-                        if (words.Length < 3) break;
-                        Instantiation inst = new Instantiation();
-                        inst.Responsible = GetArgs(3, words);
-                        model.fingerprints[words[1]] = inst;
-                    }
-                    break;
                 case "[mk_const]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
                 case "[create_ite]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
 
                 case "[done-instantiate-fp]": lastInst = null; break;
-                case "[instantiate-fp]":
-                    {
-                        if (words.Length < 4) break;
-                        Instantiation inst;
-                        if (!model.fingerprints.TryGetValue(words[2], out inst))
-                        {
-                            Console.WriteLine("fingerprint not found {0}", words[0]);
-                            break;
-                        }
-                        if (inst.Quant != null)
-                        {
-                            break;
-                        }
-                        inst.Quant = CreateQuantifier(words[1], words[1]);
-                        AddInstance(inst);
-                        for (int i = 4; i < words.Length; ++i)
-                            words[i] = words[i].Substring(words[i].IndexOf(':') + 1);
-                        inst.Bindings = GetArgs(4, words);
-                    }
-                    break;
                 case "[conflict-resolve]":
                     if (!interestedInCurrentCheck) break;
                     if (skipDecisions) break;
@@ -846,7 +1277,7 @@ namespace AxiomProfiler
                                 int idx = words[i].IndexOf(":");
                                 if (idx > 0) words[i] = words[i].Substring(0, idx);
                             }
-                            lit.Term = new Term(sym, GetArgs(pos, words));
+                            lit.Term = new Term(sym, GetArgs(words, pos));
                         }
                     }
                     break;
@@ -861,7 +1292,295 @@ namespace AxiomProfiler
             }
         }
 
-        private bool ParseProofStep(string[] words)
+        /// <summary>
+        /// Follows the key through the dictionary until it finds a leaf.
+        /// </summary>
+        private static T GetOrIdTransitive<T>(Dictionary<T, T> dict, T key)
+        {
+            var returnValue = key;
+            while (dict.TryGetValue(key, out var found))
+            {
+                if (ReferenceEquals(returnValue, found)) break;
+                returnValue = found;
+            }
+            return returnValue;
+        }
+
+        public void Finish()
+        {
+            model.NumChecks = beginCheckSeen;
+
+            //add reverse rewrites to terms
+            foreach (var reverseRewrite in reverseRewriteClosure)
+            {
+                reverseRewrite.Key.reverseRewrite = GetOrIdTransitive(reverseRewriteClosure, reverseRewrite.Value);
+            }
+
+            //unify quantifiers with the same name and body
+            var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {
+                var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
+                foreach (var quant in group)
+                {
+                    var separation = quant.BodyTerm.Args.ToLookup(arg => arg.Name == "pattern");
+                    if (separation[false].Count() != 1) throw new Exception();
+                    if (!patternsForBodies.TryGetValue(separation[false].First(), out var collectedPatterns))
+                    {
+                        collectedPatterns = Tuple.Create(quant, new HashSet<Term>());
+                        patternsForBodies[separation[false].First()] = collectedPatterns;
+                    }
+                    foreach (var inst in quant.Instances)
+                    {
+                        inst.Quant = collectedPatterns.Item1;
+                       if (collectedPatterns.Item1 != quant) collectedPatterns.Item1.Instances.Add(inst);
+                    }
+                    collectedPatterns.Item2.UnionWith(separation[true]);
+                }
+                foreach (var found in patternsForBodies)
+                {
+                    var quant = found.Value.Item1;
+                    quant.BodyTerm = new Term(quant.BodyTerm.Name, found.Value.Item2.Concat(new Term[] { found.Key }).ToArray())
+                    {
+                        id = quant.BodyTerm.id
+                    };
+                }
+                return patternsForBodies.Select(kv => kv.Value.Item1);
+            }).ToList();
+            model.quantifiers.Clear();
+            foreach (var quant in unifiedQuantifiers)
+            {
+                model.quantifiers.Add("#" + quant.BodyTerm.id, quant);
+            }
+
+            //code used to test several heuristics for choosing a path to try to find a matching loop on
+            /*var random = new Random();
+            Console.Out.WriteLine("start");
+            foreach (var i in new int[] { 30715 })//Enumerable.Range(0, 100))
+            {
+                var randomIndex = i;// random.Next(model.instances.Count);
+                var randomInstantiation = model.instances[randomIndex];
+                var graph = new HashSet<Instantiation> { randomInstantiation };
+                AddUpNodes(1000, graph);
+                AddDownNodes(1000, graph);
+                /*var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction1(path, pre, post, 1));
+                var p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction2(path, pre, post, 0.05));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations())) {
+                    Console.Out.WriteLine($"1: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }*/
+                //var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3(path, pre, post, 0.2));
+                /*var p0 = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3(path, pre, post, 0.3));
+                var p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction3_(path, pre, post, 0.3));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations()))
+                {
+                    Console.Out.WriteLine($"2: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    Console.Out.WriteLine($"{InstantiationPathScoreFunction3(p0, true, false, 0.3)}, {InstantiationPathScoreFunction3_(p0, true, false, 0.3)}");
+                    Console.Out.WriteLine($"{InstantiationPathScoreFunction3(p, true, false, 0.3)}, {InstantiationPathScoreFunction3_(p, true, false, 0.3)}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        var selected = Tuple.Create(randomInstantiation.Quant, randomInstantiation.bindingInfo.fullPattern);
+                        Console.Out.WriteLine($"{cycle0.Contains(selected)}, {cycle1.Contains(selected)}");
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }
+                /*p = PathSelect(graph, randomInstantiation, (path, pre, post) => InstantiationPathScoreFunction4(path, pre, post, 5));
+                if (!p.getInstantiations().SequenceEqual(p0.getInstantiations()))
+                {
+                    Console.Out.WriteLine($"3: {randomIndex}, {p0.TryGetCyclePath(out var x)}: {p0.Length()}, {p.TryGetCyclePath(out var y)}: {p.Length()}");
+                    if (p0.TryGetLoop(out var cycle0) && p.TryGetLoop(out var cycle1))
+                    {
+                        Console.Out.WriteLine(cycle0.SequenceEqual(cycle1));
+                        Console.Out.WriteLine($"{p0.GetNumRepetitions()}, {p.GetNumRepetitions()}");
+                    }
+                    continue;
+                }*/
+                //Console.Out.WriteLine("iteration");
+            //}
+        }
+
+        /*private static double InstantiationPathScoreFunction1(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double factor)
+        {
+            var statistics = instantiationPath.Statistics();
+            var expectation = statistics.Average(dataPoint => dataPoint.Item2);
+            var stddev = Math.Sqrt(statistics.Sum(dataPoint => Math.Pow(dataPoint.Item2 - expectation, 2)) / statistics.Count());
+            var eliminationTreshhold = Math.Max(expectation - factor * stddev, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction2(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(instantiationPath.Length() * percentile, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction3(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * percentile, 0);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static double InstantiationPathScoreFunction3_(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double percentile)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * percentile, 0);
+            //var eliminatableQuantifiers = statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1);
+            var eliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term>>();
+            foreach (var quant in statistics.Where(dp => dp.Item2 <= eliminationTreshhold).Select(dp => dp.Item1))
+            {
+                eliminatableQuantifiers.Add(quant);
+            }
+
+            var clearSpace = (int) Math.Floor(eliminationTreshhold);
+            var remainingInstantiations = instantiationPath.getInstantiations();
+            if (eliminatePostfix) remainingInstantiations = remainingInstantiations.Reverse();
+            while (remainingInstantiations.Take(clearSpace).Any(inst => eliminatableQuantifiers.Contains(Tuple.Create(inst.Quant, inst.bindingInfo.fullPattern))))
+            {
+                remainingInstantiations = remainingInstantiations.Skip(1);
+            }
+
+            if (remainingInstantiations.Count() == 0) return -1;
+
+            var remainingPath = new InstantiationPath();
+            foreach (var inst in remainingInstantiations)
+            {
+                remainingPath.append(inst);
+            }
+
+            return 1.0 * remainingPath.Length() / remainingPath.Statistics().Count();
+        }
+
+        private static double InstantiationPathScoreFunction4(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix, double diff)
+        {
+            var statistics = instantiationPath.Statistics();
+            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) - diff, 2);
+            var outliers = (eliminatePrefix ? statistics.TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            outliers = outliers.Concat(eliminatePostfix ? statistics.Skip(outliers.Count()).Reverse().TakeWhile(dataPoint => dataPoint.Item2 <= eliminationTreshhold) : Enumerable.Empty<Tuple<Tuple<Quantifier, Term>, int>>());
+            return 1.0 * (instantiationPath.Length() - outliers.Sum(dataPoint => dataPoint.Item2)) / (statistics.Count() - outliers.Count());
+        }
+
+        private static void AddUpNodes(int limit, ISet<Instantiation> graph)
+        {
+            List<Instantiation> generation = graph.ToList();
+            var added = 0;
+            while (added < limit)
+            {
+                generation = generation.SelectMany(i => i.ResponsibleInstantiations).ToList();
+                graph.UnionWith(generation.Take(limit-added));
+                added += generation.Count;
+                if (generation.Count == 0) break;
+            }
+        }
+
+        private static void AddDownNodes(int limit, ISet<Instantiation> graph)
+        {
+            List<Instantiation> generation = graph.ToList();
+            var added = 0;
+            while (added < limit)
+            {
+                generation = generation.SelectMany(i => i.DependantInstantiations).ToList();
+                graph.UnionWith(generation.Take(limit - added));
+                added += generation.Count;
+                if (generation.Count == 0) break;
+            }
+        }
+
+        private static InstantiationPath PathSelect(ISet<Instantiation> nodes, Instantiation startNode, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            // building path downwards:
+            var bestDownPath = BestDownPath(nodes, startNode, scoreFunction);
+            InstantiationPath bestUpPath;
+            if (bestDownPath.TryGetLoop(out var loop))
+            {
+                bestUpPath = ExtendPathUpwardsWithLoop(loop, nodes, startNode);
+                if (bestUpPath == null)
+                {
+                    bestUpPath = BestUpPath(nodes, startNode, scoreFunction);
+                }
+            }
+            else
+            {
+                bestUpPath = BestUpPath(nodes, startNode, scoreFunction);
+            }
+
+            bestUpPath.appendWithOverlap(bestDownPath);
+
+            return bestUpPath;
+        }
+
+        private static InstantiationPath BestDownPath(ISet<Instantiation> nodes, Instantiation node, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            var paths = AllDownPaths(new InstantiationPath(), nodes, node);
+            return paths.OrderByDescending(p => scoreFunction(p, false, true)).First();
+        }
+
+        private static InstantiationPath BestUpPath(ISet<Instantiation> nodes, Instantiation node, Func<InstantiationPath, bool, bool, double> scoreFunction)
+        {
+            return AllUpPaths(new InstantiationPath(), nodes, node).OrderByDescending(p => scoreFunction(p, true, false)).First();
+        }
+
+        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, ISet<Instantiation> nodes, Instantiation node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.append(node);
+            var outNodes = node.DependantInstantiations.Where(i => nodes.Contains(i));
+            if (outNodes.Any()) return outNodes.SelectMany(n => AllDownPaths(basePath, nodes, n));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, ISet<Instantiation> nodes, Instantiation node)
+        {
+            basePath = new InstantiationPath(basePath);
+            basePath.prepend(node);
+            var inNodes = node.ResponsibleInstantiations.Where(i => nodes.Contains(i));
+            if (inNodes.Any()) return inNodes.SelectMany(n => AllUpPaths(basePath, nodes, n));
+            else return Enumerable.Repeat(basePath, 1);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, ISet<Instantiation> nodes, Instantiation node)
+        {
+            if (!loop.Any(inst => inst.Item1 == node.Quant && inst.Item2 == node.bindingInfo.fullPattern)) return null;
+            loop = loop.Reverse().RepeatIndefinietly();
+            loop = loop.SkipWhile(inst => inst.Item1 != node.Quant || inst.Item2 != node.bindingInfo.fullPattern);
+            return ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, nodes, node);
+        }
+
+        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, ISet<Instantiation> nodes, Instantiation node)
+        {
+            if (!instantiations.Any()) return path;
+            var instantiation = instantiations.First();
+            if (instantiation.Item1 != node.Quant || instantiation.Item2 != node.bindingInfo.fullPattern) return path;
+            var extendedPath = new InstantiationPath(path);
+            extendedPath.prepend(node);
+            var bestPath = extendedPath;
+            var remainingInstantiations = instantiations.Skip(1);
+            var inNodes = node.ResponsibleInstantiations.Where(i => nodes.Contains(i));
+            foreach (var predecessor in inNodes)
+            {
+                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, nodes, predecessor);
+                if (candidatePath.Length() > bestPath.Length())
+                {
+                    bestPath = candidatePath;
+                }
+            }
+            return bestPath;
+        }*/
+
+        //Proof steps are now being parsed as by ParseTraceLine()
+        /*private bool ParseProofStep(string[] words)
         {
             if (words.Length >= 3 && words[0].Length >= 2 && words[0][0] == '#' && words[1] == ":=")
             {
@@ -920,7 +1639,7 @@ namespace AxiomProfiler
                 return true;
             }
             return false;
-        }
+        }*/
 
         private Term GetLiteralTerm(string w, out bool negated, out int id)
         {
@@ -1012,13 +1731,7 @@ namespace AxiomProfiler
 
         private Quantifier CreateQuantifier(string name, string qid)
         {
-            Quantifier quant;
-            if (model.quantifiers.TryGetValue(name, out quant))
-            {
-                return quant;
-            }
-
-            quant = new Quantifier
+            var quant = new Quantifier
             {
                 Qid = qid
             };
@@ -1026,8 +1739,9 @@ namespace AxiomProfiler
             loadBoogieToken(quant);
             return quant;
         }
-
-
+        
+        [Serializable]
+        public class OldLogFormatException : Exception {}
     }
 
 

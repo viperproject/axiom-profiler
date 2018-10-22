@@ -34,8 +34,6 @@ namespace AxiomProfiler
             this.z3AxiomTree = new System.Windows.Forms.TreeView();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.loadZ3TraceLogToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.profileZ3TraceToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.loadZ3FromBoogieToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.colorVisualizationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -50,8 +48,13 @@ namespace AxiomProfiler
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.largeTextToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsPanel = new System.Windows.Forms.Panel();
+            this.showEqualityExplanationsCheckBox = new System.Windows.Forms.CheckBox();
+            this.congruenceDepthUD = new System.Windows.Forms.NumericUpDown();
             this.rewritingRulesButton = new System.Windows.Forms.Button();
+            this.congruenceDepthLabel = new System.Windows.Forms.Label();
             this.enableRewritingCB = new System.Windows.Forms.CheckBox();
             this.showTermIdCB = new System.Windows.Forms.CheckBox();
             this.showTypesCB = new System.Windows.Forms.CheckBox();
@@ -68,6 +71,7 @@ namespace AxiomProfiler
             this.splitContainer2.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.toolsPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.congruenceDepthUD)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).BeginInit();
             this.SuspendLayout();
@@ -137,8 +141,6 @@ namespace AxiomProfiler
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.loadZ3TraceLogToolStripMenuItem,
-            this.profileZ3TraceToolStripMenuItem,
-            this.loadZ3FromBoogieToolStripMenuItem,
             this.searchToolStripMenuItem,
             this.toolStripSeparator2,
             this.colorVisualizationToolStripMenuItem,
@@ -153,66 +155,52 @@ namespace AxiomProfiler
             // loadZ3TraceLogToolStripMenuItem
             // 
             this.loadZ3TraceLogToolStripMenuItem.Name = "loadZ3TraceLogToolStripMenuItem";
-            this.loadZ3TraceLogToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.loadZ3TraceLogToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.loadZ3TraceLogToolStripMenuItem.Text = "&Load Z3 Output File";
             this.loadZ3TraceLogToolStripMenuItem.Click += new System.EventHandler(this.LoadZ3Logfile_Click);
-            // 
-            // profileZ3TraceToolStripMenuItem
-            // 
-            this.profileZ3TraceToolStripMenuItem.Name = "profileZ3TraceToolStripMenuItem";
-            this.profileZ3TraceToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.profileZ3TraceToolStripMenuItem.Text = "Profile Z3 Trace";
-            this.profileZ3TraceToolStripMenuItem.Click += new System.EventHandler(this.LoadZ3_Click);
-            // 
-            // loadZ3FromBoogieToolStripMenuItem
-            // 
-            this.loadZ3FromBoogieToolStripMenuItem.Name = "loadZ3FromBoogieToolStripMenuItem";
-            this.loadZ3FromBoogieToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
-            this.loadZ3FromBoogieToolStripMenuItem.Text = "Profile Z3 Trace for &Boogie Execution";
-            this.loadZ3FromBoogieToolStripMenuItem.Click += new System.EventHandler(this.LoadBoogie_Click);
             // 
             // searchToolStripMenuItem
             // 
             this.searchToolStripMenuItem.Name = "searchToolStripMenuItem";
-            this.searchToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.searchToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.searchToolStripMenuItem.Text = "&Search";
             this.searchToolStripMenuItem.Click += new System.EventHandler(this.searchToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(264, 6);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(229, 6);
             // 
             // colorVisualizationToolStripMenuItem
             // 
             this.colorVisualizationToolStripMenuItem.Name = "colorVisualizationToolStripMenuItem";
-            this.colorVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.colorVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.colorVisualizationToolStripMenuItem.Text = "&Color Visualization";
             this.colorVisualizationToolStripMenuItem.Click += new System.EventHandler(this.colorVisualizationToolStripMenuItem_Click);
             // 
             // searchTreeVisualizationToolStripMenuItem
             // 
             this.searchTreeVisualizationToolStripMenuItem.Name = "searchTreeVisualizationToolStripMenuItem";
-            this.searchTreeVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.searchTreeVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.searchTreeVisualizationToolStripMenuItem.Text = "Search &Tree Visualization";
             this.searchTreeVisualizationToolStripMenuItem.Click += new System.EventHandler(this.searchTreeVisualizationToolStripMenuItem_Click);
             // 
             // quantifierBlameVisualizationToolStripMenuItem
             // 
             this.quantifierBlameVisualizationToolStripMenuItem.Name = "quantifierBlameVisualizationToolStripMenuItem";
-            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.quantifierBlameVisualizationToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.quantifierBlameVisualizationToolStripMenuItem.Text = "Quantifier Blame Visualization";
             this.quantifierBlameVisualizationToolStripMenuItem.Click += new System.EventHandler(this.quantifierBlameVisualizationToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(264, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(229, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(267, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(232, 22);
             this.exitToolStripMenuItem.Text = "&Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.Exit_Click);
             // 
@@ -267,6 +255,7 @@ namespace AxiomProfiler
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
             this.cSVToolStripMenuItem1,
+            this.viewToolStripMenuItem,
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -274,11 +263,30 @@ namespace AxiomProfiler
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
+            // viewToolStripMenuItem
+            // 
+            this.viewToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.largeTextToolStripMenuItem});
+            this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
+            this.viewToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+            this.viewToolStripMenuItem.Text = "View";
+            // 
+            // largeTextToolStripMenuItem
+            // 
+            this.largeTextToolStripMenuItem.CheckOnClick = true;
+            this.largeTextToolStripMenuItem.Name = "largeTextToolStripMenuItem";
+            this.largeTextToolStripMenuItem.Size = new System.Drawing.Size(127, 22);
+            this.largeTextToolStripMenuItem.Text = "Large Text";
+            this.largeTextToolStripMenuItem.Click += new System.EventHandler(this.largeTextToolStripMenuItem_Click);
+            // 
             // toolsPanel
             // 
             this.toolsPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolsPanel.Controls.Add(this.showEqualityExplanationsCheckBox);
+            this.toolsPanel.Controls.Add(this.congruenceDepthUD);
             this.toolsPanel.Controls.Add(this.rewritingRulesButton);
+            this.toolsPanel.Controls.Add(this.congruenceDepthLabel);
             this.toolsPanel.Controls.Add(this.enableRewritingCB);
             this.toolsPanel.Controls.Add(this.showTermIdCB);
             this.toolsPanel.Controls.Add(this.showTypesCB);
@@ -291,22 +299,62 @@ namespace AxiomProfiler
             this.toolsPanel.Size = new System.Drawing.Size(1184, 25);
             this.toolsPanel.TabIndex = 7;
             // 
+            // showEqualityExplanationsCheckBox
+            // 
+            this.showEqualityExplanationsCheckBox.AutoSize = true;
+            this.showEqualityExplanationsCheckBox.Checked = true;
+            this.showEqualityExplanationsCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.showEqualityExplanationsCheckBox.Location = new System.Drawing.Point(785, 5);
+            this.showEqualityExplanationsCheckBox.Name = "showEqualityExplanationsCheckBox";
+            this.showEqualityExplanationsCheckBox.Size = new System.Drawing.Size(156, 17);
+            this.showEqualityExplanationsCheckBox.TabIndex = 10;
+            this.showEqualityExplanationsCheckBox.Text = "Show Equality Explanations";
+            this.showEqualityExplanationsCheckBox.UseVisualStyleBackColor = true;
+            this.showEqualityExplanationsCheckBox.CheckedChanged += new System.EventHandler(this.showEqualityExplanationsCheckBox_CheckedChanged);
+            // 
+            // congruenceDepthUD
+            // 
+            this.congruenceDepthUD.Location = new System.Drawing.Point(500, 3);
+            this.congruenceDepthUD.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.congruenceDepthUD.Name = "congruenceDepthUD";
+            this.congruenceDepthUD.Size = new System.Drawing.Size(50, 20);
+            this.congruenceDepthUD.TabIndex = 9;
+            this.congruenceDepthUD.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.congruenceDepthUD.ValueChanged += new System.EventHandler(this.congruenceDepthUD_ValueChanged);
+            // 
             // rewritingRulesButton
             // 
-            this.rewritingRulesButton.Location = new System.Drawing.Point(679, 1);
+            this.rewritingRulesButton.Location = new System.Drawing.Point(1088, 1);
             this.rewritingRulesButton.Name = "rewritingRulesButton";
-            this.rewritingRulesButton.Size = new System.Drawing.Size(100, 23);
+            this.rewritingRulesButton.Size = new System.Drawing.Size(93, 23);
             this.rewritingRulesButton.TabIndex = 7;
             this.rewritingRulesButton.Text = "Printing Rules";
             this.rewritingRulesButton.UseVisualStyleBackColor = true;
             this.rewritingRulesButton.Click += new System.EventHandler(this.rewritingRulesButton_Click);
+            // 
+            // congruenceDepthLabel
+            // 
+            this.congruenceDepthLabel.AutoSize = true;
+            this.congruenceDepthLabel.Location = new System.Drawing.Point(313, 6);
+            this.congruenceDepthLabel.Name = "congruenceDepthLabel";
+            this.congruenceDepthLabel.Size = new System.Drawing.Size(181, 13);
+            this.congruenceDepthLabel.TabIndex = 8;
+            this.congruenceDepthLabel.Text = "Max Congruence Explanation Depth:";
             // 
             // enableRewritingCB
             // 
             this.enableRewritingCB.AutoSize = true;
             this.enableRewritingCB.Checked = true;
             this.enableRewritingCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.enableRewritingCB.Location = new System.Drawing.Point(538, 4);
+            this.enableRewritingCB.Location = new System.Drawing.Point(947, 5);
             this.enableRewritingCB.Name = "enableRewritingCB";
             this.enableRewritingCB.Size = new System.Drawing.Size(135, 17);
             this.enableRewritingCB.TabIndex = 6;
@@ -319,7 +367,7 @@ namespace AxiomProfiler
             this.showTermIdCB.AutoSize = true;
             this.showTermIdCB.Checked = true;
             this.showTermIdCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showTermIdCB.Location = new System.Drawing.Point(404, 4);
+            this.showTermIdCB.Location = new System.Drawing.Point(651, 5);
             this.showTermIdCB.Name = "showTermIdCB";
             this.showTermIdCB.Size = new System.Drawing.Size(128, 17);
             this.showTermIdCB.TabIndex = 5;
@@ -332,7 +380,7 @@ namespace AxiomProfiler
             this.showTypesCB.AutoSize = true;
             this.showTypesCB.Checked = true;
             this.showTypesCB.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showTypesCB.Location = new System.Drawing.Point(313, 4);
+            this.showTypesCB.Location = new System.Drawing.Point(560, 5);
             this.showTypesCB.Name = "showTypesCB";
             this.showTypesCB.Size = new System.Drawing.Size(85, 17);
             this.showTypesCB.TabIndex = 4;
@@ -404,7 +452,7 @@ namespace AxiomProfiler
             this.Controls.Add(this.menuStrip1);
             this.Name = "AxiomProfiler";
             this.Text = "Axiom Profiler";
-            this.Load += new System.EventHandler(this.AxiomProfiler_OnLoadEvent);
+            this.Load += new System.EventHandler(this.AxiomProfiler_Load);
             this.splitContainer1.Panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
@@ -416,6 +464,7 @@ namespace AxiomProfiler
             this.menuStrip1.PerformLayout();
             this.toolsPanel.ResumeLayout(false);
             this.toolsPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.congruenceDepthUD)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermDepthUD)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.maxTermWidthUD)).EndInit();
             this.ResumeLayout(false);
@@ -430,8 +479,6 @@ namespace AxiomProfiler
         private System.Windows.Forms.TreeView z3AxiomTree;
         private System.Windows.Forms.ToolStripMenuItem fileToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem loadZ3TraceLogToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem profileZ3TraceToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem loadZ3FromBoogieToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem searchToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripMenuItem colorVisualizationToolStripMenuItem;
@@ -455,6 +502,11 @@ namespace AxiomProfiler
         private System.Windows.Forms.Label maxTermDepthLabel;
         private System.Windows.Forms.CheckBox enableRewritingCB;
         private System.Windows.Forms.Button rewritingRulesButton;
+        private System.Windows.Forms.NumericUpDown congruenceDepthUD;
+        private System.Windows.Forms.Label congruenceDepthLabel;
+        private System.Windows.Forms.CheckBox showEqualityExplanationsCheckBox;
+        private System.Windows.Forms.ToolStripMenuItem viewToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem largeTextToolStripMenuItem;
     }
 }
 

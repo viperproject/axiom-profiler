@@ -2,15 +2,17 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using AxiomProfiler.PrettyPrinting;
+using System;
 
 namespace AxiomProfiler.QuantifierModel
 {
     public class Instantiation : Common
     {
         public Quantifier Quant;
-        public Term[] Bindings;
-        public Term[] Responsible;
+        public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
+        public readonly Dictionary<string, List<Term>> TheoryConstraintsDependentTerms = new Dictionary<string, List<Term>>(); // Indicates which terms were added by which theory after instantiating the quantifier.
+        public readonly Dictionary<string, List<Term>> TheoryConstraintsEqualities = new Dictionary<string, List<Term>>(); // Equalities added through theory constraints.
         public int LineNo;
         public double Cost;
         public readonly List<Instantiation> ResponsibleInstantiations = new List<Instantiation>();
@@ -20,22 +22,64 @@ namespace AxiomProfiler.QuantifierModel
         int wdepth = -1;
         public int DeepestSubpathDepth;
         public string uniqueID => LineNo.ToString();
-        private BindingInfo _bindingInfo;
-
-        public BindingInfo bindingInfo
+        public readonly BindingInfo bindingInfo;
+        private Term[] _Responsible = null;
+        public Term[] Responsible
         {
             get
             {
-                if (!didPatternMatch) processPattern();
-                return _bindingInfo;
+                if (_Responsible == null)
+                {
+                    _Responsible = bindingInfo.TopLevelTerms
+                        .Concat(bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.target)).Select(expl => expl.target))
+                        .ToArray();
+                }
+                return _Responsible;
             }
         }
 
-        public void CopyTo(Instantiation inst)
+        public Term[] Bindings
         {
-            inst.Quant = Quant;
-            inst.Bindings = (Term[])Bindings.Clone();
-            inst.Responsible = (Term[])Responsible.Clone();
+            get
+            {
+                return bindingInfo.BoundTerms;
+            }
+        }
+
+        public Instantiation(BindingInfo bindingInfo)
+        {
+            this.bindingInfo = bindingInfo;
+        }
+
+        public Instantiation Copy()
+        {
+            return new Instantiation(bindingInfo)
+            {
+                Quant = Quant,
+                concreteBody = concreteBody
+            };
+        }
+
+        public Instantiation CopyForBindingInfoModification()
+        {
+            var copy = new Instantiation(bindingInfo.Clone())
+            {
+                Quant = Quant,
+                concreteBody = concreteBody
+            };
+            foreach (var kv in TheoryConstraintsDependentTerms)
+            {
+                copy.TheoryConstraintsDependentTerms[kv.Key] = kv.Value;
+            }
+            foreach (var kv in TheoryConstraintsEqualities)
+            {
+                copy.TheoryConstraintsEqualities[kv.Key] = kv.Value;
+            }
+            foreach (var dependentTerm in dependentTerms)
+            {
+                copy.dependentTerms.Add(dependentTerm);
+            }
+            return copy;
         }
 
         public int Depth
@@ -68,7 +112,6 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-
         public override string ToString()
         {
             string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
@@ -91,7 +134,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             printNoMatchdisclaimer(content);
             SummaryInfo(content);
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Blamed terms:\n\n");
             content.switchToDefaultFormat();
 
@@ -103,7 +146,7 @@ namespace AxiomProfiler.QuantifierModel
             }
             content.Append('\n');
             content.switchToDefaultFormat();
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkMagenta);
+            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
             content.Append("Bound terms:\n\n");
             content.switchToDefaultFormat();
             foreach (var t in Bindings)
@@ -118,212 +161,254 @@ namespace AxiomProfiler.QuantifierModel
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
 
-            if (dependentTerms.Count <= 0) return;
-
             content.switchToDefaultFormat();
             content.Append("The resulting term:\n\n");
-            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+            concreteBody.PrettyPrint(content, format);
+            content.switchToDefaultFormat();
         }
 
         public void printNoMatchdisclaimer(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
+            content.switchFormat(PrintConstants.ItalicFont, PrintConstants.warningTextColor);
             content.Append("No pattern match found. Possible reasons include (hidden) equalities\nand / or automatic term simplification.\n");
             content.switchToDefaultFormat();
         }
 
         private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            if (isAmbiguous)
-            {
-                content.switchFormat(InfoPanelContent.ItalicFont, Color.Red);
-                content.Append( "Pattern match is ambiguos. Most likely match presented.\n");
-                content.switchToDefaultFormat();
-            }
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.LimeGreen);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
             content.Append("matched");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Goldenrod);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
             content.Append("matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.Coral);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
             content.Append("blamed");
             content.switchToDefaultFormat();
             content.Append(" or ");
-            content.switchFormat(InfoPanelContent.DefaultFont, Color.DeepSkyBlue);
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.bindColor);
             content.Append("bound");
             content.switchToDefaultFormat();
             content.Append(".\n\n");
 
             tempHighlightBlameBindTerms(format);
 
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("Blamed Terms:\n\n");
-
-            foreach (var t in bindingInfo.getDistinctBlameTerms())
-            {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
-                content.Append("\n\n");
-            }
-
-            content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
-            content.Append("Binding information:\n\n");
             content.switchToDefaultFormat();
 
-            foreach (var bindings in bindingInfo.getBindingsToFreeVars())
+            var termNumbering = 1;
+
+            var blameTerms = bindingInfo.getDistinctBlameTerms();
+            var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
+                (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.Item2.id == req.id) &&
+                !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k].Item2 == req)));
+
+            foreach (var t in distinctBlameTerms)
             {
-                content.Append(bindings.Key.Name).Append(" was bound to ");
-                bindings.Value.printName(content, format);
-                content.Append('\n');
+                if (!format.termNumbers.TryGetValue(t, out var termNumber))
+                {
+                    termNumber = termNumbering;
+                    ++termNumbering;
+                    format.termNumbers[t] = termNumber;
+                }
+                var numberingString = $"({termNumber}) ";
+                content.Append($"\n{numberingString}");
+                t.PrettyPrint(content, format, numberingString.Length);
+                content.switchToDefaultFormat();
+                content.Append("\n\n");
             }
 
             if (bindingInfo.equalities.Count > 0)
             {
-                content.switchFormat(InfoPanelContent.SubtitleFont, Color.DarkCyan);
-                content.Append("\n\nRelevant equalities:\n\n");
+                var numberOfTopLevelTerms = bindingInfo.getDistinctBlameTerms().Count;
+
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nRelevant equalities:\n\n");
                 content.switchToDefaultFormat();
 
+                format.printContextSensitive = false;
                 foreach (var equality in bindingInfo.equalities)
                 {
-                    bindingInfo.bindings[equality.Key].printName(content, format);
-                    foreach (var term in equality.Value)
+                    var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
+                    foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
-                        content.Append(" = ");
-                        term.printName(content, format);
+                        var explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                        if (!format.equalityNumbers.TryGetValue(explanation, out var termNumber))
+                        {
+                            termNumber = termNumbering;
+                            ++termNumbering;
+                            format.equalityNumbers[explanation] = termNumber;
+                        }
+                        
+                        if (format.ShowEqualityExplanations)
+                        {
+                            explanation.PrettyPrint(content, format, termNumber);
+                        }
+                        else
+                        {
+                            var numberingString = $"({termNumber}) ";
+                            content.switchToDefaultFormat();
+                            content.Append(numberingString);
+                            var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
+                            term.PrettyPrint(content, format, numberingString.Length);
+                            content.switchToDefaultFormat();
+                            content.Append($"\n{indentString}= (explanation omitted)\n{indentString}");
+                            effectiveTerm.PrettyPrint(content, format, numberingString.Length);
+                        }
+                        content.Append("\n\n");
                     }
-                    content.Append('\n');
                 }
+                format.printContextSensitive = true;
+
+                bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
-            content.Append("\n\nThe quantifier body:\n\n");
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+            content.Append("Binding information:");
+            content.switchToDefaultFormat();
+
+            foreach (var bindings in bindingInfo.getBindingsToFreeVars())
+            {
+                content.Append("\n\n");
+                content.Append(bindings.Key.Name).Append(" was bound to:\n");
+                bindings.Value.PrettyPrint(content, format);
+                content.switchToDefaultFormat();
+            }
+
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+            content.Append("\n\n\nThe quantifier body:\n\n");
+            content.switchToDefaultFormat();
             Quant.BodyTerm.PrettyPrint(content, format);
             content.Append("\n\n");
             format.restoreAllOriginalRules();
 
-            if (dependentTerms.Count <= 0) return;
-
             content.switchToDefaultFormat();
+            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
             content.Append("The resulting term:\n\n");
-            dependentTerms[dependentTerms.Count - 1].PrettyPrint(content, format);
+            content.switchToDefaultFormat();
+            HightlightConstraintEqualities(format);
+            concreteBody.PrettyPrint(content, format);
+
+            if (TheoryConstraintsDependentTerms.Any())
+            {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\n\nAdded Theory Constraints:");
+                content.switchToDefaultFormat();
+                foreach (var kv in TheoryConstraintsDependentTerms)
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append($"\n\nConstraints Added by the {kv.Key} theory:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var term in kv.Value)
+                    {
+                        var constraintExplanation = GetTheoryConstraintExplanation(term, kv.Key);
+                        if (constraintExplanation == null)
+                        {
+                            term.PrettyPrint(content, format);
+                        }
+                        else
+                        {
+                            constraintExplanation.PrettyPrint(content, format);
+                        }
+                        content.switchToDefaultFormat();
+                        content.Append("\n\n");
+                    }
+                }
+            }
+
+            format.restoreAllOriginalRules();
         }
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
             if (bindingInfo == null) return;
-            bindingInfo.fullPattern.highlightTemporarily(format, Color.LimeGreen);
+
+            // highlight replaced, equal terms as well
+            foreach (var eqTerm in bindingInfo.equalities.SelectMany(kv => kv.Value))
+            {
+                eqTerm.Item2.highlightTemporarily(format, PrintConstants.equalityColor, eqTerm.Item1);
+            }
+
+            bindingInfo.fullPattern.highlightTemporarily(format, PrintConstants.patternMatchColor);
             foreach (var binding in bindingInfo.bindings)
             {
                 var patternTerm = binding.Key;
                 var term = binding.Value;
-                var color = Color.Coral;
-                if (patternTerm.id == -1) color = Color.DeepSkyBlue;
+                var color = PrintConstants.blameColor;
+                if (patternTerm.id == -1) color = PrintConstants.bindColor;
 
-                patternTerm.highlightTemporarily(format, color, bindingInfo.matchContext[patternTerm.id]);
-                term.highlightTemporarily(format, color, bindingInfo.matchContext[term.id]);
-                if (!bindingInfo.equalities.ContainsKey(patternTerm)) continue;
-
-                // highlight replaced, equal terms as well
-                foreach (var eqTerm in bindingInfo.equalities[patternTerm])
-                {
-                    eqTerm.highlightTemporarily(format, Color.Goldenrod, bindingInfo.matchContext[eqTerm.id]);
-                }
+                patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
+                term.Item2.highlightTemporarily(format, color, term.Item1);
             }
         }
-
-        private void processPattern()
-        {
-            if (didPatternMatch) return;
-            didPatternMatch = true;
-            var bindingCandidates = findAllMatches();
-            switch (bindingCandidates.Count)
-            {
-                case 0:
-                    return;
-                case 1:
-                    _bindingInfo = bindingCandidates[0];
-                    return;
-                default:
-                    _bindingInfo = bindingCandidates.First(candidate => candidate.validate());
-                    break;
-            }
-            if (_bindingInfo != null) return;
-            isAmbiguous = true;
-            _bindingInfo = bindingCandidates[0];
-        }
-
-        private List<BindingInfo> findAllMatches()
-        {
-            var plausibleMatches = new List<BindingInfo>();
-            foreach (var pattern in Quant.Patterns())
-            {
-                var matches = parallelDescent(pattern);
-                foreach (var match in matches)
-                {
-                    if (match.finalize(Responsible.ToList(), Bindings.ToList())) plausibleMatches.Add(match);
-                }
-            }
-            return plausibleMatches.OrderBy(match => match.numEq).ToList();
-        }
-
-        private IEnumerable<BindingInfo> parallelDescent(Term pattern)
-        {
-            // list with empty binding info to collect all possible matches
-            var plausibleMatches = new List<BindingInfo> {new BindingInfo(pattern, Responsible)};
-            
-            var patternQueue = new Queue<Term>();
-
-            enqueueSubPatterns(pattern, patternQueue);
-
-            while (patternQueue.Count > 0)
-            {
-                var currentPattern = patternQueue.Dequeue();
-                var currMatches = new List<BindingInfo>();
-                foreach (var match in plausibleMatches)
-                {
-                    currMatches.AddRange(match.allNextMatches(currentPattern));
-                }
-                plausibleMatches = currMatches;
-
-                enqueueSubPatterns(currentPattern, patternQueue);
-            }
-
-            return plausibleMatches;
-        }
-
-        private static void enqueueSubPatterns(Term pattern, Queue<Term> patternQueue)
-        {
-            foreach (var arg in pattern.Args)
-            {
-                patternQueue.Enqueue(arg);
-            }
-        }
-
-
-        // The dictionary stores the following information:
-        // The key is a the free variable term.
-        // The value is structured as follows:
-        // It's a tuple with the first item being bound term.
-        // The second item is a list of histories such that occurrences of bound terms in blamed terms,
-        // that were actually bound in that position, can be distinguished from occurrences that were not bound.
-        // A history is represented as a list of terms.
-        // That's why the value type is Tuple<Term, List<List<Term>>>.
-        private bool didPatternMatch;
-        private bool isAmbiguous;
 
         public override void SummaryInfo(InfoPanelContent content)
         {
-            content.switchFormat(InfoPanelContent.TitleFont, Color.DarkRed);
+            content.switchFormat(PrintConstants.TitleFont, PrintConstants.instantiationTitleColor);
             content.Append("Instantiation ").Append('@').Append(LineNo + ":\n");
             content.switchToDefaultFormat();
 
             content.Append('\n').Append(Quant.PrintName).Append('\n');
             content.Append("Depth: " + depth).Append('\n');
             content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
+        }
+
+        private void HightlightConstraintEqualities(PrettyPrintFormat format)
+        {
+            foreach (var term in TheoryConstraintsEqualities.Values.SelectMany(l => l.SelectMany(t => t.Args)).Distinct().Where(t => concreteBody.isSubterm(t.id)))
+            {
+                term.highlightTemporarily(format, PrintConstants.equalityColor);
+            }
+        }
+
+        public EqualityExplanation GetTheoryConstraintExplanation(Term t, string theory)
+        {
+            var eqs = TheoryConstraintsEqualities[theory];
+
+            var pathsTodoQueue = new Queue<List<Term>>();
+            pathsTodoQueue.Enqueue(new List<Term>() { t });
+            List<Term> resultPath = null;
+            do
+            {
+                var path = pathsTodoQueue.Dequeue();
+                var edge = path.Last();
+                var continuations = eqs.Where(eq => eq.Args.Contains(edge)).SelectMany(eq => eq.Args).Where(term => !path.Contains(term));
+
+                var solution = continuations.FirstOrDefault(term => concreteBody.isSubterm(term.id));
+                if (solution != null)
+                {
+                    resultPath = path;
+                    resultPath.Add(solution);
+                    break;
+                }
+
+                foreach (var continuation in continuations)
+                {
+                    var newPath = new List<Term>(path);
+                    newPath.Add(continuation);
+                    pathsTodoQueue.Enqueue(newPath);
+                }
+            } while (pathsTodoQueue.Any());
+
+            if (resultPath == null) return null;
+
+            resultPath.Reverse();
+            var explanationSteps = resultPath.Zip(resultPath.Skip(1), (from, to) => new TheoryEqualityExplanation(from, to, theory)).ToArray();
+
+            if (explanationSteps.Length == 1)
+            {
+                return explanationSteps.First();
+            }
+            else
+            {
+                return new TransitiveEqualityExplanation(explanationSteps.First().source, explanationSteps.Last().target, explanationSteps);
+            }
         }
 
         public override IEnumerable<Common> Children()
@@ -365,11 +450,9 @@ namespace AxiomProfiler.QuantifierModel
         public int DepCount;
         public readonly List<ImportantInstantiation> ResponsibleInsts = new List<ImportantInstantiation>();
 
-        public ImportantInstantiation(Instantiation par)
+        public ImportantInstantiation(Instantiation par) : base(par.bindingInfo)
         {
             Quant = par.Quant;
-            Bindings = par.Bindings;
-            Responsible = par.Responsible;
             LineNo = par.LineNo;
             Cost = par.Cost;
             Z3Generation = par.Z3Generation;
