@@ -28,7 +28,8 @@ namespace AxiomProfiler
         private readonly List<Color> colors = new List<Color> {Color.Purple, Color.Blue,
                 Color.Green, Color.LawnGreen, Color.Orange, Color.DarkKhaki, Color.DarkGray, Color.Moccasin,
                 Color.DarkSeaGreen, Color.Silver, Color.Salmon, Color.LemonChiffon, Color.Fuchsia,
-                Color.ForestGreen, Color.Beige, Color.AliceBlue, Color.MediumTurquoise, Color.Tomato
+                Color.ForestGreen, Color.Beige, Color.AliceBlue, Color.MediumTurquoise, Color.Tomato,
+                Color.Black
                 };
 
         private static readonly Color selectionColor = Color.Red;
@@ -112,7 +113,11 @@ namespace AxiomProfiler
 
             if (checkNumNodesWithDialog(ref newNodeInsts)) return;
 
-            foreach (var node in newNodeInsts.Select(connectToVisibleNodes))
+            // Sorting helps ensure that the most common quantifiers end up with different colors
+            var prioritySortedNewNodeInsts = newNodeInsts.GroupBy(inst => inst.Quant)
+                .OrderByDescending(group => group.Count())
+                .SelectMany(group => group);
+            foreach (var node in prioritySortedNewNodeInsts.Select(connectToVisibleNodes))
             {
                 formatNode(node);
             }
@@ -146,12 +151,7 @@ namespace AxiomProfiler
         {
             if (!colorMap.TryGetValue(quant, out var color))
             {
-                color = colors.FirstOrDefault(c => !colorMap.Values.Contains(c));
-                if (color == default(Color))
-                {
-                    color = Color.Black;
-                }
-
+                color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
                 colorMap[quant] = color;
             }
 
