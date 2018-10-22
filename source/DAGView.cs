@@ -494,7 +494,7 @@ namespace AxiomProfiler
                 }
                 catch (Exception exception)
                 {
-                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {e.Message}");
+                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {exception.Message}");
                 }
 #endif
             });
