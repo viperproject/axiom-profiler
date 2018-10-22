@@ -55,7 +55,7 @@ namespace AxiomProfiler.CycleDetection
             if (!hasCycle()) return result;
             result.AddRange(suffixTree.getCycle()
                 .Where(c => c != endChar)
-                .Select(c => reverseMapping[c].First().Quant));
+                .Select(c => reverseMapping[c].First().Quant)); // The cycle detection works on chars. We need to map these back to the corresponding instantiations and obtain the quantifier from there.
             return result;
         }
 
@@ -63,7 +63,7 @@ namespace AxiomProfiler.CycleDetection
         {
             var chars = new List<char>();
 
-            // Map the instantiations. At this point we ignore edge types (which part of the pattern was matched by the preceeding
+            // Map the instantiations. At this point we ignore edge types (which part of the pattern was matched by the preceding
             // instantiation).
             foreach (var instantiation in path)
             {
@@ -348,15 +348,16 @@ namespace AxiomProfiler.CycleDetection
 
                 // Theory Constraints
                 var instantiations = loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0).ToList();
+                // For each subpattern we collect that theory constraint terms that may supply the term matched against that subpattern.
                 var perBindingTheoryConstraints = loopInstantiationsWorkSpace[i]
                     .Zip(instantiations, (p, c) => c.bindingInfo.bindings
-                        .Where(bnd => bnd.Value.Item1.Any(pathCondition => !pathCondition.Any()))
+                        .Where(bnd => bnd.Value.Item1.Any(pathCondition => !pathCondition.Any())) // We are only interested in terms that are not subterms of any other matched term.
                         .Select(bnd => Tuple.Create(bnd.Key, p.TheoryConstraintsDependentTerms.SelectMany(kv => kv.Value
-                            .Where(tc => tc.isSubterm(bnd.Value.Item2.id))
+                            .Where(tc => tc.isSubterm(bnd.Value.Item2.id)) // Get all theory constraint terms that may supply the needed term.
                             .Select(tc => Tuple.Create(kv.Key, tc))).ToList()))
-                        .Where(perBinding => perBinding.Item2.Any()))
+                        .Where(perBinding => perBinding.Item2.Any())) // Ignore all terms that are not supplied by theroy constraints.
                     .SelectMany(x => x)
-                    .GroupBy(perBinding => perBinding.Item1)
+                    .GroupBy(perBinding => perBinding.Item1) // Group across iterations.
                     .Select(group => Tuple.Create(group.Key, group.Select(perIt => perIt.Item2).ToList()))
                     .ToList();
 
@@ -364,6 +365,7 @@ namespace AxiomProfiler.CycleDetection
                 var generalizedTheoryExplanations = new List<EqualityExplanation>();
                 foreach (var perBinding in perBindingTheoryConstraints)
                 {
+                    // We use the theory constraints that can be used to explain the most iterations.
                     var relevantTheories = perBinding.Item2.SelectMany(list => list.Select(t => t.Item1)).Distinct();
                     var theoryCounts = relevantTheories.Select(theory => Tuple.Create(theory, perBinding.Item2
                         .Count(list => list.Any(t => t.Item1 == theory))));
@@ -371,6 +373,7 @@ namespace AxiomProfiler.CycleDetection
                     var selectedTheory = selected.Item1;
                     var selectedCount = selected.Item2;
 
+                    // Check if we can find an equality explanation that works for all relevant theory constraints.
                     var candidates = perBinding.Item2.Zip(loopInstantiationsWorkSpace[i], (list, inst) => list
                         .Where(t => t.Item1 == selectedTheory).Select(t => inst.GetTheoryConstraintExplanation(t.Item2, selectedTheory)).Where(ee => ee != null));
                     var possibleSources = candidates.Zip(Enumerable.Range(j <= i ? 1 : 0, instantiations.Count), (list, iteration) => list
@@ -381,6 +384,7 @@ namespace AxiomProfiler.CycleDetection
 
                     if (selectedSource != null)
                     {
+                        // Generalize the equality explanation
                         var concretes = possibleSources.Zip(instantiations.Zip(Enumerable.Range(j <= i ? 1 : 0, instantiations.Count), Tuple.Create), (list, inst) =>
                             Tuple.Create(list
                             .FirstOrDefault(t => t.Item2.Contains(selectedSource)).Item1, inst.Item1, inst.Item2)).Where(t => t.Item1 != null).ToList();
@@ -391,6 +395,7 @@ namespace AxiomProfiler.CycleDetection
                         var generalizedEq = theoryConstraintExplanationGeneralizer.visit(explanations.First(), Tuple.Create(explanations, highlightInfoInsts, nextBindingInfo, isWrapInstantiation, instantiationNumberings));
                         var generalizedTerm = generalizedEq.target;
 
+                        // Add to the generalized loop step
                         if (!generalizedTheoryConstraints.TryGetValue(selectedTheory, out var theoryConstraints))
                         {
                             theoryConstraints = new List<Term>();
@@ -404,6 +409,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                     else
                     {
+                        // Generalize the term
                         var concretes = perBinding.Item2.Zip(instantiations.Zip(Enumerable.Range(j <= i ? 1 : 0, instantiations.Count), Tuple.Create), (tcs, inst) =>
                             Tuple.Create(tcs.FirstOrDefault(t => t.Item1 == selectedTheory).Item2, inst.Item1, inst.Item2)).Where(t => t.Item1 != null).ToList();
                         var terms = concretes.Select(t => t.Item1).ToList();
@@ -414,6 +420,7 @@ namespace AxiomProfiler.CycleDetection
                         generalized.Responsible = terms.Last().Responsible;
                         generalized.dependentInstantiationsBlame.Add(loopInstantiationsWorkSpace[j].First());
 
+                        // Add to the loop step
                         if (!generalizedTheoryConstraints.TryGetValue(selectedTheory, out var theoryConstraints))
                         {
                             theoryConstraints = new List<Term>();
@@ -630,7 +637,7 @@ namespace AxiomProfiler.CycleDetection
 
             var recursionPointFinder = new RecursionPointFinder();
             generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
-
+                // We pick an index in the middle to make sure it follows the general pattern.
                 var safeIndex = list.Count / 2;
 
                 // Get explanations that may be referenced (i.e. exist before) by list[safeIndex]. These have to occur in previous concrete
@@ -1038,14 +1045,18 @@ namespace AxiomProfiler.CycleDetection
             public override EqualityExplanation Transitive(TransitiveEqualityExplanation target, Tuple<IEnumerable<int>, Tuple<EqualityExplanation, int>> arg)
             {
                 var path = arg.Item1;
+
+                // We're only interested in whether the path contains 0, 1, or more than 1 more elements. We can check this efficiently.
                 var indicator = path.Take(3).Count();
                 if (indicator == 0)
                 {
+                    // The entire explanation should be replaced.
                     var recursionPoint = arg.Item2;
                     return new RecursiveReferenceEqualityExplanation(target.source, target.target, recursionPoint.Item1, recursionPoint.Item2);
                 }
                 else if (indicator == 2 && path.ElementAt(1) < 0)
                 {
+                    // A subsequence of equalities whithin this explanation should be replaced.
                     var startIndex = path.ElementAt(0);
                     var length = -path.ElementAt(1);
                     var endIndex = startIndex + length - 1;
@@ -1061,6 +1072,7 @@ namespace AxiomProfiler.CycleDetection
                 }
                 else
                 {
+                    // Continue following the path.
                     var index = path.First();
                     var nextPath = path.Skip(1);
                     var nextArg = Tuple.Create(nextPath, arg.Item2);

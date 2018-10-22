@@ -456,6 +456,8 @@ namespace AxiomProfiler
 
             Task.Run(() =>
             {
+                // During debugging we want VS to catch exceptions so we can inspect the program state at the point where the exception was thrown.
+                // For release builds we catch the execption here and display a message so the user knows that that they shouldn't wait for a path to be found.
 #if !DEBUG
                 try
                 {
@@ -492,7 +494,7 @@ namespace AxiomProfiler
                 }
                 catch (Exception exception)
                 {
-                    _z3AxiomProfiler.DisplayMessage($"Something went wrong: {exception.Message}");
+                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {e.Message}");
                 }
 #endif
             });

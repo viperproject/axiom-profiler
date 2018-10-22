@@ -639,6 +639,8 @@ namespace AxiomProfiler
 
             lock (this)
             {
+                // During debugging we want VS to catch exceptions so we can inspect the program state at the point where the exception was thrown.
+                // For release builds we catch the execption here and display a message so the user knows that that they shouldn't wait for the generalization.
 #if !DEBUG
                 try
                 {
@@ -657,7 +659,7 @@ namespace AxiomProfiler
                 {
                     // Notify user
                     Interlocked.Decrement(ref workCounter);
-                    DisplayMessage($"Something went wrong: {e.Message}");
+                    DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {e.Message}");
                 }
 #endif
             }

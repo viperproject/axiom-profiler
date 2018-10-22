@@ -35,6 +35,11 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
+
+        // isPrime and generationOffset represent a similar concept: they indicate that a generalized term is written in terms of a different
+        // (generalized) loop iteration than the one we are currently in. iterationOffset is used by the algorithms whereas isPrime is used for
+        // printing. Furthermore an iterationOffset > 0 indicates that the term comes from a preceeding iteration whereas isPrime is usually used
+        // indicate a term from a future iteration.
         public int iterationOffset = 0;
         public bool isPrime = false;
 

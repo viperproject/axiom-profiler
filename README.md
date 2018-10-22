@@ -8,7 +8,7 @@ An upgrade of the [Z3 Axiom Profiler](http://vcc.codeplex.com/SourceControl/late
 
         hg clone https://bitbucket.org/viperproject/axiom-profiler
         
-2.  Build from Visual Studio (also possible on the command-line): open source/AxiomProfiler.sln solution, and run the release build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2015).
+2.  Build from Visual Studio (also possible on the command-line): open source/AxiomProfiler.sln solution, and run the release build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2017).
         
 3.  Run the tool (either via Visual Studio, or by executing bin/Release/AxiomProfiler.exe)
 
