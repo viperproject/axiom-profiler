@@ -49,6 +49,7 @@ namespace AxiomProfiler
                     .Where(inst => inst.Depth <= maxDepthUpDown.Value)
                     .Where(inst => quantSelectionBox.CheckedItems.Contains(inst.Quant))
                     .OrderBy(ordFunc)
+                    .Distinct()
                     .Take((int)maxNewNodesUpDown.Value));
                 updateFilteredNodes();
             });
@@ -124,6 +125,9 @@ namespace AxiomProfiler
                     break;
                 case "Starting Longest Path":
                     ordFunc = inst => -inst.DeepestSubpathDepth;
+                    break;
+                case "Most Children":
+                    ordFunc = inst => -inst.DependantInstantiations.Count;
                     break;
                 default:
                     ordFunc = inst => inst.LineNo;
