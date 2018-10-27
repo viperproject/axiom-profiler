@@ -796,9 +796,9 @@ namespace AxiomProfiler
             // In general the explanations may converge at some term before they reach the root. After reaching that term
             // they follow the same steps to reach the root. We remove this redundancy from our explanation.
             // This is in particular necessary to avoid looping on congruence explanations (see GoogleDoc).
-            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1.Equals(t.Item2));
-            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse();
-            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Select(e => explanationReverser.visit(e, null));
+            var commonPrefixLength = sourceExplanations.Zip(targetExplanations, (s, t) => s.Equals(t)).TakeWhile(x => x).Count();
+            var relevantSourceExplanations = sourceExplanations.Skip(commonPrefixLength).Reverse();
+            var relevantTargetExplanations = targetExplanations.Skip(commonPrefixLength).Select(e => explanationReverser.visit(e, null));
 
             // Build the explanation.
             var explanationPath = relevantSourceExplanations.Concat(relevantTargetExplanations).Select(e => explanationFinalizer.visit(e, this));
