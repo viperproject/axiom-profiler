@@ -5,6 +5,9 @@ using System.Linq;
 
 namespace AxiomProfiler.QuantifierModel
 {
+    using ConstraintElementType = Tuple<Term, int>;
+    using ConstraintType = List<Tuple<Term, int>>;
+
     public class BindingInfo
     {
         // Pattern used for this binding
@@ -16,8 +19,8 @@ namespace AxiomProfiler.QuantifierModel
 
         private bool processed = false;
         // bindings: trigger subterm --> (path constraints, Term)
-        private Dictionary<Term, Tuple<List<List<Term>>, Term>> _bindings = new Dictionary<Term, Tuple<List<List<Term>>, Term>>();
-        public Dictionary<Term, Tuple<List<List<Term>>, Term>> bindings
+        private Dictionary<Term, Tuple<List<ConstraintType>, Term>> _bindings = new Dictionary<Term, Tuple<List<ConstraintType>, Term>>();
+        public Dictionary<Term, Tuple<List<ConstraintType>, Term>> bindings
         {
             get
             {
@@ -27,8 +30,8 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         // highlighting info for pattern: Term --> List of path constraints
-        private readonly Dictionary<int, List<List<Term>>> _patternMatchContext = new Dictionary<int, List<List<Term>>>();
-        public Dictionary<int, List<List<Term>>> patternMatchContext
+        private readonly Dictionary<int, List<ConstraintType>> _patternMatchContext = new Dictionary<int, List<ConstraintType>>();
+        public Dictionary<int, List<ConstraintType>> patternMatchContext
         {
             get {
                 if (!processed) Process();
@@ -37,8 +40,8 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         // equalities inferred from pattern matching
-        private Dictionary<Term, List<Tuple<List<Term>, Term>>> _equalities = new Dictionary<Term, List<Tuple<List<Term>, Term>>>();
-        public Dictionary<Term, List<Tuple<List<Term>, Term>>> equalities
+        private Dictionary<Term, List<Tuple<ConstraintType, Term>>> _equalities = new Dictionary<Term, List<Tuple<ConstraintType, Term>>>();
+        public Dictionary<Term, List<Tuple<ConstraintType, Term>>> equalities
         {
             get
             {
@@ -141,27 +144,27 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private static Dictionary<Term, Tuple<List<List<Term>>, Term>> copyBindings(Dictionary<Term, Tuple<List<List<Term>>, Term>> bindings)
+        private static Dictionary<Term, Tuple<List<ConstraintType>, Term>> CopyBindings(Dictionary<Term, Tuple<List<ConstraintType>, Term>> bindings)
         {
-            var copy = new Dictionary<Term, Tuple<List<List<Term>>, Term>>();
+            var copy = new Dictionary<Term, Tuple<List<ConstraintType>, Term>>();
 
             // 'deeper' copy of path constraints
             foreach (var kv in bindings)
             {
-                copy[kv.Key] = Tuple.Create(kv.Value.Item1.Select(l => new List<Term>(l)).ToList(), kv.Value.Item2);
+                copy[kv.Key] = Tuple.Create(kv.Value.Item1.Select(l => new ConstraintType(l)).ToList(), kv.Value.Item2);
             }
 
             return copy;
         }
 
-        private static Dictionary<Term, List<Tuple<List<Term>, Term>>> copyEqualities(Dictionary<Term, List<Tuple<List<Term>, Term>>> bindings)
+        private static Dictionary<Term, List<Tuple<ConstraintType, Term>>> CopyEqualities(Dictionary<Term, List<Tuple<ConstraintType, Term>>> bindings)
         {
-            var copy = new Dictionary<Term, List<Tuple<List<Term>, Term>>>();
+            var copy = new Dictionary<Term, List<Tuple<ConstraintType, Term>>>();
 
             // 'deeper' copy of path constraints and equality lhs
             foreach (var kv in bindings)
             {
-                copy[kv.Key] = kv.Value.Select(t => Tuple.Create(new List<Term>(t.Item1), t.Item2)).ToList();
+                copy[kv.Key] = kv.Value.Select(t => Tuple.Create(new ConstraintType(t.Item1), t.Item2)).ToList();
             }
 
             return copy;
@@ -179,7 +182,7 @@ namespace AxiomProfiler.QuantifierModel
         private BindingInfo(BindingInfo other)
         {
             processed = other.processed;
-            _bindings = copyBindings(other._bindings);
+            _bindings = CopyBindings(other._bindings);
             BoundTerms = other.BoundTerms;
             TopLevelTerms = other.TopLevelTerms;
             EqualityExplanations = other.EqualityExplanations;
@@ -187,13 +190,13 @@ namespace AxiomProfiler.QuantifierModel
             numEq = other.numEq;
 
             // 'deeper' copy
-            _patternMatchContext = new Dictionary<int, List<List<Term>>>();
+            _patternMatchContext = new Dictionary<int, List<ConstraintType>>();
             foreach (var context in other._patternMatchContext)
             {
-                _patternMatchContext[context.Key] = context.Value.Select(l => new List<Term>(l)).ToList();
+                _patternMatchContext[context.Key] = context.Value.Select(l => new ConstraintType(l)).ToList();
             }
             
-            _equalities = copyEqualities(other._equalities);
+            _equalities = CopyEqualities(other._equalities);
         }
 
         public BindingInfo Clone()
@@ -201,9 +204,9 @@ namespace AxiomProfiler.QuantifierModel
             return new BindingInfo(this);
         }
 
-        private void addPatternMatchContext(Term term, List<List<Term>> context)
+        private void addPatternMatchContext(Term term, List<ConstraintType> context)
         {
-            if (!patternMatchContext.ContainsKey(term.id)) _patternMatchContext[term.id] = new List<List<Term>>();
+            if (!patternMatchContext.ContainsKey(term.id)) _patternMatchContext[term.id] = new List<ConstraintType>();
             _patternMatchContext[term.id].AddRange(context);
         }
 
@@ -217,34 +220,33 @@ namespace AxiomProfiler.QuantifierModel
         /// <param name="toMatch"> Other matches that still need to be processed. </param>
         /// <param name="multipatternArg"> The index of the term of a multi-pattern that is currently being matched. </param>
         /// <returns> Boolean indicating wether the match and all subsequent matches were successful or not. </returns>
-        private bool AddPatternMatch(Term pattern, Term match, Term usedEquality, IEnumerable<Term> context, IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch, int multipatternArg)
+        private bool AddPatternMatch(Term pattern, Term match, Term usedEquality, IEnumerable<ConstraintElementType> context, IEnumerable<Tuple<Term, Term, IEnumerable<ConstraintElementType>>> toMatch, int multipatternArg)
         {
             // Backup so we can backtrack later.
-            var origBindings = copyBindings(_bindings);
-            var origEqualities = copyEqualities(_equalities);
+            var origBindings = CopyBindings(_bindings);
+            var origEqualities = CopyEqualities(_equalities);
 
             // Update binding info.
             if (usedEquality != null)
             {
                 if (!_equalities.TryGetValue(pattern, out var eqs))
                 {
-                    eqs = new List<Tuple<List<Term>, Term>>();
+                    eqs = new List<Tuple<ConstraintType, Term>>();
                     _equalities[pattern] = eqs;
                 }
                 eqs.Add(Tuple.Create(context.ToList(), usedEquality));
-                context = Enumerable.Empty<Term>();
+                context = Enumerable.Empty<ConstraintElementType>();
             }
 
             if (!_bindings.TryGetValue(pattern, out var existingBinding))
             {
-                existingBinding = Tuple.Create(new List<List<Term>>(), match);
+                existingBinding = Tuple.Create(new List<ConstraintType>(), match);
                 _bindings[pattern] = existingBinding;
             }
             existingBinding.Item1.Add(context.ToList());
             
             // Continue with arguments.
-            var nextContext = context.Concat(Enumerable.Repeat(match, 1));
-            var nextMatches = pattern.Args.Zip(match.Args, (p, m) => Tuple.Create(p, m, nextContext)).Concat(toMatch);
+            var nextMatches = Enumerable.Range(0, pattern.Args.Length).Select(i => Tuple.Create(pattern.Args[i], match.Args[i], context.Concat(Enumerable.Repeat(Tuple.Create(match, i), 1)))).Concat(toMatch);
             if (DoNextMatch(nextMatches, multipatternArg))
             {
                 return true;
@@ -257,7 +259,7 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        private bool DoNextMatch(IEnumerable<Tuple<Term, Term, IEnumerable<Term>>> toMatch, int multipatternArg)
+        private bool DoNextMatch(IEnumerable<Tuple<Term, Term, IEnumerable<ConstraintElementType>>> toMatch, int multipatternArg)
         {
             // Done with one term in multi-pattern.
             if (!toMatch.Any())
@@ -395,7 +397,7 @@ namespace AxiomProfiler.QuantifierModel
                     t.Args.Length == pattern.Args.Length);
                 foreach (var match in topLevelMatches)
                 {
-                    if (AddPatternMatch(pattern, match, null, Enumerable.Empty<Term>(), Enumerable.Empty<Tuple<Term, Term, IEnumerable<Term>>>(), index))
+                    if (AddPatternMatch(pattern, match, null, Enumerable.Empty<ConstraintElementType>(), Enumerable.Empty<Tuple<Term, Term, IEnumerable<ConstraintElementType>>>(), index))
                     {
                         return true;
                     }
@@ -421,9 +423,9 @@ namespace AxiomProfiler.QuantifierModel
         /// </summary>
         private void AddPatternPathconditions()
         {
-            var patternStack = new Stack<Term>();
-            patternStack.Push(fullPattern);
-            var history = new Stack<Term>();
+            var patternStack = new Stack<ConstraintElementType>();
+            patternStack.Push(Tuple.Create(fullPattern, 0));
+            var history = new Stack<ConstraintElementType>();
 
             while (patternStack.Count > 0)
             {
@@ -437,12 +439,13 @@ namespace AxiomProfiler.QuantifierModel
 
                 var pathConstraint = history.ToList();
                 pathConstraint.Reverse();
-                addPatternMatchContext(currentPattern, new List<List<Term>> { pathConstraint });
+                addPatternMatchContext(currentPattern.Item1, new List<ConstraintType> { pathConstraint });
                 
                 history.Push(currentPattern);
-                foreach (var subPattern in currentPattern.Args)
+                for (var i = 0; i < currentPattern.Item1.Args.Length; ++i)
                 {
-                    patternStack.Push(subPattern);
+                    var subPattern = currentPattern.Item1.Args[i];
+                    patternStack.Push(Tuple.Create(subPattern, i));
                 }
             }
         }
@@ -459,7 +462,7 @@ namespace AxiomProfiler.QuantifierModel
             var blameTerms = bindings
                 .Select(bnd => bnd.Value).Distinct();
             return blameTerms
-                .Where(t1 => t1 == default(Tuple<List<List<Term>>, Term>) ? false : t1.Item1.Any(l => l.Count == 0))
+                .Where(t1 => t1 == default(Tuple<List<ConstraintType>, Term>) ? false : t1.Item1.Any(l => l.Count == 0))
                 .Select(t => t.Item2)
                 .Distinct(Term.semanticTermComparer)
                 .ToList();

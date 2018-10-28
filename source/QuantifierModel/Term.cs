@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -7,6 +8,8 @@ using AxiomProfiler.PrettyPrinting;
 
 namespace AxiomProfiler.QuantifierModel
 {
+    using ConstraintType = List<Tuple<Term, int>>;
+
     public class Term : Common
     {
         public class SemanticTermComparer : IEqualityComparer<Term>
@@ -149,12 +152,12 @@ namespace AxiomProfiler.QuantifierModel
             format.addTemporaryRule(id + "", tmp);
         }
 
-        public void highlightTemporarily(PrettyPrintFormat format, Color color, List<Term> pathConstraint)
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, ConstraintType pathConstraint)
         {
             highlightTemporarily(format, color, Enumerable.Repeat(pathConstraint, 1));
         }
 
-        public void highlightTemporarily(PrettyPrintFormat format, Color color, IEnumerable<List<Term>> pathConstraints)
+        public void highlightTemporarily(PrettyPrintFormat format, Color color, IEnumerable<ConstraintType> pathConstraints)
         {
             var baseRule = format.getPrintRule(this);
             IEnumerable<PrintRule> newRules;
@@ -172,7 +175,7 @@ namespace AxiomProfiler.QuantifierModel
             {
                 var tmp = baseRule.Clone();
                 tmp.color = color;
-                tmp.historyConstraints = new List<Term>();
+                tmp.historyConstraints = new ConstraintType();
                 newRules = Enumerable.Repeat(tmp, 1);
             }
 
@@ -329,9 +332,9 @@ namespace AxiomProfiler.QuantifierModel
                     { return false; }
                     if (!string.IsNullOrWhiteSpace(parentRule.infix(false)) &&
                         !string.IsNullOrWhiteSpace(parentRule.suffix(false)) &&
-                        format.childIndex == format.history.Last().Args.Length - 1)
+                        format.childIndex == format.history.Last().Item1.Args.Length - 1)
                     { return false; }
-                    return format.history.Last().Name != Name || !rule.associative;
+                    return format.history.Last().Item1.Name != Name || !rule.associative;
                 default:
                     throw new InvalidEnumArgumentException();
             }

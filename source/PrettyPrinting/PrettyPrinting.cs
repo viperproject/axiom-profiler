@@ -7,6 +7,8 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler.PrettyPrinting
 {
+    using ConstraintType = List<Tuple<Term, int>>;
+
     public class PrintConstants
     {
         public static bool LargeTextMode = false;
@@ -168,7 +170,7 @@ namespace AxiomProfiler.PrettyPrinting
         public ParenthesesSetting parentheses;
         public bool isDefault;
         public bool isUserdefined;
-        public List<Term> historyConstraints;
+        public ConstraintType historyConstraints;
 
         public enum LineBreakSetting { Before = 0, After = 1, None = 2 };
         public enum ParenthesesSetting { Always = 0, Precedence = 1, Never = 2 };
@@ -192,7 +194,7 @@ namespace AxiomProfiler.PrettyPrinting
                 indent = true,
                 isDefault = true,
                 precedence = 0,
-                historyConstraints = new List<Term>(),
+                historyConstraints = new ConstraintType(),
                 prefixLineBreak = LineBreakSetting.After,
                 infixLineBreak = LineBreakSetting.After,
                 suffixLineBreak = LineBreakSetting.Before,
@@ -274,7 +276,7 @@ namespace AxiomProfiler.PrettyPrinting
                 infixLineBreak = infixLineBreak,
                 suffixLineBreak = suffixLineBreak,
                 associative = associative,
-                historyConstraints = new List<Term>(historyConstraints),
+                historyConstraints = new ConstraintType(historyConstraints),
                 indent = indent,
                 isDefault = isDefault,
                 parentheses = parentheses,
@@ -294,7 +296,7 @@ namespace AxiomProfiler.PrettyPrinting
         public bool showType;
         public bool showTermId;
         public bool rewritingEnabled;
-        public readonly List<Term> history = new List<Term>();
+        public readonly ConstraintType history = new ConstraintType();
         public int childIndex = -1; // which child of the parent the current term is.
         public PrintRuleDictionary printRuleDict = new PrintRuleDictionary();
         private readonly Dictionary<string, PrintRule> originalRulesReplacedByTemp = new Dictionary<string, PrintRule>();
@@ -321,7 +323,7 @@ namespace AxiomProfiler.PrettyPrinting
                 equalityNumbers = equalityNumbers
             };
             nextFormat.history.AddRange(history);
-            nextFormat.history.Add(parent);
+            nextFormat.history.Add(Tuple.Create(parent, childNo));
             return nextFormat;
         }
 
@@ -395,7 +397,7 @@ namespace AxiomProfiler.PrettyPrinting
         public PrintRule GetParentPrintRule()
         {
             if (history.Count == 0) return null;
-            return getPrintRule(history.Last());
+            return getPrintRule(history.Last().Item1);
         }
 
         private bool historyConstraintSatisfied(PrintRule rule)
@@ -404,7 +406,7 @@ namespace AxiomProfiler.PrettyPrinting
             var constraint = rule.historyConstraints;
             if (constraint.Count > history.Count) return false;
             var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
-            var intermediate = slice.Zip(constraint, (term1, term2) => term1.id == term2.id);
+            var intermediate = slice.Zip(constraint, (term1, term2) => term1.Item1.id == term2.Item1.id && term1.Item2 == term2.Item2);
             return intermediate.All(val => val);
         }
 
