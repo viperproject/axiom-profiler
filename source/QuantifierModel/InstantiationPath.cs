@@ -512,21 +512,41 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
-            content.switchFormat(PrintConstants.TitleFont, PrintConstants.warningTextColor);
-            content.Append("Possible matching loop found!\n");
+            var generalizationState = cycleDetector.getGeneralization();
+
+            if (generalizationState.TrueLoop)
+            {
+                content.switchFormat(PrintConstants.TitleFont, PrintConstants.warningTextColor);
+                content.Append("Possible matching loop found!\n");
+            }
+            else
+            {
+                content.switchFormat(PrintConstants.BoldFont, PrintConstants.defaultTextColor);
+                content.Append("Repating pattern but ");
+                content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
+                content.Append("no");
+                content.switchFormat(PrintConstants.BoldFont, PrintConstants.defaultTextColor);
+                content.Append(" matching loop found!\n");
+            }
             content.switchToDefaultFormat();
-            content.Append("Number of loop iterations: ").Append(cycleDetector.GetNumRepetitions() + "\n");
-            content.Append("Number of quantifiers in loop: ").Append(cycle.Count + "\n");
-            content.Append("Loop: ");
+            content.Append($"Number of{(generalizationState.TrueLoop ? " loop" : "")} iterations: ").Append(cycleDetector.GetNumRepetitions() + "\n");
+            content.Append($"Number of quantifiers in {(generalizationState.TrueLoop ? "loop" : "pattern")}: ").Append(cycle.Count + "\n");
+            if (generalizationState.TrueLoop)
+            {
+                content.Append("Loop: ");
+            }
+            else
+            {
+                content.Append("Pattern: ");
+            }
             content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
             content.Append("\n");
 
             printPreamble(content, true);
 
             content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
-            content.Append("\n\nGeneralized Loop Iteration:\n\n");
-
-            var generalizationState = cycleDetector.getGeneralization();
+            content.Append($"\n\nGeneralized{(generalizationState.TrueLoop ? "Loop" : "")} Iteration:\n\n");
+            
             var generalizedTerms = generalizationState.generalizedTerms;
 
             var additionalTerms = generalizedTerms.Take(generalizedTerms.Count - 1).SelectMany(t => t.Item3
@@ -898,10 +918,17 @@ namespace AxiomProfiler.QuantifierModel
 
                 foreach (var binding in bindingInfo.getBindingsToFreeVars())
                 {
-                    content.Append(binding.Key.Name).Append(" will be bound to:\n");
-                    binding.Value.PrettyPrint(content, format);
-                    content.switchToDefaultFormat();
-                    content.Append("\n\n");
+                    if (binding.Value == null)
+                    {
+                        content.Append($"A generalized binding for {binding.Key.Name} in the next iteration\ncould not be generated (This pattern cannot repeat indefinetly).");
+                    }
+                    else
+                    {
+                        content.Append(binding.Key.Name).Append(" will be bound to:\n");
+                        binding.Value.PrettyPrint(content, format);
+                        content.switchToDefaultFormat();
+                        content.Append("\n\n");
+                    }
                 }
 
                 return;

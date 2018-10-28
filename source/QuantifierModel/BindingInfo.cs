@@ -315,14 +315,18 @@ namespace AxiomProfiler.QuantifierModel
             else
             {
                 // Try without equality first.
-                if (patternTerm.Name == matchedTerm.Name && patternTerm.Args.Count() == matchedTerm.Args.Count() &&
+                if (patternTerm.Name == matchedTerm.Name &&
+                    patternTerm.GenericType == matchedTerm.GenericType &&
+                    patternTerm.Args.Length == matchedTerm.Args.Length &&
                     AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
                 {
                     return true;
                 }
 
                 // If that fails try equalities.
-                var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id && ee.target.Name == patternTerm.Name && ee.target.Args.Count() == patternTerm.Args.Count());
+                var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id &&
+                    ee.target.Name == patternTerm.Name && ee.target.GenericType == patternTerm.GenericType &&
+                    ee.target.Args.Length == patternTerm.Args.Length);
                 foreach (var equalityExplanation in feasibleEqualities)
                 {
                     if (AddPatternMatch(patternTerm, equalityExplanation.target, matchedTerm, context, nextMatches, multipatternArg))
@@ -386,7 +390,9 @@ namespace AxiomProfiler.QuantifierModel
             else
             {
                 var pattern = fullPattern.Args[index];
-                var topLevelMatches = TopLevelTerms.Where(t => t.Name == pattern.Name && t.Args.Count() == pattern.Args.Count());
+                var topLevelMatches = TopLevelTerms.Where(t => t.Name == pattern.Name &&
+                    t.GenericType == pattern.GenericType &&
+                    t.Args.Length == pattern.Args.Length);
                 foreach (var match in topLevelMatches)
                 {
                     if (AddPatternMatch(pattern, match, null, Enumerable.Empty<Term>(), Enumerable.Empty<Tuple<Term, Term, IEnumerable<Term>>>(), index))
@@ -453,7 +459,7 @@ namespace AxiomProfiler.QuantifierModel
             var blameTerms = bindings
                 .Select(bnd => bnd.Value).Distinct();
             return blameTerms
-                .Where(t1 => t1.Item1.Any(l => l.Count == 0))
+                .Where(t1 => t1 == default(Tuple<List<List<Term>>, Term>) ? false : t1.Item1.Any(l => l.Count == 0))
                 .Select(t => t.Item2)
                 .Distinct(Term.semanticTermComparer)
                 .ToList();
@@ -463,7 +469,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             return bindings
                 .Where(bnd => bnd.Key.id == -1)
-                .Select(kv => new KeyValuePair<Term, Term>(kv.Key, kv.Value.Item2))
+                .Select(kv => new KeyValuePair<Term, Term>(kv.Key, kv.Value?.Item2))
                 .ToList();
         }
     }

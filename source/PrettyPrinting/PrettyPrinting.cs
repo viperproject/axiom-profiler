@@ -37,10 +37,10 @@ namespace AxiomProfiler.PrettyPrinting
         private static readonly Font BigItalicFont = new Font(DefaultFont, FontStyle.Italic | FontStyle.Bold);
 
         public static Font DefaultFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
-        public static Font TitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
-        public static Font SubtitleFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
-        public static Font BoldFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
-        public static Font ItalicFont { get { return LargeTextMode ? BigDefaultFont : RegDefaultFont; } }
+        public static Font TitleFont { get { return LargeTextMode ? BigTitleFont : RegTitleFont; } }
+        public static Font SubtitleFont { get { return LargeTextMode ? BigSubtitleFont : RegSubtitleFont; } }
+        public static Font BoldFont { get { return LargeTextMode ? BigBoldFont : RegBoldFont; } }
+        public static Font ItalicFont { get { return LargeTextMode ? BigItalicFont : RegItalicFont; } }
 
         //strings
         public static readonly string indentDiff = "¦ ";
