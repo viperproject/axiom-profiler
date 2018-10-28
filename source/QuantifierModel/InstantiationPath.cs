@@ -148,6 +148,18 @@ namespace AxiomProfiler.QuantifierModel
             return cycleDetector.hasCycle();
         }
 
+        public List<Instantiation> GetInstnationsUnusedInGeneralization()
+        {
+            if (hasCycle())
+            {
+                return cycleDetector.getGeneralization().unusedInstantitations;
+            }
+            else
+            {
+                return new List<Instantiation>();
+            }
+        }
+
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             if (hasCycle())

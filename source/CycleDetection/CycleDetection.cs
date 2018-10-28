@@ -245,6 +245,7 @@ namespace AxiomProfiler.CycleDetection
         private Dictionary<Term, Term> genReplacementTermsForNextIteration = new Dictionary<Term, Term>(Term.semanticTermComparer); //A map from generalization terms in the first term of the loop explanation (e.g. T_1) to their counterparts in the result of a single matching loop iteration (e.g. plus(T_1, x) if the loop piles up plus terms)
 
         public bool TrueLoop { get; private set; } = true;
+        public readonly List<Instantiation> unusedInstantitations = new List<Instantiation>();
 
         private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
 
@@ -638,6 +639,10 @@ namespace AxiomProfiler.CycleDetection
         /// <param name="instIndex"> The index of the instantiation in the generalized loop iteration. </param>
         private void GeneralizeEqualityExplanations(int instIndex)
         {
+            // We may elimnate some instantitations (usually base cases of recursive equalities). We use this array to decide which
+            // instantiations to remove from the path shown to the user.
+            var usedInstnatiations = loopInstantiationsWorkSpace[instIndex].Select(x => true).ToArray();
+
             var insts = loopInstantiationsWorkSpace[instIndex].ToList();
             BindingInfo generalizedBindingInfo = generalizedTerms[instIndex].Item2;
 
@@ -714,7 +719,7 @@ namespace AxiomProfiler.CycleDetection
                 // Check for which explanations the recursion points can be used. There may be some explanations at the beginning that
                 // don't follow the general pattern, yet (e.g. if they have no predecessors).
                 var validationFilter = ValidateRecursionPoints(recursionPoints, list);
-                IEnumerable<Tuple<EqualityExplanation, int>> reversed;
+                IEnumerable<Tuple<EqualityExplanation, int>> valid;
                 if (validationFilter.Count(b => b) > 1)
                 {
                     var validExplanations = list.Zip(validationFilter, Tuple.Create).Where(filter => filter.Item2).Select(filter => filter.Item1);
@@ -723,17 +728,26 @@ namespace AxiomProfiler.CycleDetection
                     // match structurally after this step.
                     var explanationsWithoutRecursion = GeneralizeAtRecursionPoints(recursionPoints, validExplanations.Select(pair => pair.Item1));
 
-                    reversed = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create);
+                    valid = explanationsWithoutRecursion.Zip(validExplanations.Select(pair => pair.Item2), Tuple.Create);
                 }
                 else
                 {
 
                     // If the recursion points are only valid for a single explanation we discard them.
-                    reversed = list;
+                    valid = list;
+                }
+
+                // remember which instnatiations we didn't use
+                for (var i = 0; i < usedInstnatiations.Length; ++i)
+                {
+                    if (!valid.Any(t => t.Item2 == i))
+                    {
+                        usedInstnatiations[i] = false;
+                    }
                 }
 
                 // Now we generalize. If the explanations already match structurally this simply replaces all terms with their generalizations.
-                var result = reversed.Skip(1).Aggregate(reversed.First().Item1, (gen, conc) => EqualityExplanationGeneralizer(gen, conc, false));
+                var result = valid.Skip(1).Aggregate(valid.First().Item1, (gen, conc) => EqualityExplanationGeneralizer(gen, conc, false));
 
                 // We set all other generalizations that we could have chosen equal to the ones we actually chose.
                 // This will allow us to eliminate generalizations that were only needed by the first few (concrete) iterations that
@@ -784,6 +798,15 @@ namespace AxiomProfiler.CycleDetection
                 foreach (var recursiveReference in backPointers)
                 {
                     recursiveReference.UpdateReference(generalized);
+                }
+            }
+
+            // Add eliminated instantiations to the list so they can be removed from the graph shown to the user later on.
+            for (var i = 0; i < usedInstnatiations.Length; ++i)
+            {
+                if (!usedInstnatiations[i])
+                {
+                    unusedInstantitations.Add(insts[i]);
                 }
             }
         }
