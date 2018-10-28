@@ -53,7 +53,6 @@ namespace AxiomProfiler
                     .Take((int)maxNewNodesUpDown.Value));
                 updateFilteredNodes();
             });
-            
         }
 
         private void updateFilteredNodes()

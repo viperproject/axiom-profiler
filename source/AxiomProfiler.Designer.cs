@@ -365,8 +365,6 @@ namespace AxiomProfiler
             // showTermIdCB
             // 
             this.showTermIdCB.AutoSize = true;
-            this.showTermIdCB.Checked = true;
-            this.showTermIdCB.CheckState = System.Windows.Forms.CheckState.Checked;
             this.showTermIdCB.Location = new System.Drawing.Point(651, 5);
             this.showTermIdCB.Name = "showTermIdCB";
             this.showTermIdCB.Size = new System.Drawing.Size(128, 17);

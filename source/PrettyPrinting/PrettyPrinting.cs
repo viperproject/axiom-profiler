@@ -354,7 +354,7 @@ namespace AxiomProfiler.PrettyPrinting
                 MaxTermPrintingDepth = 0,
                 MaxEqualityExplanationPrintingDepth = 1,
                 ShowEqualityExplanations = true,
-                showTermId = true,
+                showTermId = false,
                 showType = true,
                 rewritingEnabled = false,
                 printRuleDict = new PrintRuleDictionary()
