@@ -204,8 +204,22 @@ namespace AxiomProfiler
         Term GetTerm(string key)
         {
             if (key == ";") return null;
-            int id = parseIdentifier(RemoveParen(key));
-            return model.terms[id];
+#if !DEBUG
+            try
+            {
+#endif
+                int id = parseIdentifier(RemoveParen(key));
+                return model.terms[id];
+#if !DEBUG
+            }
+            catch (Exception)
+            {
+                return new Term("unknown term", EmptyTerms)
+                {
+                    id = 0
+                };
+            }
+#endif
         }
 
         private static string RemoveParen(string key)
@@ -228,11 +242,7 @@ namespace AxiomProfiler
 
         public void ComputeCost()
         {
-            if (eofSeen == 0 && beginCheckSeen <= 1)
-            {
-                Console.WriteLine("Warning: no [eof] marker found; log might be incomplete");
-            }
-            else if (beginCheckSeen > 1 && checkToConsider == 0)
+            if (beginCheckSeen > 1 && checkToConsider == 0)
             {
                 Console.WriteLine("This log file contains multiple checks; they will be merged and displayed as one, but the data could be invalid, confusing, or both. Use /c:N (for 1 <= N <= {0}) to show a single one.", beginCheckSeen);
             }
@@ -529,7 +539,18 @@ namespace AxiomProfiler
                 {
                     var sourceId = parseIdentifier(logInfo[i].Substring(1));
                     var targetId = parseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1));
-                    explanations.Add(GetExplanation(sourceId, targetId));
+#if !DEBUG
+                    try
+                    {
+#endif
+                        explanations.Add(GetExplanation(sourceId, targetId));
+#if !DEBUG
+                    }
+                    catch (Exception)
+                    {
+                        explanations.Add(new TransitiveEqualityExplanation(GetTerm(logInfo[i]), GetTerm(logInfo[i + 1]), emptyEqualityExplanation));
+                    }
+#endif
                     i += 2;
                 }
             }

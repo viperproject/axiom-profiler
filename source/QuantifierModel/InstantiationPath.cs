@@ -271,7 +271,19 @@ namespace AxiomProfiler.QuantifierModel
                     var effectiveTerm = current.bindingInfo.bindings[equality.Key].Item2;
                     foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
-                        var explanation = current.bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                        EqualityExplanation explanation;
+#if !DEBUG
+                        try
+                        {
+#endif
+                            explanation = current.bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+#if !DEBUG
+                        }
+                        catch (Exception)
+                        {
+                            explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
+                        }
+#endif
                         if (!format.equalityNumbers.TryGetValue(explanation, out var eeNumber))
                         {
                             eeNumber = termNumbering;
@@ -350,7 +362,19 @@ namespace AxiomProfiler.QuantifierModel
                     var effectiveTerm = current.bindingInfo.bindings[equality.Key].Item2;
                     foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
-                        var explanation = current.bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                        EqualityExplanation explanation;
+#if !DEBUG
+                        try
+                        {
+#endif
+                            explanation = current.bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+#if !DEBUG
+                        }
+                        catch (Exception)
+                        {
+                            explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
+                        }
+#endif
                         if (!format.equalityNumbers.TryGetValue(explanation, out var eeNumber))
                         {
                             eeNumber = termNumbering;
@@ -965,7 +989,19 @@ namespace AxiomProfiler.QuantifierModel
                             content.Append('\n');
                             termNumber = format.GetEqualityNumber(t, effectiveTerm);
 
-                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                            EqualityExplanation explanation;
+#if !DEBUG
+                            try
+                            {
+#endif
+                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+#if !DEBUG
+                            }
+                            catch (Exception)
+                            {
+                                explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
+                            }
+#endif
                             var isRecursive = EqualityExplanationIsRecursiveVisitor.singleton.visit(explanation, null);
                             if (isRecursive)
                             {
@@ -1023,7 +1059,19 @@ namespace AxiomProfiler.QuantifierModel
                             content.Append('\n');
                             termNumber = format.GetEqualityNumber(t, effectiveTerm);
 
-                            var explanation = bindingInfo.EqualityExplanations.Single(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
+                            EqualityExplanation explanation;
+#if !DEBUG
+                            try
+                            {
+#endif
+                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+#if !DEBUG
+                            }
+                            catch (Exception)
+                            {
+                                explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
+                            }
+#endif
                             var isRecursive = EqualityExplanationIsRecursiveVisitor.singleton.visit(explanation, null);
                             if (isRecursive)
                             {

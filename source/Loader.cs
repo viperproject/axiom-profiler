@@ -116,12 +116,14 @@ namespace AxiomProfiler
                                 isCancelled = true;
                                 return;
                             }
+#if !DEBUG
                             catch (Exception e)
                             {
                                 System.Windows.Forms.MessageBox.Show($"An exception occured while parsing the log: {e.Message}", "Parsing Log Failed");
                                 isCancelled = true;
                                 return;
                             }
+#endif
                         }
                         curPos += l.Length + 2;
 

@@ -467,7 +467,18 @@ namespace AxiomProfiler.PrettyPrinting
 
         public int GetEqualityNumber(Term source, Term target)
         {
-            return equalityNumbers.First(kv => Term.semanticTermComparer.Equals(source, kv.Key.source) && Term.semanticTermComparer.Equals(target, kv.Key.target)).Value;
+#if !DEBUG
+            try
+            {
+#endif
+                return equalityNumbers.First(kv => Term.semanticTermComparer.Equals(source, kv.Key.source) && Term.semanticTermComparer.Equals(target, kv.Key.target)).Value;
+#if !DEBUG
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+#endif
         }
     }
 }

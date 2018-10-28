@@ -522,10 +522,29 @@ namespace AxiomProfiler.CycleDetection
                             afterNextBindingInfo = loopInstantiationsWorkSpace[afterNextIdx][iterator].bindingInfo;
                         }
 
-                        var newBody = GeneralizeAtBindings(inst.concreteBody, inst.Quant.BodyTerm.Args.Last(), nextBindingInfo, out var usedConcrete);
+                        var concreteBody = inst.concreteBody;
+                        var quantBody = inst.Quant.BodyTerm.Args.Last();
+                        Term newBody;
+                        if (quantBody.Name == "or" && concreteBody.Args.Length != quantBody.Args.Length)
+                        {
+                            var mainClause = quantBody.Args.Last();
+                            if (concreteBody.Name == "or")
+                            {
+                                newBody = new Term(concreteBody);
+                                newBody.Args[newBody.Args.Length - 1] = GeneralizeAtBindings(concreteBody.Args.Last(), mainClause, nextBindingInfo, out _);
+                            }
+                            else
+                            {
+                                newBody = GeneralizeAtBindings(concreteBody, mainClause, nextBindingInfo, out _);
+                            }
+                        }
+                        else
+                        {
+                            newBody = GeneralizeAtBindings(concreteBody, quantBody, nextBindingInfo, out _);
+                        }
                         if (newBody != null)
                         {
-                            if (afterNextBindingInfo != null) UpdateBindingsForReplacementTerm(usedConcrete, newBody, afterNextBindingInfo, new ConstraintType(), new ConstraintType());
+                            if (afterNextBindingInfo != null) UpdateBindingsForReplacementTerm(concreteBody, newBody, afterNextBindingInfo, new ConstraintType(), new ConstraintType());
                             inst.concreteBody = newBody;
                         }
                         else
@@ -618,7 +637,7 @@ namespace AxiomProfiler.CycleDetection
             {
                 // We found a generalization.
                 genReplacementTermsForNextIteration[loopStart] = loopEnd;
-                if (loopStart.generalizationCounter >= 0 && loopEnd.generalizationCounter < 0)
+                if (loopStart.generalizationCounter < 0 && loopEnd.generalizationCounter >= 0)
                 {
                     TrueLoop = false;
                 }
@@ -681,6 +700,12 @@ namespace AxiomProfiler.CycleDetection
                 return eeCollector;
             }).ToList();
 
+#if DEBUG
+            if (equalityExplanations.Any(l => l.Count == 0)) throw new Exception("Found no concrete explanations.");
+#else
+            equalityExplanations = equalityExplanations.Where(l => l.Count != 0);
+#endif
+
             var recursionPointFinder = new RecursionPointFinder();
             generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
                 // We pick an index in the middle to make sure it follows the general pattern.
@@ -738,9 +763,10 @@ namespace AxiomProfiler.CycleDetection
                 }
 
                 // remember which instnatiations we didn't use
+                var usedLookup = new HashSet<int>(valid.Select(t => t.Item2));
                 for (var i = 0; i < usedInstnatiations.Length; ++i)
                 {
-                    if (!valid.Any(t => t.Item2 == i))
+                    if (!usedLookup.Contains(i))
                     {
                         usedInstnatiations[i] = false;
                     }
@@ -2563,16 +2589,16 @@ namespace AxiomProfiler.CycleDetection
             {
 
                 //If the concrete term doesn't structurally match the qantifier reverse any rewritings made by z3
-                var concreteContinue = concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite : concrete;
+                var concreteContinue = /*concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name ? concrete.reverseRewrite :*/ concrete;
                 usedConcreteTerm = concreteContinue;
 
                 //recurse over the arguments
                 replacement = GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo, out usedConcreteTerm);
 
-                if (replacement == null && !ReferenceEquals(concrete, concrete.reverseRewrite))
+                /*if (replacement == null && !ReferenceEquals(concrete, concrete.reverseRewrite))
                 {
                     replacement = GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo, out usedConcreteTerm);
-                }
+                }*/
             }
             return replacement;
         }
@@ -2584,17 +2610,18 @@ namespace AxiomProfiler.CycleDetection
             var copy = new Term(concrete); //do not modify the original term
             usedConcreteTerm = new Term(concrete);
             if (!quantifier.ContainsQuantifiedVar()) return copy; //nothing left to replace
-            if (concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name)
+            if (concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name || concrete.GenericType != quantifier.GenericType)
             {
                 //If the concrete term doesn't structually match the quantifier body we fail. The caller will backtrack if possible.
-                return null;
+                //return null;
+                return concrete;
             }
 
             //recurse on arguments
             for (int i = 0; i < concrete.Args.Count(); i++)
             {
                 var replacement = GeneralizeAtBindings(concrete.Args[i], quantifier.Args[i], bindingInfo, out var usedArg);
-                if (replacement == null)
+                /*if (replacement == null)
                 {
                     //Failed => backtrack
                     if (ReferenceEquals(concrete, concrete.reverseRewrite))
@@ -2607,10 +2634,10 @@ namespace AxiomProfiler.CycleDetection
                         /* Try to resolve by reversing the rewriting. We reach this state if the top level structure matches that of the
                          * quantifier body but some deeper structure doesn't and it is not possible to resolve the issue by locally reversing
                          * the rewritng of the deeper term.
-                         */
+                         *//*
                         return GeneralizeChildrenBindings(concrete.reverseRewrite, quantifier, bindingInfo, out usedArg);
                     }
-                }
+                }*/
                 copy.Args[i] = replacement;
                 usedConcreteTerm.Args[i] = usedArg;
             }
@@ -3144,13 +3171,13 @@ namespace AxiomProfiler.CycleDetection
                 if (term.Args.Count() == 0)
                 {
                     rule.prefix = new Func<bool, string>(isPrime => term.Name + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
-                        (term.generalizationCounter < 0 && format.showTermId ? $"[g{-term.id}{(isPrime ? "'" : "")}]" : ""));
+                        (term.generalizationCounter < 0 && format.showTermId ? (term.id >= 0 ? $"[{term.id}]" : $"[g{-term.id}{(isPrime ? "'" : "")}]") : ""));
                     rule.suffix = new Func<bool, string>(_ => "");
                 }
                 else
                 {
                     rule.prefix = new Func<bool, string>(isPrime => term.Name + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (term.generalizationCounter < 0 ? (format.showTermId ? (term.iterationOffset > 0 ? "_-" +
-                        term.iterationOffset : "") + $"[g{-term.id}{(isPrime ? "'" : "")}]" : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(");
+                        term.iterationOffset : "") + (term.id >= 0 ? $"[{term.id}]" : $"[g{-term.id}{(isPrime ? "'" : "")}]") : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(");
                 }
                 format.addTemporaryRule(term.id.ToString(), rule);
             }
