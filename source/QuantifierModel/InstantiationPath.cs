@@ -558,7 +558,7 @@ namespace AxiomProfiler.QuantifierModel
             else
             {
                 content.switchFormat(PrintConstants.BoldFont, PrintConstants.defaultTextColor);
-                content.Append("Repating pattern but ");
+                content.Append("Repeating pattern but ");
                 content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
                 content.Append("no");
                 content.switchFormat(PrintConstants.BoldFont, PrintConstants.defaultTextColor);
