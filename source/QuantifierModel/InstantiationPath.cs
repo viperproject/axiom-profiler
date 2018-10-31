@@ -152,11 +152,23 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (hasCycle())
             {
-                return cycleDetector.getGeneralization().unusedInstantitations;
+                return cycleDetector.getGeneralization().UnusedInstantitations;
             }
             else
             {
                 return new List<Instantiation>();
+            }
+        }
+
+        public bool NeedsIds()
+        {
+            if (hasCycle())
+            {
+                return cycleDetector.getGeneralization().NeedsIds;
+            }
+            else
+            {
+                return false;
             }
         }
 
@@ -549,6 +561,10 @@ namespace AxiomProfiler.QuantifierModel
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
             var generalizationState = cycleDetector.getGeneralization();
+            if (generalizationState.NeedsIds)
+            {
+                format.showTermId = true;
+            }
 
             if (generalizationState.TrueLoop)
             {

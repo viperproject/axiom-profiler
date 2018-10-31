@@ -245,7 +245,8 @@ namespace AxiomProfiler.CycleDetection
         private Dictionary<Term, Term> genReplacementTermsForNextIteration = new Dictionary<Term, Term>(Term.semanticTermComparer); //A map from generalization terms in the first term of the loop explanation (e.g. T_1) to their counterparts in the result of a single matching loop iteration (e.g. plus(T_1, x) if the loop piles up plus terms)
 
         public bool TrueLoop { get; private set; } = true;
-        public readonly List<Instantiation> unusedInstantitations = new List<Instantiation>();
+        public bool NeedsIds { get; private set; } = false;
+        public readonly List<Instantiation> UnusedInstantitations = new List<Instantiation>();
 
         private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
 
@@ -643,6 +644,14 @@ namespace AxiomProfiler.CycleDetection
                     TrueLoop = false;
                 }
             }
+            else if ((loopStart.Args.Length == 0 || loopEnd.Args.Length == 0) && loopStart.id != loopEnd.id)
+            {
+                genReplacementTermsForNextIteration[loopStart] = loopEnd;
+                if (loopStart.Args.Length == 0 && loopEnd.Args.Length == 0)
+                {
+                    NeedsIds = true;
+                }
+            }
             else if (loopStart.Name == loopEnd.Name && loopStart.Args.Length == loopEnd.Args.Length)
             {
                 // Parallel descent
@@ -833,7 +842,7 @@ namespace AxiomProfiler.CycleDetection
             {
                 if (!usedInstnatiations[i])
                 {
-                    unusedInstantitations.Add(insts[i]);
+                    UnusedInstantitations.Add(insts[i]);
                 }
             }
         }
@@ -3166,7 +3175,7 @@ namespace AxiomProfiler.CycleDetection
             var onlyOne = !generalizationTerms.Where(gen => gen.Args.Count() == 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
 
             //Print generalizations and terms that correspond to generalizations when wrapping around the loop in the correct color
-            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Values) : generalizationTerms;
+            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Where(kv => kv.Key.generalizationCounter >= 0).Select(kv => kv.Value)) : generalizationTerms;
             foreach (var term in allGeneralizations)
             {
                 var rule = format.getPrintRule(term);

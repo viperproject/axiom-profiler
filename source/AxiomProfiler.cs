@@ -869,5 +869,17 @@ namespace AxiomProfiler
             SetInfoPanel(currentInfoPanelPrintable);
             z3AxiomTree.Font = PrintConstants.DefaultFont;
         }
+
+        public void EnableTermIds()
+        {
+            if (InvokeRequired)
+            {
+                Invoke((MethodInvoker)delegate { showTermIdCB.Checked = true; });
+            }
+            else
+            {
+                showTermIdCB.Checked = true;
+            }
+        }
     }
 }
