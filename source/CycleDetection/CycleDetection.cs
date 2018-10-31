@@ -703,7 +703,7 @@ namespace AxiomProfiler.CycleDetection
 #if DEBUG
             if (equalityExplanations.Any(l => l.Count == 0)) throw new Exception("Found no concrete explanations.");
 #else
-            equalityExplanations = equalityExplanations.Where(l => l.Count != 0);
+            equalityExplanations = equalityExplanations.Where(l => l.Count != 0).ToList();
 #endif
 
             var recursionPointFinder = new RecursionPointFinder();
