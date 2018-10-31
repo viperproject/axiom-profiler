@@ -523,6 +523,7 @@ namespace AxiomProfiler.CycleDetection
                         }
 
                         var concreteBody = inst.concreteBody;
+                        var concreteBindingInfo = inst.bindingInfo;
                         var quantBody = inst.Quant.BodyTerm.Args.Last();
                         Term newBody;
                         if (quantBody.Name == "or" && concreteBody.Args.Length != quantBody.Args.Length)
@@ -531,16 +532,16 @@ namespace AxiomProfiler.CycleDetection
                             if (concreteBody.Name == "or")
                             {
                                 newBody = new Term(concreteBody);
-                                newBody.Args[newBody.Args.Length - 1] = GeneralizeAtBindings(concreteBody.Args.Last(), mainClause, nextBindingInfo, out _);
+                                newBody.Args[newBody.Args.Length - 1] = GeneralizeAtBindings(concreteBody.Args.Last(), mainClause, concreteBindingInfo, nextBindingInfo, out _);
                             }
                             else
                             {
-                                newBody = GeneralizeAtBindings(concreteBody, mainClause, nextBindingInfo, out _);
+                                newBody = GeneralizeAtBindings(concreteBody, mainClause, concreteBindingInfo, nextBindingInfo, out _);
                             }
                         }
                         else
                         {
-                            newBody = GeneralizeAtBindings(concreteBody, quantBody, nextBindingInfo, out _);
+                            newBody = GeneralizeAtBindings(concreteBody, quantBody, concreteBindingInfo, nextBindingInfo, out _);
                         }
                         if (newBody != null)
                         {
@@ -2464,6 +2465,7 @@ namespace AxiomProfiler.CycleDetection
         private void SimplifyTermIds(Term t, Dictionary<string, IDLookupEntry> idLookup)
         {
             if (t.generalizationCounter >= 0) return;
+            if (t.Args.Length == 0) return;
             if (!idLookup.TryGetValue(t.Name, out var cursor))
             {
                 cursor = new IDLookupEntry(t.Args.Length == 0, t.id);
@@ -2571,19 +2573,20 @@ namespace AxiomProfiler.CycleDetection
         /// </summary>
         /// <param name="concrete">The concrete term in which occurences of quantified variables should be replaced.</param>
         /// <param name="quantifier">The body of the quantifier that produced the concrete term.</param>
-        /// <param name="bindingInfo">The generalized binding info indicating what generalized terms each quantified variable is bound to in the loop explanation.</param>
+        /// <param name="concreteBindingInfo">The binding info used to generate the concrete term.</param>
+        /// <param name="generalzedBindingInfo">The generalized binding info indicating what generalized terms each quantified variable is bound to in the loop explanation.</param>
         /// <param name="usedConcreteTerm">Gives back the concrete term that was actually used, i.e. a term where some rewritings may have been undone.</param>
         /// <returns>The concrete term updated to use the specified bindings or null if the algorithm failed. The algorithm fails if the
         /// structue of the concrete term (and the term obtained by reversing z3's rewritings) and the quantifier body do not match.</returns>
-        private static Term GeneralizeAtBindings(Term concrete, Term quantifier, BindingInfo bindingInfo, out Term usedConcreteTerm)
+        private static Term GeneralizeAtBindings(Term concrete, Term quantifier, BindingInfo concreteBindingInfo, BindingInfo generalzedBindingInfo, out Term usedConcreteTerm)
         {
             usedConcreteTerm = concrete;
             Term replacement;
-            if (quantifier.id == -1)
+            if (quantifier.id == -1 && Term.semanticTermComparer.Equals(concrete, concreteBindingInfo.bindings[quantifier].Item2))
             {
 
                 // We have reached a quantified variable in the quantifier body => replace the concrete term with the term bound to that quantified variable
-                replacement = bindingInfo.bindings[quantifier].Item2;
+                replacement = generalzedBindingInfo.bindings[quantifier].Item2;
             }
             else
             {
@@ -2593,7 +2596,7 @@ namespace AxiomProfiler.CycleDetection
                 usedConcreteTerm = concreteContinue;
 
                 //recurse over the arguments
-                replacement = GeneralizeChildrenBindings(concreteContinue, quantifier, bindingInfo, out usedConcreteTerm);
+                replacement = GeneralizeChildrenBindings(concreteContinue, quantifier, concreteBindingInfo, generalzedBindingInfo, out usedConcreteTerm);
 
                 /*if (replacement == null && !ReferenceEquals(concrete, concrete.reverseRewrite))
                 {
@@ -2603,7 +2606,7 @@ namespace AxiomProfiler.CycleDetection
             return replacement;
         }
 
-        private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo bindingInfo, out Term usedConcreteTerm)
+        private static Term GeneralizeChildrenBindings(Term concrete, Term quantifier, BindingInfo concreteBindingInfo, BindingInfo generalizedBindingInfo, out Term usedConcreteTerm)
         {
             usedConcreteTerm = concrete;
             if (concrete == null) return null;
@@ -2620,7 +2623,7 @@ namespace AxiomProfiler.CycleDetection
             //recurse on arguments
             for (int i = 0; i < concrete.Args.Count(); i++)
             {
-                var replacement = GeneralizeAtBindings(concrete.Args[i], quantifier.Args[i], bindingInfo, out var usedArg);
+                var replacement = GeneralizeAtBindings(concrete.Args[i], quantifier.Args[i], concreteBindingInfo, generalizedBindingInfo, out var usedArg);
                 /*if (replacement == null)
                 {
                     //Failed => backtrack
@@ -3209,6 +3212,11 @@ namespace AxiomProfiler.CycleDetection
                 var referenceTerms = Enumerable.Repeat(generalizedTerms.First().Item1, 1).Concat(generalizedTerms.First().Item3);
                 HighlightNewTerms(generalizedTerms.Last().Item1, referenceTerms, format);
             }
+        }
+
+        public bool HasGeneralizationsForNextIteration()
+        {
+            return genReplacementTermsForNextIteration.Any();
         }
 
         /// <summary>

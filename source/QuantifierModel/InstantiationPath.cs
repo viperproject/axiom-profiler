@@ -943,10 +943,13 @@ namespace AxiomProfiler.QuantifierModel
 
             if (last)
             {
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nTerms for the Next Iteration:\n\n");
-                content.switchToDefaultFormat();
-                generalizationState.PrintGeneralizationsForNextIteration(content, format);
+                if (generalizationState.HasGeneralizationsForNextIteration())
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nTerms for the Next Iteration:\n\n");
+                    content.switchToDefaultFormat();
+                    generalizationState.PrintGeneralizationsForNextIteration(content, format);
+                }
 
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\nBindings to Start Next Iteration:\n\n");
