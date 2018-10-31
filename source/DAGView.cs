@@ -480,21 +480,31 @@ namespace AxiomProfiler
                         bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
                     }
 
+                    List<Instantiation> toRemove;
                     if (bestUpPath.TryGetCyclePath(out var cyclePath))
                     {
                         highlightPath(cyclePath);
                         _z3AxiomProfiler.UpdateSync(cyclePath);
+                        toRemove = cyclePath.GetInstnationsUnusedInGeneralization();
                     }
                     else
                     {
                         highlightPath(bestUpPath);
                         _z3AxiomProfiler.UpdateSync(bestUpPath);
+                        toRemove = bestUpPath.GetInstnationsUnusedInGeneralization();
                     }
+
+                    // Stop highlighting nodes that weren't used in the generalization.
+                    foreach (var inst in toRemove)
+                    {
+                        formatNode(graph.FindNode(inst.uniqueID));
+                    }
+                    _viewer.Invalidate();
 #if !DEBUG
                 }
                 catch (Exception exception)
                 {
-                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug.\nDescription of the excepiton: {exception.Message}");
+                    _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug to viper@inf.ethz.ch.\nDescription of the exception: {exception.Message}");
                 }
 #endif
             });

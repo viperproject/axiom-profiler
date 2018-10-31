@@ -7,6 +7,8 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler
 {
+    using ConstraintType = List<Tuple<Term, int>>;
+
     public partial class EditPrintRuleDialog : Form
     {
         private readonly PrintRuleDictionary printRuleDictionary;
@@ -155,7 +157,7 @@ namespace AxiomProfiler
                 indent = indentCB.Checked,
                 parentheses = PrintRule.parenthesesSettingsFromString((string)parenthesesCB.SelectedItem),
                 precedence = (int)precedenceUD.Value,
-                historyConstraints = new List<Term>(),
+                historyConstraints = new ConstraintType(),
                 isDefault = false,
                 isUserdefined = true
             };

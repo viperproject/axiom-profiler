@@ -204,8 +204,22 @@ namespace AxiomProfiler
         Term GetTerm(string key)
         {
             if (key == ";") return null;
-            int id = parseIdentifier(RemoveParen(key));
-            return model.terms[id];
+#if !DEBUG
+            try
+            {
+#endif
+                int id = parseIdentifier(RemoveParen(key));
+                return model.terms[id];
+#if !DEBUG
+            }
+            catch (Exception)
+            {
+                return new Term("unknown term", EmptyTerms)
+                {
+                    id = 0
+                };
+            }
+#endif
         }
 
         private static string RemoveParen(string key)
@@ -228,11 +242,7 @@ namespace AxiomProfiler
 
         public void ComputeCost()
         {
-            if (eofSeen == 0 && beginCheckSeen <= 1)
-            {
-                Console.WriteLine("Warning: no [eof] marker found; log might be incomplete");
-            }
-            else if (beginCheckSeen > 1 && checkToConsider == 0)
+            if (beginCheckSeen > 1 && checkToConsider == 0)
             {
                 Console.WriteLine("This log file contains multiple checks; they will be merged and displayed as one, but the data could be invalid, confusing, or both. Use /c:N (for 1 <= N <= {0}) to show a single one.", beginCheckSeen);
             }
@@ -529,7 +539,18 @@ namespace AxiomProfiler
                 {
                     var sourceId = parseIdentifier(logInfo[i].Substring(1));
                     var targetId = parseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1));
-                    explanations.Add(GetExplanation(sourceId, targetId));
+#if !DEBUG
+                    try
+                    {
+#endif
+                        explanations.Add(GetExplanation(sourceId, targetId));
+#if !DEBUG
+                    }
+                    catch (Exception)
+                    {
+                        explanations.Add(new TransitiveEqualityExplanation(GetTerm(logInfo[i]), GetTerm(logInfo[i + 1]), emptyEqualityExplanation));
+                    }
+#endif
                     i += 2;
                 }
             }
@@ -796,9 +817,9 @@ namespace AxiomProfiler
             // In general the explanations may converge at some term before they reach the root. After reaching that term
             // they follow the same steps to reach the root. We remove this redundancy from our explanation.
             // This is in particular necessary to avoid looping on congruence explanations (see GoogleDoc).
-            var withoutCommonPrefix = sourceExplanations.Zip(targetExplanations, Tuple.Create).SkipWhile(t => t.Item1.Equals(t.Item2));
-            var relevantSourceExplanations = withoutCommonPrefix.Select(t => t.Item1).Reverse();
-            var relevantTargetExplanations = withoutCommonPrefix.Select(t => t.Item2).Select(e => explanationReverser.visit(e, null));
+            var commonPrefixLength = sourceExplanations.Zip(targetExplanations, (s, t) => s.Equals(t)).TakeWhile(x => x).Count();
+            var relevantSourceExplanations = sourceExplanations.Skip(commonPrefixLength).Reverse();
+            var relevantTargetExplanations = targetExplanations.Skip(commonPrefixLength).Select(e => explanationReverser.visit(e, null));
 
             // Build the explanation.
             var explanationPath = relevantSourceExplanations.Concat(relevantTargetExplanations).Select(e => explanationFinalizer.visit(e, this));

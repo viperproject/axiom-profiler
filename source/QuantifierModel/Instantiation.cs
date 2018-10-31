@@ -237,7 +237,19 @@ namespace AxiomProfiler.QuantifierModel
                     var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
                     foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
                     {
-                        var explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                        EqualityExplanation explanation;
+#if !DEBUG
+                        try
+                        {
+#endif
+                            explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+#if !DEBUG
+                        }
+                        catch (Exception)
+                        {
+                            explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
+                        }
+#endif
                         if (!format.equalityNumbers.TryGetValue(explanation, out var termNumber))
                         {
                             termNumber = termNumbering;

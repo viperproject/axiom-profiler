@@ -9,6 +9,8 @@ using AxiomProfiler.QuantifierModel;
 
 namespace AxiomProfiler
 {
+    using ConstraintType = List<Tuple<Term, int>>;
+
     public partial class PrintRuleViewer : Form
     {
         private readonly PrintRuleDictionary printRuleDict;
@@ -224,7 +226,7 @@ namespace AxiomProfiler
                     parentheses = parenthesesSettings,
                     precedence = precedence,
                     indent = indent,
-                    historyConstraints = new List<Term>(),
+                    historyConstraints = new ConstraintType(),
                     isDefault = false,
                     isUserdefined = true
                 });
