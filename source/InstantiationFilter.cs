@@ -19,7 +19,7 @@ namespace AxiomProfiler
         {
             InitializeComponent();
             original = instantiationsToFilter;
-            sortSelectionBox.SelectedIndex = 5;
+            sortSelectionBox.SelectedIndex = 6;
         }
 
         protected override void OnLoad(EventArgs e)

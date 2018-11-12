@@ -934,7 +934,7 @@ namespace AxiomProfiler
                 case "[attach-enode]":
                     {
                         Term t = GetTerm(words[1]);
-                        int gen = int.Parse(words[2]);
+                        int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
                         if (lastInst != null && t.Responsible != lastInst)
                         {
                             if (t.Responsible != null)

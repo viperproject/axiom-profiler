@@ -149,13 +149,23 @@ namespace AxiomProfiler
 
         private Color getColor(Quantifier quant)
         {
-            if (!colorMap.TryGetValue(quant, out var color))
-            {
-                color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
-                colorMap[quant] = color;
-            }
+            //Hard coded colors for generating screenshots for the paper
+            /*switch (quant.Qid) {
+                case "sortedness":
+                    return Color.Green;
+                case "next_def":
+                    return Color.Yellow;
+                case "injectivity":
+                    return Color.Green;
+                default:*/
+                if (!colorMap.TryGetValue(quant, out var color))
+                {
+                    color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
+                    colorMap[quant] = color;
+                }
 
-            return color;
+                return color;
+            //}
         }
 
         private int oldX = -1;
