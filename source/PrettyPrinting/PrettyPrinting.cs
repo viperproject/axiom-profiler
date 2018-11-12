@@ -32,9 +32,9 @@ namespace AxiomProfiler.PrettyPrinting
         private static readonly Font RegBoldFont = new Font(DefaultFont, FontStyle.Bold);
         private static readonly Font RegItalicFont = new Font(DefaultFont, FontStyle.Italic);
 
-        private static readonly Font BigDefaultFont = new Font("Consolas", 23, FontStyle.Bold);
-        private static readonly Font BigTitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
-        private static readonly Font BigSubtitleFont = new Font("Consolas", 23, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigDefaultFont = new Font("Consolas", 18, FontStyle.Bold);
+        private static readonly Font BigTitleFont = new Font("Consolas", 18, FontStyle.Underline | FontStyle.Bold);
+        private static readonly Font BigSubtitleFont = new Font("Consolas", 18, FontStyle.Underline | FontStyle.Bold);
         private static readonly Font BigBoldFont = new Font(DefaultFont, FontStyle.Bold);
         private static readonly Font BigItalicFont = new Font(DefaultFont, FontStyle.Italic | FontStyle.Bold);
 

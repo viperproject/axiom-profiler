@@ -183,7 +183,7 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append(" or ");
             content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
-            content.Append("matched using equality");
+            content.Append(PrintConstants.LargeTextMode ? "matched using\nequality" : "matched using equality");
             content.switchToDefaultFormat();
             content.Append(" or ");
             content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
