@@ -496,7 +496,7 @@ namespace AxiomProfiler
             {
                 return literalToTermId[logId];
             }
-            var term = model.terms.Values.First(t => t.Name == logId);
+            var term = model.terms.Values.FirstOrDefault(t => t.Name == logId);
 
             if (term == null) throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
 

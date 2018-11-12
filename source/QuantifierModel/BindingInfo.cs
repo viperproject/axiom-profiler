@@ -297,13 +297,13 @@ namespace AxiomProfiler.QuantifierModel
                 else
                 {
                     // Try without equality first.
-                    if (AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
+                    if (BoundTerms.Any(bt => bt.id == matchedTerm.id) && AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
                     {
                         return true;
                     }
 
                     // If that fails try equalities.
-                    var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id);
+                    var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id && BoundTerms.Any(bt => ee.target.id == bt.id));
                     foreach (var equalityExplanation in feasibleEqualities)
                     {
                         if (AddPatternMatch(patternTerm, equalityExplanation.target, matchedTerm, context, nextMatches, multipatternArg))
@@ -347,12 +347,12 @@ namespace AxiomProfiler.QuantifierModel
         private bool IsValid()
         {
             // Bindings match with those reported by z3.
-            var qVarBindings = _bindings.Where(kv => kv.Key.id == -1).Select(kv => kv.Value);
-            if (!qVarBindings.All(binding => BoundTerms.Any(o => o.id == binding.Item2.id)))
+            var qVarBindings = _bindings.Where(kv => kv.Key.id == -1).Select(kv => kv.Value.Item2);
+            if (!qVarBindings.All(binding => BoundTerms.Any(o => o.id == binding.id)))
             {
                 return false;
             }
-            if (!BoundTerms.All(binding => qVarBindings.Any(o => o.Item2.id == binding.id)))
+            if (!BoundTerms.All(binding => qVarBindings.Any(o => o.id == binding.id)))
             {
                 return false;
             }

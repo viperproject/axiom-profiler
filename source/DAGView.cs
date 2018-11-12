@@ -156,7 +156,7 @@ namespace AxiomProfiler
                 case "next_def":
                     return Color.Yellow;
                 case "injectivity":
-                    return Color.Green;
+                    return Color.Purple;
                 default:*/
                 if (!colorMap.TryGetValue(quant, out var color))
                 {
