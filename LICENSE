@@ -2,7 +2,7 @@ The AxiomProfiler and all files of its source code are licensed under the
 Mozilla Public License Version 2.0 (see later in this file, or 
 http://www.mozilla.org/MPL/2.0/)
 
-The original source code for this tool (as copied on 21/10/15) come from the 
+The source code for this tool was originally based on a copy of that from the 
 "Z3AxiomProfiler" which was part of the Microsoft Research VCC project 
 (https://github.com/Microsoft/vcc). These original sources are covered by the 
 copyright and permission notices immediately below:
@@ -13,6 +13,8 @@ VCC
 Copyright (c) Microsoft Corporation
 
 All rights reserved. 
+
+MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
