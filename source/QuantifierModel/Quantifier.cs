@@ -23,7 +23,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Quantifier[{PrintName}] Cost: {Cost.ToString("F")}, #instances: {Instances.Count}, #conflicts: {GeneratedConflicts}";
+            string result = $"Quantifier[{PrintName}], #instances: {Instances.Count}, Cost: {Cost.ToString("F")}, #conflicts: {GeneratedConflicts}";
             return result;
         }
 
@@ -106,8 +106,8 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
             content.Append("\nPrint name: ").Append(PrintName).Append('\n');
             content.Append("QId: ").Append(Qid).Append('\n');
-            content.Append("Cost: " + Cost).Append('\n');
             content.Append("Number of Instantiations: " + Instances.Count).Append('\n');
+            content.Append("Cost: " + Cost).Append('\n');
             content.Append("Number of Conflicts: " + GeneratedConflicts).Append("\n\n");
         }
     }

@@ -597,7 +597,7 @@ namespace AxiomProfiler.QuantifierModel
             printPreamble(content, true);
 
             content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
-            content.Append($"\n\nGeneralized{(generalizationState.TrueLoop ? "Loop" : "")} Iteration:\n\n");
+            content.Append($"\n\nGeneralized{(generalizationState.TrueLoop ? " Loop" : "")} Iteration:\n\n");
             
             var generalizedTerms = generalizationState.generalizedTerms;
 
@@ -991,15 +991,14 @@ namespace AxiomProfiler.QuantifierModel
 
             if (bindingInfo.equalities.Count > 0)
             {
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nRelevant equalities:\n");
+                content.switchToDefaultFormat();
                 var equalitySetLookup = bindingInfo.equalities.ToLookup(eq => eq.Key.ContainsGeneralization() || eq.Value.Any(t => t.Item2.ContainsGeneralization()));
 
                 format.printContextSensitive = false;
                 if (equalitySetLookup[true].Any())
                 {
-                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                    content.Append("\nWith a Set of equalities:\n");
-                    content.switchToDefaultFormat();
-
                     foreach (var equality in equalitySetLookup[true])
                     {
                         var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
@@ -1013,7 +1012,7 @@ namespace AxiomProfiler.QuantifierModel
                             try
                             {
 #endif
-                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
 #if !DEBUG
                             }
                             catch (Exception)
@@ -1066,10 +1065,6 @@ namespace AxiomProfiler.QuantifierModel
 
                 if (equalitySetLookup[false].Any())
                 {
-                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                    content.Append("\nRelevant equalities:\n");
-                    content.switchToDefaultFormat();
-
                     foreach (var equality in equalitySetLookup[false])
                     {
                         var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;

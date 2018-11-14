@@ -114,7 +114,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Cost: {Cost}";
+            string result = $"Instantiation[{Quant.PrintName}] @line: {LineNo}, Depth: {Depth}, Longest Subpath Length: {DeepestSubpathDepth}, Cost: {Cost}";
             return result;
         }
 
@@ -368,6 +368,7 @@ namespace AxiomProfiler.QuantifierModel
 
             content.Append('\n').Append(Quant.PrintName).Append('\n');
             content.Append("Depth: " + depth).Append('\n');
+            content.Append($"Longest Subpath Length: {DeepestSubpathDepth.ToString("F")}\n");
             content.Append("Cost: ").Append(Cost.ToString("F")).Append("\n\n");
         }
 

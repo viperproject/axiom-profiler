@@ -496,7 +496,7 @@ namespace AxiomProfiler
             {
                 return literalToTermId[logId];
             }
-            var term = model.terms.Values.First(t => t.Name == logId);
+            var term = model.terms.Values.FirstOrDefault(t => t.Name == logId);
 
             if (term == null) throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
 
@@ -934,7 +934,7 @@ namespace AxiomProfiler
                 case "[attach-enode]":
                     {
                         Term t = GetTerm(words[1]);
-                        int gen = int.Parse(words[2]);
+                        int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
                         if (lastInst != null && t.Responsible != lastInst)
                         {
                             if (t.Responsible != null)
