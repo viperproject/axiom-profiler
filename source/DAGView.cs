@@ -506,11 +506,7 @@ namespace AxiomProfiler
                         highlightPath(bestUpPath);
                         _z3AxiomProfiler.UpdateSync(bestUpPath);
                         toRemove = bestUpPath.GetInstnationsUnusedInGeneralization();
-                        if (cyclePath.NeedsIds())
-                        {
-                            _z3AxiomProfiler.EnableTermIds();
-                        }
-                }
+                    }
 
                     // Stop highlighting nodes that weren't used in the generalization.
                     foreach (var inst in toRemove)
