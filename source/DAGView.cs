@@ -68,7 +68,7 @@ namespace AxiomProfiler
                                        .OrderByDescending(inst => inst.DeepestSubpathDepth)
                                        .ToList();
 
-            drawGraphWithInstantiations(newNodeInsts);
+            drawGraphWithInstantiations(newNodeInsts, true);
         }
 
         public void drawGraphNoFilterQuestion()
@@ -87,7 +87,7 @@ namespace AxiomProfiler
             drawGraphWithInstantiations(new List<Instantiation>());
         }
 
-        private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts)
+        private void drawGraphWithInstantiations(List<Instantiation> newNodeInsts, bool forceDialog = false)
         {
             var usedQuants = newNodeInsts.Select(inst => inst.Quant).Distinct().ToList();
             var removedQuants = colorMap.Keys.Where(quant => !usedQuants.Contains(quant)).ToList();
@@ -111,7 +111,7 @@ namespace AxiomProfiler
                 LayoutAlgorithmSettings = layoutSettings
             };
 
-            if (checkNumNodesWithDialog(ref newNodeInsts)) return;
+            if (checkNumNodesWithDialog(ref newNodeInsts, forceDialog)) return;
 
             // Sorting helps ensure that the most common quantifiers end up with different colors
             var prioritySortedNewNodeInsts = newNodeInsts.GroupBy(inst => inst.Quant)
@@ -319,9 +319,9 @@ namespace AxiomProfiler
             redrawGraph();
         }
 
-        private bool checkNumNodesWithDialog(ref List<Instantiation> newNodeInsts)
+        private bool checkNumNodesWithDialog(ref List<Instantiation> newNodeInsts, bool forceDialog = false)
         {
-            if (newNodeInsts.Count > newNodeWarningThreshold)
+            if (forceDialog || newNodeInsts.Count > newNodeWarningThreshold)
             {
                 var filterDecision = MessageBox.Show(
                     $"This operation would add {newNodeInsts.Count} new nodes to the graph. It is recommended to reduce the number by filtering.\nWould you like to filter the new nodes now?",

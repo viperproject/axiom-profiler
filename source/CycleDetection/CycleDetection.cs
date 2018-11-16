@@ -2591,11 +2591,19 @@ namespace AxiomProfiler.CycleDetection
         {
             usedConcreteTerm = concrete;
             Term replacement;
-            if (quantifier.id == -1 && Term.semanticTermComparer.Equals(concrete, concreteBindingInfo.bindings[quantifier].Item2))
+            if (quantifier.id == -1)
             {
+                if (concreteBindingInfo.bindings.TryGetValue(quantifier, out var bound) && Term.semanticTermComparer.Equals(concrete, bound.Item2))
+                {
+                    // We have reached a quantified variable in the quantifier body => replace the concrete term with the term bound to that quantified variable
+                    replacement = bound.Item2;
+                }
+                else
+                {
 
-                // We have reached a quantified variable in the quantifier body => replace the concrete term with the term bound to that quantified variable
-                replacement = generalzedBindingInfo.bindings[quantifier].Item2;
+                    //TODO: I think this happens because of nested quantifers.
+                    replacement = concrete;
+                }
             }
             else
             {

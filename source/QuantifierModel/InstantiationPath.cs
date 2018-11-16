@@ -688,10 +688,6 @@ namespace AxiomProfiler.QuantifierModel
                         content.Append("\n\n");
                     }
                 }
-
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nand the following term(s):\n\n");
-                content.switchToDefaultFormat();
             }
             else
             {
