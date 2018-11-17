@@ -1074,7 +1074,7 @@ namespace AxiomProfiler.QuantifierModel
                             try
                             {
 #endif
-                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == term.id && ee.target.id == effectiveTerm.id);
+                                explanation = bindingInfo.EqualityExplanations.First(ee => ee.source.id == t.id && ee.target.id == effectiveTerm.id);
 #if !DEBUG
                             }
                             catch (Exception)
