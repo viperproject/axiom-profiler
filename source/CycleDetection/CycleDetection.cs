@@ -265,6 +265,28 @@ namespace AxiomProfiler.CycleDetection
                 index = ++index % loopInstantiations.Length;
             }
 
+            var maxI = 0;
+            for (var i = cycleLength - 1; i >= 0; --i)
+            {
+                //TODO: find a longest subsequence
+                if (loopInstantiations[i][0].concreteBody.Name != loopInstantiations[i][1].concreteBody.Name)
+                {
+                    maxI = i + 1;
+                    break;
+                }
+            }
+            foreach (var list in loopInstantiations)
+            {
+                list.Clear();
+            }
+            index = 0;
+            foreach (var instantiation in instantiations.Skip(maxI))
+            {
+                loopInstantiations[index].Add(instantiation);
+                index = ++index % loopInstantiations.Length;
+            }
+            UnusedInstantitations.AddRange(instantiations.Take(maxI));
+
             // We will modify some instantiations later on so we create a copy.
             loopInstantiationsWorkSpace = loopInstantiations.Select(list => list.Select(inst => inst.CopyForBindingInfoModification()).ToList()).ToArray();
         }
