@@ -42,9 +42,11 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 ## Obtaining logs from Z3
 
 Run Z3 with two extra command-line options:
+
     z3 trace=true proof=true ./input.smt2
 (this will produce a log file called ./z3.log)
 If you want to specify the target filename, you can pass a third option:
+
     z3 trace=true proof=true trace-file-name=foo.log ./input.smt2
 
 
