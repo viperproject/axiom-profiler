@@ -41,6 +41,8 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
 ## Obtaining logs from Z3
 
+NOTE: at present, a fork of Z3 should be used to generate logs for the Axiom Profiler; there are some small modifications that we plan to get into the official version shortly. In the meantime, the correct fork of Z3 is available here: https://github.com/Nils-Becker/z3
+
 Run Z3 with two extra command-line options:
 
     z3 trace=true proof=true ./input.smt2
@@ -53,7 +55,7 @@ NOTE: if this takes too long, it is possible to run the Axiom Profiler with a pr
 
 Similarly, if you have a log file which takes too long to load into the Axiom Profiler, hitting Cancel will cause the tool to work with the portion loaded so far.
 
-## Obtaining Z3 logs from various verification tools that use Z3 (feel free to extend this list via pull requests)
+## Obtaining Z3 logs from various verification tools that use Z3 (feel free to add more via pull requests)
 
 To obtain a Z3 log with Boogie, use e.g:
 
