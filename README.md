@@ -49,6 +49,9 @@ If you want to specify the target filename, you can pass a third option:
 
     z3 trace=true proof=true trace-file-name=foo.log ./input.smt2
 
+NOTE: if this takes too long, it is possible to run the Axiom Profiler with a prefix of a valid log file - you could potentially kill the z3 process and obtain the corresponding partial log. Some users (especially on Windows) have reported that killing z3 can cause a lot of the file contents to disappear; if you observe this problem, it's recommended to copy the log file before killing the process.
+
+Similarly, if you have a log file which takes too long to load into the Axiom Profiler, hitting Cancel will cause the tool to work with the portion loaded so far.
 
 ## Obtaining Z3 logs from various verification tools that use Z3 (feel free to extend this list via pull requests)
 
