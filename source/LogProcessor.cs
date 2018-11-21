@@ -574,7 +574,20 @@ namespace AxiomProfiler
 
             public override EqualityExplanation Congruence(CongruenceExplanation target, LogProcessor arg)
             {
-                var argumentExplanations = target.sourceArgumentEqualities.Select(e => arg.GetExplanation(e.source.id, e.target.id));
+                var argumentExplanations = target.sourceArgumentEqualities.Select(e => {
+#if !DEBUG
+                    try
+                    {
+#endif
+                        return arg.GetExplanation(e.source.id, e.target.id);
+#if !DEBUG
+                    }
+                    catch (Exception)
+                    {
+                        return e;
+                    }
+#endif
+                });
                 return new CongruenceExplanation(target.source, target.target, argumentExplanations.ToArray());
             }
 
@@ -696,7 +709,10 @@ namespace AxiomProfiler
             }
             else
             {
-                return new TransitiveEqualityExplanation(model.terms[id], model.terms[it], explanations.Select(ee => explanationFinalizer.visit(ee, this)).ToArray());
+                return new TransitiveEqualityExplanation(model.terms[id], model.terms[it], explanations.Select(ee => {
+                    var test = explanationFinalizer.visit(ee, this);
+                    return test;
+                    }).ToArray());
             }
         }
 
@@ -737,6 +753,7 @@ namespace AxiomProfiler
             }
         }
 
+        private HashSet<string> WorkingKeys = new HashSet<string>();
         /// <summary>
         /// Generates an explanation for the equality between the indicated terms.
         /// </summary>
@@ -747,6 +764,14 @@ namespace AxiomProfiler
         {
             var key = $"{sourceId}, {targetId}";
             if (equalityExplanationCache.TryGetValue(key, out var existing)) return existing;
+            if (WorkingKeys.Contains(key))
+            {
+                throw new Exception("Infinite recursion while constructing equality explanation.");
+            }
+            else
+            {
+                WorkingKeys.Add(key);
+            }
 
             // Follow steps from the source.
             EqualityExplanation knownExplanation = null;
@@ -792,16 +817,34 @@ namespace AxiomProfiler
             {
                 if (knownExplanation.source.id == sourceId)
                 {
-                    var explanations = explanationExtractor.visit(knownExplanation, null).Concat(targetExplanations.Select(e => explanationReverser.visit(e, null)).Select(e => explanationFinalizer.visit(e, this)).Reverse());
+                    targetExplanations.Reverse();
+                    var knownExplanationSteps = explanationExtractor.visit(knownExplanation, null);
+                    var commonSuffixLength = knownExplanationSteps
+                        .Zip(targetExplanations, (s, t) => Term.semanticTermComparer.Equals(s.source, t.target) && Term.semanticTermComparer.Equals(s.target, t.source))
+                        .TakeWhile(x => x).Count();
+                    targetExplanations = targetExplanations.Skip(commonSuffixLength).Reverse().ToList();
+                    knownExplanationSteps = knownExplanationSteps.Skip(commonSuffixLength);
+
+                    var explanations = knownExplanationSteps.Concat(targetExplanations.Select(e => explanationReverser.visit(e, null)).Select(e => explanationFinalizer.visit(e, this)).Reverse());
                     var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
                     equalityExplanationCache[key] = explanation;
+                    WorkingKeys.Remove(key);
                     return explanation;
                 }
                 else
                 {
-                    var explanations = sourceExplanations.Select(e => explanationFinalizer.visit(e, this)).Concat(explanationExtractor.visit(knownExplanation, null));
+                    sourceExplanations.Reverse();
+                    var knownExplanationSteps = explanationExtractor.visit(knownExplanation, null);
+                    var commonSuffixLength = knownExplanationSteps
+                        .Zip(sourceExplanations, (t, s) => Term.semanticTermComparer.Equals(s.source, t.target) && Term.semanticTermComparer.Equals(s.target, t.source))
+                        .TakeWhile(x => x).Count();
+                    sourceExplanations = sourceExplanations.Skip(commonSuffixLength).Reverse().ToList();
+                    knownExplanationSteps = knownExplanationSteps.Skip(commonSuffixLength);
+
+                    var explanations = sourceExplanations.Select(e => explanationFinalizer.visit(e, this)).Concat(knownExplanationSteps);
                     var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
                     equalityExplanationCache[key] = explanation;
+                    WorkingKeys.Remove(key);
                     return explanation;
                 }
             }
@@ -827,12 +870,14 @@ namespace AxiomProfiler
             {
                 var explanation = explanationPath.Single();
                 equalityExplanationCache[key] = explanation;
+                WorkingKeys.Remove(key);
                 return explanation;
             }
             else
             {
                 var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanationPath.ToArray());
                 equalityExplanationCache[key] = explanation;
+                WorkingKeys.Remove(key);
                 return explanation;
             }
         }
