@@ -55,7 +55,7 @@ NOTE: if this takes too long, it is possible to run the Axiom Profiler with a pr
 
 Similarly, if you have a log file which takes too long to load into the Axiom Profiler, hitting Cancel will cause the tool to work with the portion loaded so far.
 
-## Obtaining Z3 logs from various verification tools that use Z3 (feel free to add more via pull requests)
+## Obtaining Z3 logs from various verification tools that use Z3 (feel free to add more)
 
 To obtain a Z3 log with Boogie, use e.g:
 
