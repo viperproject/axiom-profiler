@@ -626,6 +626,8 @@ namespace AxiomProfiler.CycleDetection
                     EqualityExplanationTermVisitor.singleton.visit(ee, term => gens.AddRange(term.GetAllGeneralizationSubterms()));
                     return gens;
                 }))
+                .Concat(t.Item2.bindings.Values.SelectMany(b => b.Item2.GetAllGeneralizationSubterms()))
+                .Concat(t.Item2.equalities.Values.SelectMany(e => e.SelectMany(se => se.Item2.GetAllGeneralizationSubterms())))
                 .Concat(t.Item3.SelectMany(term => term.GetAllGeneralizationSubterms()))
                 .Concat(t.Item4.SelectMany(kv => kv.Value.SelectMany(term => term.GetAllGeneralizationSubterms()))))
             .Distinct().ToList();
@@ -1358,7 +1360,7 @@ namespace AxiomProfiler.CycleDetection
                     if (t1.id != t2.id || (offset - wrapOffset != t1.iterationOffset + 1 && t1.iterationOffset != 0))
                     {
                         Term newGen;
-                        if (t1.Name == t2.Name && t1.Args.Length == t2.Args.Length)
+                        if (t1.generalizationCounter < 0 && t2.generalizationCounter < 0 && t1.Name == t2.Name && t1.Args.Length == t2.Args.Length)
                         {
 
                             // Can keep name.
@@ -1949,7 +1951,7 @@ namespace AxiomProfiler.CycleDetection
                 // Only generalizations that have addedGen in their coverage closure (can reach) but not in their true coverage closure
                 // (guaranteed by phase 2) are interesting. N.B. others are also not needed to cover all arguments since they would also
                 // have addedGen in their coverage closure.
-                var candidateCoverers = new HashSet<int>(chosenGens.Where(gen => coverageClosures[gen].Contains(addedGen))
+                var candidateCoverers = new HashSet<int>(chosenGens.Where(gen => gen != addedGen && coverageClosures[gen].Contains(addedGen))
                     .SelectMany(gen => trueCoverageClosures[gen]));
                 bool change = true;
                 do

@@ -511,7 +511,11 @@ namespace AxiomProfiler
                     // Stop highlighting nodes that weren't used in the generalization.
                     foreach (var inst in toRemove)
                     {
-                        formatNode(graph.FindNode(inst.uniqueID));
+                        var node = graph.FindNode(inst.uniqueID);
+                        if (node != null)
+                        {
+                            formatNode(node);
+                        }
                     }
                     _viewer.Invalidate();
 #if !DEBUG

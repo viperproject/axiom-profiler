@@ -136,7 +136,20 @@ namespace AxiomProfiler.QuantifierModel
                 var usedPattern = pair.Item2;
                 var topLevelTerm = format.termNumbers.First(kv => kv.Key.isSubterm(effectiveTerm.id));
                 var usedEqualityNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
-                    .Select(b => format.equalityNumbers.First(kv => Term.semanticTermComparer.Equals(kv.Key.target, b.Item2)).Value).Distinct();
+                    .Select(b => {
+#if !DEBUG
+                        try
+                        {
+#endif
+                            return format.equalityNumbers.First(kv => Term.semanticTermComparer.Equals(kv.Key.target, b.Item2)).Value;
+#if !DEBUG
+                        }
+                        catch (Exception)
+                        {
+                            return 0;
+                        }
+#endif
+                    }).Distinct();
                 content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Value}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
