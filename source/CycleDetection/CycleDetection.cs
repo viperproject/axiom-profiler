@@ -626,7 +626,7 @@ namespace AxiomProfiler.CycleDetection
                     EqualityExplanationTermVisitor.singleton.visit(ee, term => gens.AddRange(term.GetAllGeneralizationSubterms()));
                     return gens;
                 }))
-                .Concat(t.Item2.bindings.Values.SelectMany(b => b.Item2.GetAllGeneralizationSubterms()))
+                .Concat(t.Item2.bindings.Values.Where(v => v != default(Tuple<List<ConstraintType>, Term>)).SelectMany(b => b.Item2.GetAllGeneralizationSubterms()))
                 .Concat(t.Item2.equalities.Values.SelectMany(e => e.SelectMany(se => se.Item2.GetAllGeneralizationSubterms())))
                 .Concat(t.Item3.SelectMany(term => term.GetAllGeneralizationSubterms()))
                 .Concat(t.Item4.SelectMany(kv => kv.Value.SelectMany(term => term.GetAllGeneralizationSubterms()))))
@@ -2817,13 +2817,13 @@ namespace AxiomProfiler.CycleDetection
                 // find candidates for the next term.
                 int i = 0;
                 foreach (var currentTermAndBindings in todoStacks.Select(stack => stack.Peek())
-                    .Zip(highlightInfoInsts.Skip(blameWrapAround ? 1 : 0), Tuple.Create)
+                    .Zip(highlightInfoInsts.Skip(blameWrapAround ? 1 : 0).Concat(Enumerable.Repeat<Instantiation>(null, blameWrapAround ? 1 : 0)), Tuple.Create)
                     .Zip(concreteHistories, (t, h) => Tuple.Create(t.Item1, t.Item2, h)))
                 {
                     var currentTerm = currentTermAndBindings.Item1;
                     var boundIn = currentTermAndBindings.Item2;
                     var history = currentTermAndBindings.Item3.Reverse().ToList();
-                    var boundTo = boundIn.bindingInfo.bindings.Keys.FirstOrDefault(k => boundIn.bindingInfo.bindings[k].Item2.id == currentTerm.id &&
+                    var boundTo = boundIn?.bindingInfo.bindings.Keys.FirstOrDefault(k => boundIn.bindingInfo.bindings[k].Item2.id == currentTerm.id &&
                         constraintsSat(history, boundIn.bindingInfo.bindings[k].Item1));
                     if (boundTo != null && generalizedBindingInfo.bindings.TryGetValue(boundTo, out var existing) && existing.Item2.id < -1)
                     {
@@ -2835,7 +2835,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                     else
                     {
-                        collectCandidateTerm(currentTerm, boundIn.bindingInfo, i, candidates);
+                        collectCandidateTerm(currentTerm, boundIn?.bindingInfo, i, candidates);
                     }
                     ++i;
                 }
@@ -2886,6 +2886,9 @@ namespace AxiomProfiler.CycleDetection
 
                 // reset candidates for next round
                 candidates.Clear();
+
+                var expected = todoStacks[0].Count;
+                if (todoStacks.Any(s => s.Count != expected)) throw new InvalidOperationException("Generalization produced illegal state.");
             }
         }
 
@@ -3140,9 +3143,11 @@ namespace AxiomProfiler.CycleDetection
 
         private static void pushSubterms(IEnumerable<Stack<Term>> todoStacks)
         {
+            var expectedSize = todoStacks.First().Peek().Args.Length;
             foreach (var stack in todoStacks)
             {
                 var curr = stack.Peek();
+                if (curr.Args.Length != expectedSize) throw new ArgumentException("Tried to push subterms of terms that do not match.");
                 foreach (var subterm in curr.Args)
                 {
                     stack.Push(subterm);
@@ -3156,11 +3161,11 @@ namespace AxiomProfiler.CycleDetection
         {
             var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length + "_" + currentTerm.generalizationCounter;
 
-            var existingReplacements = bindingInfo.bindings.Where(kv => kv.Value.Item2.id == currentTerm.id)
+            var existingReplacements = bindingInfo?.bindings.Where(kv => kv.Value.Item2.id == currentTerm.id)
                 .SelectMany(kv => bindingInfo.equalities.TryGetValue(kv.Key, out var eqs) ? eqs : Enumerable.Empty<Tuple<ConstraintType, Term>>())
                 .SelectMany(t => replacementDict.TryGetValue(Tuple.Create(iteration, t.Item2.id), out var gen) ? gen : nonGenTerm);
             //TODO: keep tracking all existing replacements
-            var generalization = existingReplacements.FirstOrDefault();
+            var generalization = existingReplacements?.FirstOrDefault();
             if (generalization == null || generalization.generalizationCounter < 0 || existingReplacements.Any(t => generalization.generalizationCounter != t.generalizationCounter))
             {
                 generalization = null;
