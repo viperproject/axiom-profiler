@@ -60,7 +60,7 @@ namespace AxiomProfiler.PrettyPrinting
             {
                 return termTranslations[t.id + ""];
             }
-            if (termTranslations.ContainsKey(t.Name + t.GenericType))
+            if (termTranslations.ContainsKey(t.PrettyName + t.GenericType))
             {
                 return termTranslations[t.Name + t.GenericType];
             }
@@ -177,17 +177,17 @@ namespace AxiomProfiler.PrettyPrinting
 
         public static PrintRule DefaultRewriteRule(Term t, PrettyPrintFormat format)
         {
-            var prefix = new Func<bool, string>(isPrime => t.Name +
+            var prefix = new Func<bool, string>(isPrime => t.PrettyName +
                 (format.showType ? t.GenericType : "") +
                 (t.generalizationCounter >= 0 ? (isPrime ? "'" : "") + "_" + t.generalizationCounter : "") +
                 (t.iterationOffset > 0 ? "_-" + t.iterationOffset : "") +
                 (format.showTermId && t.generalizationCounter < 0 && t.id != -1 ? "[" + (t.id >= 0 ? t.id.ToString() : $"g{-t.id}") + (isPrime ? "'" : "") + "]" : "") +
-                "(");
+                (t.TheorySpecificMeaning == null ? "(" : ""));
             return new PrintRule
             {
                 prefix = prefix,
                 infix = new Func<bool, string>(_ => ", "),
-                suffix = new Func<bool, string>(_ => ")"),
+                suffix = new Func<bool, string>(_ => t.TheorySpecificMeaning == null ? ")" : ""),
                 color = PrintConstants.defaultTermColor,
                 printChildren = true,
                 associative = false,

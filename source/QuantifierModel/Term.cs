@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.QuantifierModel.TheoryMeaning;
 
 namespace AxiomProfiler.QuantifierModel
 {
@@ -27,6 +28,21 @@ namespace AxiomProfiler.QuantifierModel
         public static readonly SemanticTermComparer semanticTermComparer = new SemanticTermComparer();
 
         public readonly string Name;
+        public string TheorySpecificMeaning = null;
+        public string Theory = null;
+
+        public string PrettyName
+        {
+            get
+            {
+                if (TheorySpecificMeaning == null)
+                {
+                    return Name;
+                }
+                return TheoryMeaningInterpretation.singleton.GetPrettyStringForTheoryMeaning(Theory, TheorySpecificMeaning);
+            }
+        }
+
         public readonly string GenericType;
         public Term[] Args;
         public int id = -1;
@@ -78,6 +94,8 @@ namespace AxiomProfiler.QuantifierModel
         public Term(Term t, Term[] newArgs = null)
         {
             Name = t.Name;
+            TheorySpecificMeaning = t.TheorySpecificMeaning;
+            Theory = t.Theory;
             Args = newArgs ?? (Term[]) t.Args.Clone();
             Responsible = t.Responsible;
             id = t.id;
@@ -314,6 +332,10 @@ namespace AxiomProfiler.QuantifierModel
 
         private bool needsParenthesis(PrettyPrintFormat format, PrintRule rule, PrintRule parentRule)
         {
+            if (TheorySpecificMeaning != null)
+            {
+                return false;
+            }
             switch (rule.parentheses)
             {
                 case PrintRule.ParenthesesSetting.Always:
@@ -424,7 +446,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public override string ToString()
         {
-            return $"Term[{Name}] Identifier:{id}, #Children:{Args.Length}";
+            return $"Term[{PrettyName}] Identifier:{id}, #Children:{Args.Length}";
         }
 
         public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)

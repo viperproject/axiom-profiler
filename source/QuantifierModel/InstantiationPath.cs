@@ -971,11 +971,11 @@ namespace AxiomProfiler.QuantifierModel
                 {
                     if (binding.Value == null)
                     {
-                        content.Append($"A generalized binding for {binding.Key.Name} in the next iteration\ncould not be generated (This pattern cannot repeat indefinetly).");
+                        content.Append($"A generalized binding for {binding.Key.PrettyName} in the next iteration\ncould not be generated (This pattern cannot repeat indefinetly).");
                     }
                     else
                     {
-                        content.Append(binding.Key.Name).Append(" will be bound to:\n");
+                        content.Append(binding.Key.PrettyName).Append(" will be bound to:\n");
                         binding.Value.PrettyPrint(content, format);
                         content.switchToDefaultFormat();
                         content.Append("\n\n");
@@ -1137,7 +1137,7 @@ namespace AxiomProfiler.QuantifierModel
             foreach (var bindings in bindingInfo.getBindingsToFreeVars())
             {
                 content.Append("\n\n");
-                content.Append(bindings.Key.Name).Append(" was bound to:\n");
+                content.Append(bindings.Key.PrettyName).Append(" was bound to:\n");
                 bindings.Value.PrettyPrint(content, format);
                 content.switchToDefaultFormat();
             }

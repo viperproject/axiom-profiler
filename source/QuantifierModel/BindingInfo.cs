@@ -99,7 +99,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             var boundTerm = bindings[patternTerm].Item2;
             var newArgs = patternTerm.Args.Count() == 0 ? boundTerm.Args : patternTerm.Args.Select(p => EffectiveBlameTermForPatternTerm(p)).ToArray();
-            var effectiveTerm = new Term(boundTerm.Name, newArgs, boundTerm.generalizationCounter) { id = boundTerm.id };
+            var effectiveTerm = new Term(boundTerm, newArgs);
             if (patternTerm.id == -1)
             {
                 _BoundEffectiveTerms.Add(effectiveTerm);

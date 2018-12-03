@@ -3219,13 +3219,13 @@ namespace AxiomProfiler.CycleDetection
                 rule.color = PrintConstants.generalizationColor;
                 if (term.Args.Count() == 0)
                 {
-                    rule.prefix = new Func<bool, string>(isPrime => term.Name + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
+                    rule.prefix = new Func<bool, string>(isPrime => term.PrettyName + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (onlyOne || term.generalizationCounter < 0 ? "" : "_" + term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "") +
                         (term.generalizationCounter < 0 && format.showTermId ? (term.id >= 0 ? $"[{term.id}]" : $"[g{-term.id}{(isPrime ? "'" : "")}]") : ""));
                     rule.suffix = new Func<bool, string>(_ => "");
                 }
                 else
                 {
-                    rule.prefix = new Func<bool, string>(isPrime => term.Name + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (term.generalizationCounter < 0 ? (format.showTermId ? (term.iterationOffset > 0 ? "_-" +
+                    rule.prefix = new Func<bool, string>(isPrime => term.PrettyName + (term.generalizationCounter >= 0 && isPrime ? "'" : "") + (term.generalizationCounter < 0 ? (format.showTermId ? (term.iterationOffset > 0 ? "_-" +
                         term.iterationOffset : "") + (term.id >= 0 ? $"[{term.id}]" : $"[g{-term.id}{(isPrime ? "'" : "")}]") : "") : "_" + (onlyOne ? term.generalizationCounter-1 : term.generalizationCounter) + (term.iterationOffset > 0 ? "_-" + term.iterationOffset : "")) + "(");
                 }
                 format.addTemporaryRule(term.id.ToString(), rule);

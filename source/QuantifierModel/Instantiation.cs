@@ -287,7 +287,7 @@ namespace AxiomProfiler.QuantifierModel
             foreach (var bindings in bindingInfo.getBindingsToFreeVars())
             {
                 content.Append("\n\n");
-                content.Append(bindings.Key.Name).Append(" was bound to:\n");
+                content.Append(bindings.Key.PrettyName).Append(" was bound to:\n");
                 bindings.Value.PrettyPrint(content, format);
                 content.switchToDefaultFormat();
             }

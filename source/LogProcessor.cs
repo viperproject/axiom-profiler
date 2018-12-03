@@ -48,7 +48,8 @@ namespace AxiomProfiler
 
         public readonly Model model = new Model();
 
-        private readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
+        private static readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
+        private static readonly char[] splitAtSpace = new char[] { ' ' };
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
@@ -975,7 +976,15 @@ namespace AxiomProfiler
                         }
                     }
                     break;
-                    
+
+                case "[attach-meaning]":
+                    {
+                        Term t = GetTerm(words[1]);
+                        t.Theory = words[2];
+                        t.TheorySpecificMeaning = line.Split(splitAtSpace, 4)[3];
+                    }
+                    break;
+
                 case "[attach-enode]":
                     {
                         Term t = GetTerm(words[1]);
