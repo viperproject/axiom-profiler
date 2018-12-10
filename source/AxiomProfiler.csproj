@@ -157,8 +157,6 @@
     <Compile Include="PrettyPrinting\InfoPanelContent.cs" />
     <Compile Include="PrettyPrinting\IPrintable.cs" />
     <Compile Include="PrettyPrinting\EqualityExplanationPrinter.cs" />
-    <Compile Include="QuantifierModel\TheoryMeaning\ArithInterpreter.cs" />
-    <Compile Include="QuantifierModel\TheoryMeaning\BVInterpreter.cs" />
     <Compile Include="QuantifierModel\TheoryMeaning\TheoryMeaningInterpretation.cs" />
     <Compile Include="ScriptingSupport.cs" />
     <Compile Include="Utilities\EqualityExplanationTermVisitor.cs" />
