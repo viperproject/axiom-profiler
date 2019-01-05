@@ -459,18 +459,23 @@ namespace AxiomProfiler.QuantifierModel
             patternStack.Push(Tuple.Create(fullPattern, 0));
             var history = new Stack<ConstraintElementType>();
 
-            while (patternStack.Count > 0)
+            while (patternStack.Any())
             {
                 var currentPattern = patternStack.Peek();
-                if (history.Count > 0 && history.Peek() == currentPattern)
+                if (history.Any() && history.Peek().Item1 == currentPattern.Item1)
                 {
                     patternStack.Pop();
                     history.Pop();
                     continue;
                 }
 
-                var pathConstraint = history.ToList();
-                pathConstraint.Reverse();
+                if (history.Any())
+                {
+                    var parent = history.Pop();
+                    history.Push(Tuple.Create(parent.Item1, currentPattern.Item2));
+                }
+
+                var pathConstraint = history.Reverse().ToList();
                 addPatternMatchContext(currentPattern.Item1, new List<ConstraintType> { pathConstraint });
                 
                 history.Push(currentPattern);

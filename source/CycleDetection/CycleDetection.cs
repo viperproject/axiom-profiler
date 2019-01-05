@@ -2764,9 +2764,9 @@ namespace AxiomProfiler.CycleDetection
             // map to 'vote' on generalization
             // also exposes outliers
             // term name + type + #Args -> #votes
-            // 4th and 5th element are id and generalization counter (kept if all terms agree)
+            // 4th, 5th, and 6th element are id, generalization counter, and theory specific meaning (kept if all terms agree)
             // last element is a T term all terms are equal to or null
-            var candidates = new Dictionary<string, Tuple<int, string, int, int, int, Term>>();
+            var candidates = new Dictionary<string, Tuple<int, string, int, int, int, Tuple<string, string>, Term>>();
             var concreteHistories = terms.Select(_ => new Stack<ConstraintElementType>()).ToArray();
             var generalizedHistory = new Stack<ConstraintElementType>();
 
@@ -3042,7 +3042,8 @@ namespace AxiomProfiler.CycleDetection
             return iterationNumberings == null ? idx : iterationNumberings[idx];
         }
 
-        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates, Stack<Term>[] todoStacks, Stack<ConstraintElementType> generalizedHistory, List<int> instantiationNumberings, bool overrideReplacements)
+        private Term getGeneralizedTerm(Dictionary<string, Tuple<int, string, int, int, int, Tuple<string, string>, Term>> candidates, Stack<Term>[] todoStacks,
+            Stack<ConstraintElementType> generalizedHistory, List<int> instantiationNumberings, bool overrideReplacements)
         {
             Term currTerm;
             if (candidates.Count == 1)
@@ -3071,12 +3072,15 @@ namespace AxiomProfiler.CycleDetection
                 {
                     Array.Copy(todoStacks[0].Peek().Args, currTerm.Args, value.Item3);
                 }
+
+                currTerm.Theory = value.Item6?.Item1;
+                currTerm.TheorySpecificMeaning = value.Item6?.Item2;
             }
             else
             {
                 // no consensus --> generalize
                 // todo: if necessary, detect outlier
-                var existingGeneralizations = candidates.Select(c => c.Value.Item6);
+                var existingGeneralizations = candidates.Select(c => c.Value.Item7);
                 var possibleGeneralization = existingGeneralizations.FirstOrDefault();
                 if (possibleGeneralization != null && existingGeneralizations.All(t => t != null && t.generalizationCounter == possibleGeneralization.generalizationCounter))
                 {
@@ -3157,7 +3161,7 @@ namespace AxiomProfiler.CycleDetection
 
         private static readonly IEnumerable<Term> nonGenTerm = Enumerable.Repeat(new Term("", new Term[0], -1), 1);
 
-        private void collectCandidateTerm(Term currentTerm, BindingInfo bindingInfo, int iteration, Dictionary<string, Tuple<int, string, int, int, int, Term>> candidates)
+        private void collectCandidateTerm(Term currentTerm, BindingInfo bindingInfo, int iteration, Dictionary<string, Tuple<int, string, int, int, int, Tuple<string, string>, Term>> candidates)
         {
             var key = currentTerm.Name + currentTerm.GenericType + currentTerm.Args.Length + "_" + currentTerm.generalizationCounter;
 
@@ -3173,15 +3177,15 @@ namespace AxiomProfiler.CycleDetection
 
             if (!candidates.ContainsKey(key))
             {
-                candidates[key] = new Tuple<int, string, int, int, int, Term>
-                    (0, currentTerm.Name + currentTerm.GenericType, currentTerm.Args.Length, currentTerm.id, currentTerm.generalizationCounter, generalization);
+                candidates[key] = Tuple.Create(0, currentTerm.Name + currentTerm.GenericType, currentTerm.Args.Length, currentTerm.id, currentTerm.generalizationCounter,
+                    Tuple.Create(currentTerm.Theory, currentTerm.TheorySpecificMeaning), generalization);
             }
             else
             {
                 var oldTuple = candidates[key];
-                candidates[key] = new Tuple<int, string, int, int, int, Term>
-                    (oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5,
-                    oldTuple.Item6 != null && generalization != null && oldTuple.Item6.id == generalization.id ? oldTuple.Item6 : null); //-1 indicates disagreement on id / generalization counter
+                candidates[key] = Tuple.Create(oldTuple.Item1 + 1, oldTuple.Item2, oldTuple.Item3, oldTuple.Item4 == currentTerm.id ? oldTuple.Item4 : -1, oldTuple.Item5,  //-1 indicates disagreement on id / generalization counter
+                    oldTuple.Item6 != null && currentTerm.Theory == oldTuple.Item6.Item1 && currentTerm.TheorySpecificMeaning == oldTuple.Item6.Item2 ? oldTuple.Item6 : null,
+                    oldTuple.Item7 != null && generalization != null && oldTuple.Item7.id == generalization.id ? oldTuple.Item7 : null);
             }
         }
 
