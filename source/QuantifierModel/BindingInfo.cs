@@ -1,4 +1,5 @@
 using AxiomProfiler.PrettyPrinting;
+using AxiomProfiler.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,9 @@ namespace AxiomProfiler.QuantifierModel
 
     public class BindingInfo
     {
+        private static readonly Term[] noTerms = new Term[0];
+        private static readonly EqualityExplanation[] noExplanations = new EqualityExplanation[0];
+
         // Pattern used for this binding
         public readonly Term fullPattern;
 
@@ -190,6 +194,21 @@ namespace AxiomProfiler.QuantifierModel
             TopLevelTerms = topLevelTerms.ToArray();
             EqualityExplanations = equalityExplanations.Distinct().ToArray();
             numEq = EqualityExplanations.Length;
+        }
+
+        public BindingInfo(Quantifier quant, Term[] bindings)
+        {
+            fullPattern = null;
+            BoundTerms = bindings;
+            foreach (var qv in quant.BodyTerm.QuantifiedVariables())
+            {
+                _bindings[qv] = Tuple.Create(new List<ConstraintType>(), bindings[qv.varIdx]);
+                _patternMatchContext[qv.id] = new List<ConstraintType>() { new ConstraintType() };
+            }
+            TopLevelTerms = noTerms;
+            EqualityExplanations = noExplanations;
+            numEq = 0;
+            processed = true;
         }
 
         private BindingInfo(BindingInfo other)
@@ -487,6 +506,15 @@ namespace AxiomProfiler.QuantifierModel
                 .Where(bnd => bnd.Key.id == -1)
                 .Select(kv => new KeyValuePair<Term, Term>(kv.Key, kv.Value?.Item2))
                 .ToList();
+        }
+
+        /// <summary>
+        /// Indicates wheter this binding info represents a pattern match.
+        /// </summary>
+        /// <returns>true if this binding info represents a pattern match, false otherwise (e.g. if MBQI was used)</returns>
+        public bool IsPatternMatch()
+        {
+            return fullPattern != null;
         }
     }
 }

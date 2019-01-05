@@ -36,8 +36,8 @@ namespace AxiomProfiler.QuantifierModel.TheoryMeaning
                             var match = findDivArguments.Match(meaning);
                             if (match.Success)
                             {
-                                var arg1 = GetPrettyStringForTheoryMeaning(theory, match.Captures[0].Value);
-                                var arg2 = GetPrettyStringForTheoryMeaning(theory, match.Captures[1].Value);
+                                var arg1 = GetPrettyStringForTheoryMeaning(theory, match.Groups[1].Value);
+                                var arg2 = GetPrettyStringForTheoryMeaning(theory, match.Groups[2].Value);
                                 var sign = false;
                                 if (arg1.StartsWith("-"))
                                 {
@@ -65,7 +65,7 @@ namespace AxiomProfiler.QuantifierModel.TheoryMeaning
                         {
                             var match = findNegArgument.Match(meaning);
                             if (match.Success) {
-                                return InvertArith(GetPrettyStringForTheoryMeaning(theory, match.Captures[0].Value));
+                                return InvertArith(GetPrettyStringForTheoryMeaning(theory, match.Groups[1].Value));
                             }
                         }
                         break;

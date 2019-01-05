@@ -54,6 +54,7 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public Term reverseRewrite = null;
         public int generalizationCounter = -1;
+        public int varIdx = -1;
 
         // isPrime and generationOffset represent a similar concept: they indicate that a generalized term is written in terms of a different
         // (generalized) loop iteration than the one we are currently in. iterationOffset is used by the algorithms whereas isPrime is used for
@@ -115,12 +116,29 @@ namespace AxiomProfiler.QuantifierModel
             dependentInstantiationsBlame = new List<Instantiation>(t.dependentInstantiationsBlame);
             dependentInstantiationsBind = new List<Instantiation>(t.dependentInstantiationsBind);
             dependentTerms = new List<Term>(t.dependentTerms);
+            varIdx = t.varIdx;
+        }
+
+        public IEnumerable<Term> QuantifiedVariables()
+        {
+            if (id == -1)
+            {
+                yield return this;
+            } else
+            {
+                foreach (var arg in Args)
+                {
+                    foreach (var result in arg.QuantifiedVariables())
+                    {
+                        yield return result;
+                    }
+                }
+            }
         }
 
         public bool ContainsQuantifiedVar()
         {
-            if (id == -1) return true;
-            return Args.Any(arg => arg.ContainsQuantifiedVar());
+            return QuantifiedVariables().Any();
         }
 
         public bool ContainsGeneralization()

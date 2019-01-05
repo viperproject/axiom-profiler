@@ -178,66 +178,78 @@ namespace AxiomProfiler.QuantifierModel
         {
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
-            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
-            content.Append("matched");
-            content.switchToDefaultFormat();
-            content.Append(" or ");
-            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
-            content.Append(PrintConstants.LargeTextMode ? "matched using\nequality" : "matched using equality");
-            content.switchToDefaultFormat();
-            content.Append(" or ");
-            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
-            content.Append("blamed");
-            content.switchToDefaultFormat();
-            content.Append(" or ");
+            if (bindingInfo.IsPatternMatch())
+            {
+                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.patternMatchColor);
+                content.Append("matched");
+                content.switchToDefaultFormat();
+                content.Append(" or ");
+                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.equalityColor);
+                content.Append(PrintConstants.LargeTextMode ? "matched using\nequality" : "matched using equality");
+                content.switchToDefaultFormat();
+                content.Append(" or ");
+                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
+                content.Append("blamed");
+                content.switchToDefaultFormat();
+                content.Append(" or ");
+            }
             content.switchFormat(PrintConstants.DefaultFont, PrintConstants.bindColor);
             content.Append("bound");
             content.switchToDefaultFormat();
             content.Append(".\n\n");
 
-            tempHighlightBlameBindTerms(format);
-
-            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-            content.Append("Blamed Terms:\n\n");
-            content.switchToDefaultFormat();
-
-            var termNumbering = 1;
-
-            var blameTerms = bindingInfo.getDistinctBlameTerms();
-            var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
-                (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.Item2.id == req.id) &&
-                !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k].Item2 == req)));
-
-            foreach (var t in distinctBlameTerms)
+            if (!bindingInfo.IsPatternMatch())
             {
-                if (!format.termNumbers.TryGetValue(t, out var termNumber))
-                {
-                    termNumber = termNumbering;
-                    ++termNumbering;
-                    format.termNumbers[t] = termNumber;
-                }
-                var numberingString = $"({termNumber}) ";
-                content.Append($"\n{numberingString}");
-                t.PrettyPrint(content, format, numberingString.Length);
+                content.switchFormat(PrintConstants.BoldFont, PrintConstants.instantiationTitleColor);
+                content.Append("Instantiated using MBQI.\n\n");
                 content.switchToDefaultFormat();
-                content.Append("\n\n");
             }
 
-            if (bindingInfo.equalities.Count > 0)
-            {
-                var numberOfTopLevelTerms = bindingInfo.getDistinctBlameTerms().Count;
+            tempHighlightBlameBindTerms(format);
 
+            if (bindingInfo.IsPatternMatch())
+            {
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nRelevant equalities:\n\n");
+                content.Append("Blamed Terms:\n\n");
                 content.switchToDefaultFormat();
 
-                format.printContextSensitive = false;
-                foreach (var equality in bindingInfo.equalities)
+                var termNumbering = 1;
+
+                var blameTerms = bindingInfo.getDistinctBlameTerms();
+                var distinctBlameTerms = blameTerms.Where(req => bindingInfo.TopLevelTerms.Contains(req) ||
+                    (!bindingInfo.equalities.SelectMany(eq => eq.Value).Any(t => t.Item2.id == req.id) &&
+                    !bindingInfo.equalities.Keys.Any(k => bindingInfo.bindings[k].Item2 == req)));
+
+                foreach (var t in distinctBlameTerms)
                 {
-                    var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
-                    foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
+                    if (!format.termNumbers.TryGetValue(t, out var termNumber))
                     {
-                        EqualityExplanation explanation;
+                        termNumber = termNumbering;
+                        ++termNumbering;
+                        format.termNumbers[t] = termNumber;
+                    }
+                    var numberingString = $"({termNumber}) ";
+                    content.Append($"\n{numberingString}");
+                    t.PrettyPrint(content, format, numberingString.Length);
+                    content.switchToDefaultFormat();
+                    content.Append("\n\n");
+                }
+
+                if (bindingInfo.equalities.Count > 0)
+                {
+                    var numberOfTopLevelTerms = bindingInfo.getDistinctBlameTerms().Count;
+
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nRelevant equalities:\n\n");
+                    content.switchToDefaultFormat();
+
+                    format.printContextSensitive = false;
+                    foreach (var equality in bindingInfo.equalities)
+                    {
+                        var effectiveTerm = bindingInfo.bindings[equality.Key].Item2;
+                        foreach (var term in equality.Value.Select(t => t.Item2).Distinct(Term.semanticTermComparer))
+                        {
+                            EqualityExplanation explanation;
 #if !DEBUG
                         try
                         {
@@ -250,34 +262,35 @@ namespace AxiomProfiler.QuantifierModel
                             explanation = new TransitiveEqualityExplanation(term, effectiveTerm, new EqualityExplanation[0]);
                         }
 #endif
-                        if (!format.equalityNumbers.TryGetValue(explanation, out var termNumber))
-                        {
-                            termNumber = termNumbering;
-                            ++termNumbering;
-                            format.equalityNumbers[explanation] = termNumber;
-                        }
-                        
-                        if (format.ShowEqualityExplanations)
-                        {
-                            explanation.PrettyPrint(content, format, termNumber);
-                        }
-                        else
-                        {
-                            var numberingString = $"({termNumber}) ";
-                            content.switchToDefaultFormat();
-                            content.Append(numberingString);
-                            var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
-                            term.PrettyPrint(content, format, numberingString.Length);
-                            content.switchToDefaultFormat();
-                            content.Append($"\n{indentString}= (explanation omitted)\n{indentString}");
-                            effectiveTerm.PrettyPrint(content, format, numberingString.Length);
-                        }
-                        content.Append("\n\n");
-                    }
-                }
-                format.printContextSensitive = true;
+                            if (!format.equalityNumbers.TryGetValue(explanation, out var termNumber))
+                            {
+                                termNumber = termNumbering;
+                                ++termNumbering;
+                                format.equalityNumbers[explanation] = termNumber;
+                            }
 
-                bindingInfo.PrintEqualitySubstitution(content, format);
+                            if (format.ShowEqualityExplanations)
+                            {
+                                explanation.PrettyPrint(content, format, termNumber);
+                            }
+                            else
+                            {
+                                var numberingString = $"({termNumber}) ";
+                                content.switchToDefaultFormat();
+                                content.Append(numberingString);
+                                var indentString = $"¦{String.Join("", Enumerable.Repeat(" ", numberingString.Length - 1))}";
+                                term.PrettyPrint(content, format, numberingString.Length);
+                                content.switchToDefaultFormat();
+                                content.Append($"\n{indentString}= (explanation omitted)\n{indentString}");
+                                effectiveTerm.PrettyPrint(content, format, numberingString.Length);
+                            }
+                            content.Append("\n\n");
+                        }
+                    }
+                    format.printContextSensitive = true;
+
+                    bindingInfo.PrintEqualitySubstitution(content, format);
+                }
             }
 
             content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
@@ -341,13 +354,27 @@ namespace AxiomProfiler.QuantifierModel
         {
             if (bindingInfo == null) return;
 
+            if (!bindingInfo.IsPatternMatch())
+            {
+                foreach (var binding in bindingInfo.bindings)
+                {
+                    var patternTerm = binding.Key;
+                    var term = binding.Value;
+                    var color = PrintConstants.bindColor;
+
+                    patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
+                    term.Item2.highlightTemporarily(format, color, term.Item1);
+                }
+                return;
+            }
+
             // highlight replaced, equal terms as well
             foreach (var eqTerm in bindingInfo.equalities.SelectMany(kv => kv.Value))
             {
                 eqTerm.Item2.highlightTemporarily(format, PrintConstants.equalityColor, eqTerm.Item1);
             }
 
-            bindingInfo.fullPattern.highlightTemporarily(format, PrintConstants.patternMatchColor);
+            bindingInfo.fullPattern?.highlightTemporarily(format, PrintConstants.patternMatchColor);
             foreach (var binding in bindingInfo.bindings)
             {
                 var patternTerm = binding.Key;

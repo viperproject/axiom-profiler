@@ -112,7 +112,13 @@ namespace AxiomProfiler
                             }
                             catch (LogProcessor.OldLogFormatException)
                             {
-                                System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to z3 when generating logs.", "Invalid Log File");
+                                System.Windows.Forms.MessageBox.Show("Please pass \"PROOF=true\" to Z3 when generating logs.", "Invalid Log File");
+                                isCancelled = true;
+                                return;
+                            }
+                            catch (LogProcessor.Z3VersionException)
+                            {
+                                System.Windows.Forms.MessageBox.Show("The version of Z3 that generated this log is not supported. Please upgrade to the latest version.", "Unsupported Z3 Version");
                                 isCancelled = true;
                                 return;
                             }

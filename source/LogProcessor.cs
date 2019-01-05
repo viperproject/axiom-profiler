@@ -36,6 +36,7 @@ namespace AxiomProfiler
         private bool _modelInState;
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
+        private bool toolVersionSeen = false;
 
         //TODO: estimate capacity based on file size
         private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
@@ -887,6 +888,24 @@ namespace AxiomProfiler
         {
             switch (words[0])
             {
+                case "[tool-version]":
+                    {
+                        if (words[1] != "Z3")
+                        {
+                            MessageBox.Show("The tool that generated this log may not be supported by the Axiom Profiler. Some data may be presented incorrectly.", "Unsupported Tool");
+                        }
+                        else
+                        {
+                            var versionComponents = words[2].Split(new char[] { '.' }).Select(sv => int.TryParse(sv, out var parsed) ? parsed : -1).ToArray();
+                            if (versionComponents[0] < 4 || versionComponents[1] < 8)
+                            {
+                                throw new Z3VersionException();
+                            }
+                        }
+                        toolVersionSeen = true;
+                    }
+                    break;
+
                 case "[mk-quant]":
                 case "[mk-lambda]":
                     {
@@ -912,7 +931,12 @@ namespace AxiomProfiler
                 case "[mk-var]":
                     {
                         var id = parseIdentifier(words[1]);
-                        model.terms[id] = new Term("qvar_" + id, EmptyTerms);
+                        var term = new Term("qvar_" + id, EmptyTerms);
+                        if (words.Length > 2 && int.TryParse(words[2], out var variableIndex))
+                        {
+                            term.varIdx = variableIndex;
+                        }
+                        model.terms[id] = term;
                     }
                     break;
 
@@ -1082,6 +1106,18 @@ namespace AxiomProfiler
                             Quant = quant
                         };
                         model.fingerprints[words[1]] = inst;
+                    }
+                    break;
+
+                case "[mbqi-triggered]":
+                    {
+                        var quant = model.quantifiers[words[2]];
+                        var args = GetArgs(words, 3);
+                        var bindingInfo = new BindingInfo(quant, args);
+                        model.fingerprints[words[1]] = new Instantiation(bindingInfo)
+                        {
+                            Quant = quant
+                        };
                     }
                     break;
 
@@ -1383,6 +1419,11 @@ namespace AxiomProfiler
 
         public void Finish()
         {
+            if (!toolVersionSeen)
+            {
+                MessageBox.Show("The tool that generated this log may not be supported by the Axiom Profiler. Some data may be presented incorrectly.", "Unsupported Tool");
+            }
+
             model.NumChecks = beginCheckSeen;
 
             //add reverse rewrites to terms
@@ -1817,6 +1858,9 @@ namespace AxiomProfiler
         
         [Serializable]
         public class OldLogFormatException : Exception {}
+
+        [Serializable]
+        public class Z3VersionException : Exception {}
     }
 
 
