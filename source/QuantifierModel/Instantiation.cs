@@ -37,6 +37,7 @@ namespace AxiomProfiler.QuantifierModel
                 return _Responsible;
             }
         }
+        public readonly string InstantiationMethod;
 
         public Term[] Bindings
         {
@@ -46,14 +47,15 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        public Instantiation(BindingInfo bindingInfo)
+        public Instantiation(BindingInfo bindingInfo, string method)
         {
             this.bindingInfo = bindingInfo;
+            InstantiationMethod = method;
         }
 
         public Instantiation Copy()
         {
-            return new Instantiation(bindingInfo)
+            return new Instantiation(bindingInfo, InstantiationMethod)
             {
                 Quant = Quant,
                 concreteBody = concreteBody
@@ -62,11 +64,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public Instantiation CopyForBindingInfoModification()
         {
-            var copy = new Instantiation(bindingInfo.Clone())
-            {
-                Quant = Quant,
-                concreteBody = concreteBody
-            };
+            var copy = Copy();
             foreach (var kv in TheoryConstraintsDependentTerms)
             {
                 copy.TheoryConstraintsDependentTerms[kv.Key] = kv.Value;
@@ -201,7 +199,7 @@ namespace AxiomProfiler.QuantifierModel
             if (!bindingInfo.IsPatternMatch())
             {
                 content.switchFormat(PrintConstants.BoldFont, PrintConstants.instantiationTitleColor);
-                content.Append("Instantiated using MBQI.\n\n");
+                content.Append($"Instantiated using {InstantiationMethod}.\n\n");
                 content.switchToDefaultFormat();
             }
 
@@ -490,7 +488,7 @@ namespace AxiomProfiler.QuantifierModel
         public int DepCount;
         public readonly List<ImportantInstantiation> ResponsibleInsts = new List<ImportantInstantiation>();
 
-        public ImportantInstantiation(Instantiation par) : base(par.bindingInfo)
+        public ImportantInstantiation(Instantiation par) : base(par.bindingInfo, par.InstantiationMethod)
         {
             Quant = par.Quant;
             LineNo = par.LineNo;

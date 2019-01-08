@@ -22,13 +22,14 @@ namespace AxiomProfiler.QuantifierModel
         public EqualityExplanation[] EqualityExplanations;
 
         private bool processed = false;
+        private Exception cachedException = null;
         // bindings: trigger subterm --> (path constraints, Term)
-        private Dictionary<Term, Tuple<List<ConstraintType>, Term>> _bindings = new Dictionary<Term, Tuple<List<ConstraintType>, Term>>();
+        private Dictionary<Term, Tuple<List<ConstraintType>, Term>> _bindings = new Dictionary<Term, Tuple<List<ConstraintType>, Term>>(Term.semanticTermComparer);
         public Dictionary<Term, Tuple<List<ConstraintType>, Term>> bindings
         {
             get
             {
-                if (!processed) Process();
+                Process();
                 return _bindings;
             }
         }
@@ -38,18 +39,18 @@ namespace AxiomProfiler.QuantifierModel
         public Dictionary<int, List<ConstraintType>> patternMatchContext
         {
             get {
-                if (!processed) Process();
+                Process();
                 return _patternMatchContext;
             }
         }
 
         // equalities inferred from pattern matching
-        private Dictionary<Term, List<Tuple<ConstraintType, Term>>> _equalities = new Dictionary<Term, List<Tuple<ConstraintType, Term>>>();
+        private Dictionary<Term, List<Tuple<ConstraintType, Term>>> _equalities = new Dictionary<Term, List<Tuple<ConstraintType, Term>>>(Term.semanticTermComparer);
         public Dictionary<Term, List<Tuple<ConstraintType, Term>>> equalities
         {
             get
             {
-                if (!processed) Process();
+                Process();
                 return _equalities;
             }
         }
@@ -202,6 +203,7 @@ namespace AxiomProfiler.QuantifierModel
             BoundTerms = bindings;
             foreach (var qv in quant.BodyTerm.QuantifiedVariables())
             {
+                //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
                 _bindings[qv] = Tuple.Create(new List<ConstraintType>(), bindings[qv.varIdx]);
                 _patternMatchContext[qv.id] = new List<ConstraintType>() { new ConstraintType() };
             }
@@ -308,7 +310,25 @@ namespace AxiomProfiler.QuantifierModel
             // Quantified variable?
             if (patternTerm.id == -1)
             {
-                if (_bindings.TryGetValue(patternTerm, out var existingBinding))
+                if (patternTerm.varIdx != -1)
+                {
+                    //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
+                    var boundTerm = BoundTerms[patternTerm.varIdx];
+                    if (boundTerm.id == matchedTerm.id)
+                    {
+                        return AddPatternMatch(patternTerm, boundTerm, null, context, nextMatches, multipatternArg);
+                    }
+                    else
+                    {
+                        // Check that equality actually exists.
+                        if (!EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == boundTerm.id))
+                        {
+                            return false;
+                        }
+                        return AddPatternMatch(patternTerm, boundTerm, matchedTerm, context, nextMatches, multipatternArg);
+                    }
+                }
+                else if (_bindings.TryGetValue(patternTerm, out var existingBinding))
                 {
                     // Make sure same term was bound to quantified variable in both cases.
                     Term equality = null;
@@ -443,10 +463,15 @@ namespace AxiomProfiler.QuantifierModel
         /// </summary>
         private void Process()
         {
+            if (cachedException != null) throw cachedException;
             if (processed) return;
             processed = true;
             var successful = ProcessMultipatternArg(0);
-            if (!successful) throw new Exception("Couldn't calculate pattern match from log information.");
+            if (!successful)
+            {
+                cachedException = new Exception("Couldn't calculate pattern match from log information.");
+                throw cachedException;
+            }
             AddPatternPathconditions();
         }
 

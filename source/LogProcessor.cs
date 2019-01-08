@@ -1003,9 +1003,34 @@ namespace AxiomProfiler
 
                 case "[attach-meaning]":
                     {
-                        Term t = GetTerm(words[1]);
+                        var t = GetTerm(words[1]);
                         t.Theory = words[2];
                         t.TheorySpecificMeaning = line.Split(splitAtSpace, 4)[3];
+                    }
+                    break;
+                case "[attach-var-names]":
+                    {
+#if !DEBUG
+                        try 
+                        {
+#endif
+                            var identifier = parseIdentifier(words[1]);
+                            var term = model.terms[identifier].DeepCopy();
+                            foreach (var qv in term.QuantifiedVariables())
+                            {
+                                if (qv.varIdx >= 0)
+                                {
+                                    qv.Theory = "quantifiers";
+                                    qv.TheorySpecificMeaning = words[qv.varIdx + 2];
+                                }
+                            }
+                            model.terms[identifier] = term;
+                            model.quantifiers[words[1]].BodyTerm = term;
+
+#if !DEBUG
+                        }
+                        catch (Exception) {}
+#endif
                     }
                     break;
 
@@ -1098,10 +1123,11 @@ namespace AxiomProfiler
                         var separationIndex = Array.FindIndex(words, el => el == ";");
                         Term[] args = GetArgs(words, 4, separationIndex);
                         var quant = model.quantifiers[words[2]];
-                        var pattern = GetTerm(words[3]);
+                        var id = parseIdentifier(words[3]);
+                        var pattern = quant.BodyTerm.Args.First(pat => pat.id == id);
                         if (pattern.Name != "pattern") throw new InvalidOperationException($"Expected pattern but found {pattern}.");
                         var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
-                        Instantiation inst = new Instantiation(bindingInfo)
+                        Instantiation inst = new Instantiation(bindingInfo, "trigger based instantiation")
                         {
                             Quant = quant
                         };
@@ -1109,12 +1135,13 @@ namespace AxiomProfiler
                     }
                     break;
 
-                case "[mbqi-triggered]":
+                case "[inst-possible]":
                     {
-                        var quant = model.quantifiers[words[2]];
-                        var args = GetArgs(words, 3);
+                        var method = words[1];
+                        var quant = model.quantifiers[words[3]];
+                        var args = GetArgs(words, 4);
                         var bindingInfo = new BindingInfo(quant, args);
-                        model.fingerprints[words[1]] = new Instantiation(bindingInfo)
+                        model.fingerprints[words[2]] = new Instantiation(bindingInfo, method)
                         {
                             Quant = quant
                         };

@@ -119,6 +119,11 @@ namespace AxiomProfiler.QuantifierModel
             varIdx = t.varIdx;
         }
 
+        public Term DeepCopy()
+        {
+            return new Term(this, Args.Select(arg => arg.DeepCopy()).ToArray());
+        }
+
         public IEnumerable<Term> QuantifiedVariables()
         {
             if (id == -1)

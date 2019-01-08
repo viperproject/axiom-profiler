@@ -71,7 +71,7 @@ namespace AxiomProfiler.CycleDetection
             foreach (var instantiation in path)
             {
                 var key = instantiation.Quant.BodyTerm.id + "_" +
-                    instantiation.bindingInfo.fullPattern.id;
+                    (instantiation.bindingInfo.fullPattern?.id ?? -1);
                 if (!mapping.ContainsKey(key))
                 {
                     mapping[key] = currMap;
