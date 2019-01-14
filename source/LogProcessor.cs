@@ -40,17 +40,12 @@ namespace AxiomProfiler
 
         //TODO: estimate capacity based on file size
         private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
-        private readonly Dictionary<Term, Term> reverseRewriteClosure = new Dictionary<Term, Term>(40_000); //keeps track of term rewritings by z3
-        private static readonly String[] proofRuleNames =
-            { "th-lemma", "hyper-res", "true-axiom", "asserted", "goal", "mp", "refl", "symm", "trans", "trans*", "monotonicity",
-            "quant-intro", "distributivity", "and-elim", "not-or-elim", "rewrite", "rewrite*", "pull-quant", "pull-quant*", "push-quant", "elim-unused",
-            "der", "quant-inst", "hypothesis", "lemma", "unit-resolution", "iff-true", "iff-false", "commutativity", "def-axiom", "intro-def",
-            "apply-def", "iff~", "nnf-pos", "nnf-neg", "nnf*", "cnf*", "sk", "mp~", "th-lemma", "hyper-res", "proof-bind" };
 
         public readonly Model model = new Model();
 
         private static readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
         private static readonly char[] splitAtSpace = new char[] { ' ' };
+        private static readonly Regex varNamesParser = new Regex(@"\(\s*([\w\d]*)\s*;\s*([\w\d]*)\)");
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
@@ -732,7 +727,7 @@ namespace AxiomProfiler
             var bodyChildren = new List<Term>();
             foreach (var child in quantImpliesBody.Args)
             {
-                if (child.Name != "not" || child.Args.First().Name != "FORALL")
+                if (child.Name != "not" || !child.Args.First().Name.StartsWith("FORALL"))
                 {
                     bodyChildren.Add(child);
                 }
@@ -897,7 +892,7 @@ namespace AxiomProfiler
                         else
                         {
                             var versionComponents = words[2].Split(new char[] { '.' }).Select(sv => int.TryParse(sv, out var parsed) ? parsed : -1).ToArray();
-                            if (versionComponents[0] < 4 || versionComponents[1] < 8)
+                            if (versionComponents[0] < 4 || versionComponents[1] < 8 || versionComponents[2] < 4)
                             {
                                 throw new Z3VersionException();
                             }
@@ -940,63 +935,40 @@ namespace AxiomProfiler
                     }
                     break;
 
-                case "[mk-app]":
+                case "[mk-proof]":
                     {
                         Term[] args = GetArgs(words, 3);
 
-                        //We are only interested in the result of a proof step (i.e. the last argument)
-                        if (proofRuleNames.Contains(words[2]))
+                        var t = args.Last();
+
+                        // We use thse to figgure out which new terms we got as the result of a quantifier instantiation.
+                        // e.g. if we have A ==> B, and we get A from a quantifier instantiation, this would include B.
+                        foreach (var prerequisite in args.Take(args.Length - 1))
                         {
-                            var t = args.Last();
-
-                            // We want to be able to undo these later on, if necessary.
-                            if (words[2] == "rewrite" || words[2] == "rewrite*" || words[2] == "unit-resolution")
-                            {
-                                Term from, to;
-                                if (words[2] == "unit-resolution")
-                                {
-                                    from = args.First();
-                                    to = t;
-                                }
-                                else
-                                {
-                                    var equality = args.Last();
-                                    if ((equality.Name != "=" && equality.Name != "iff" && equality.Name != "~") || equality.Args.Count() != 2)
-                                    {
-                                        if (equality.id == -1) return;
-                                        throw new Exception("Unexpected result term for rewrite proof step.");
-                                    }
-                                    from = GetOrIdTransitive(reverseRewriteClosure, equality.Args[0]);
-                                    to = equality.Args[1];
-                                }
-                                reverseRewriteClosure[to] = from;
-                            }
-
-                            // We use thse to figgure out which new terms we got as the result of a quantifier instantiation.
-                            // e.g. if we have A ==> B, and we get A from a quantifier instantiation, this would include B.
-                            foreach (var prerequisite in args.Take(args.Length - 1))
-                            {
-                                proofStepClosures[prerequisite] = t;
-                            }
-
-                            model.terms[parseIdentifier(words[1])] = t;
+                            proofStepClosures[prerequisite] = t;
                         }
-                        else
-                        {
-                            var t = new Term(words[2], args);
-                            model.terms[parseIdentifier(words[1])] = t;
-                            t.id = parseIdentifier(words[1]);
 
-                            if ((t.Name == "=" || t.Name == "iff" || t.Name == "~") && lastInst != null && currentTheoryConstraints.Any())
+                        model.terms[parseIdentifier(words[1])] = t;
+                    }
+                    break;
+
+                case "[mk-app]":
+                    {
+                        Term[] args = GetArgs(words, 3);
+                        
+                        var t = new Term(words[2], args);
+                        model.terms[parseIdentifier(words[1])] = t;
+                        t.id = parseIdentifier(words[1]);
+
+                        if ((t.Name == "=" || t.Name == "iff" || t.Name == "~") && lastInst != null && currentTheoryConstraints.Any())
+                        {
+                            var theoryName = currentTheoryConstraints.Peek();
+                            if (!lastInst.TheoryConstraintsEqualities.TryGetValue(theoryName, out var equalities))
                             {
-                                var theoryName = currentTheoryConstraints.Peek();
-                                if (!lastInst.TheoryConstraintsEqualities.TryGetValue(theoryName, out var equalities))
-                                {
-                                    equalities = new List<Term>();
-                                    lastInst.TheoryConstraintsEqualities[theoryName] = equalities;
-                                }
-                                equalities.Add(t);
+                                equalities = new List<Term>();
+                                lastInst.TheoryConstraintsEqualities[theoryName] = equalities;
                             }
+                            equalities.Add(t);
                         }
                     }
                     break;
@@ -1014,16 +986,29 @@ namespace AxiomProfiler
                         try 
                         {
 #endif
+                            var varNameIterator = varNamesParser.Match(line);
+                            var varInfos = new List<Tuple<string, string>>();
+                            while (varNameIterator.Success)
+                            {
+                                var name = varNameIterator.Groups[1].Value;
+                                var sort = varNameIterator.Groups[2].Value;
+                                varInfos.Add(Tuple.Create(name == "" ? null : name, sort == "" ? null : sort));
+                                varNameIterator = varNameIterator.NextMatch();
+                            }
+
                             var identifier = parseIdentifier(words[1]);
-                            var term = model.terms[identifier].DeepCopy();
+                            var term = model.terms[identifier];
+                            term = new Term(term, term.Args.Select(arg => arg.DeepCopy()).ToArray(), term.Name + " " + string.Join(", ", varInfos.Select(p => $"{p.Item1}: {p.Item2}")));
+
                             foreach (var qv in term.QuantifiedVariables())
                             {
                                 if (qv.varIdx >= 0)
                                 {
                                     qv.Theory = "quantifiers";
-                                    qv.TheorySpecificMeaning = words[qv.varIdx + 2];
+                                    qv.TheorySpecificMeaning = varInfos[qv.varIdx].Item1;
                                 }
                             }
+
                             model.terms[identifier] = term;
                             model.quantifiers[words[1]].BodyTerm = term;
 
@@ -1135,7 +1120,7 @@ namespace AxiomProfiler
                     }
                     break;
 
-                case "[inst-possible]":
+                case "[inst-discovered]":
                     {
                         var method = words[1];
                         var quant = model.quantifiers[words[3]];
@@ -1182,8 +1167,7 @@ namespace AxiomProfiler
                                     body = new Term(body);
                                 }
                             }
-
-                            body.reverseRewrite = originalBody;
+                            
                             inst.concreteBody = body;
                             pos++;
                         }
@@ -1452,12 +1436,6 @@ namespace AxiomProfiler
             }
 
             model.NumChecks = beginCheckSeen;
-
-            //add reverse rewrites to terms
-            foreach (var reverseRewrite in reverseRewriteClosure)
-            {
-                reverseRewrite.Key.reverseRewrite = GetOrIdTransitive(reverseRewriteClosure, reverseRewrite.Value);
-            }
 
             //unify quantifiers with the same name and body
             var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {

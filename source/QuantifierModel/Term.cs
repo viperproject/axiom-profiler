@@ -52,7 +52,6 @@ namespace AxiomProfiler.QuantifierModel
         public readonly List<Instantiation> dependentInstantiationsBlame = new List<Instantiation>();
         public readonly List<Instantiation> dependentInstantiationsBind = new List<Instantiation>();
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
-        public Term reverseRewrite = null;
         public int generalizationCounter = -1;
         public int varIdx = -1;
 
@@ -78,7 +77,6 @@ namespace AxiomProfiler.QuantifierModel
                 GenericType = "";
             }
             Args = args;
-            reverseRewrite = this;
 
             // Note: the null check was added to have it easier to construct the
             // generalized terms top down.
@@ -92,9 +90,9 @@ namespace AxiomProfiler.QuantifierModel
             size += 1;
         }
 
-        public Term(Term t, Term[] newArgs = null)
+        public Term(Term t, Term[] newArgs = null, string newName = null)
         {
-            Name = t.Name;
+            Name = newName ?? t.Name;
             TheorySpecificMeaning = t.TheorySpecificMeaning;
             Theory = t.Theory;
             Args = newArgs ?? (Term[]) t.Args.Clone();
@@ -102,14 +100,6 @@ namespace AxiomProfiler.QuantifierModel
             id = t.id;
             size = t.size;
             GenericType = t.GenericType;
-            if (ReferenceEquals(t.reverseRewrite, t))
-            {
-                reverseRewrite = this;
-            }
-            else
-            {
-                reverseRewrite = t.reverseRewrite;
-            }
             generalizationCounter = t.generalizationCounter;
             iterationOffset = t.iterationOffset;
 

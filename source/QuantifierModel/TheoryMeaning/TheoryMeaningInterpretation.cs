@@ -7,8 +7,8 @@ namespace AxiomProfiler.QuantifierModel.TheoryMeaning
     {
         public static TheoryMeaningInterpretation singleton = new TheoryMeaningInterpretation();
         private static readonly char[] space = new char[] {' '};
-        private static readonly Regex findDivArguments = new Regex("^\\(\\/ (\\w+|\\(.+\\)) (\\w+|\\(.+\\))\\)$");
-        private static readonly Regex findNegArgument = new Regex("^\\(- (\\w+|\\(.+\\))\\)$");
+        private static readonly Regex findDivArguments = new Regex(@"^\(\/ (\w+|\(.+\)) (\w+|\(.+\))\)$");
+        private static readonly Regex findNegArgument = new Regex(@"^\(- (\w+|\(.+\))\)$");
 
         private TheoryMeaningInterpretation() {}
 

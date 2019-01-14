@@ -116,55 +116,6 @@ namespace AxiomProfiler.QuantifierModel
             return result;
         }
 
-        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
-        {
-            if (bindingInfo != null)
-            {
-                FancyInfoPanelText(content, format);
-            }
-            else
-            {
-                legacyInfoPanelText(content, format);
-            }
-        }
-
-        private void legacyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
-        {
-            printNoMatchdisclaimer(content);
-            SummaryInfo(content);
-            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
-            content.Append("Blamed terms:\n\n");
-            content.switchToDefaultFormat();
-
-            foreach (var t in Responsible)
-            {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
-                content.Append("\n\n");
-            }
-            content.Append('\n');
-            content.switchToDefaultFormat();
-            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
-            content.Append("Bound terms:\n\n");
-            content.switchToDefaultFormat();
-            foreach (var t in Bindings)
-            {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
-                content.Append("\n\n");
-            }
-
-            content.switchToDefaultFormat();
-            content.Append("The quantifier body:\n\n");
-            Quant.BodyTerm.PrettyPrint(content, format);
-            content.Append("\n\n");
-
-            content.switchToDefaultFormat();
-            content.Append("The resulting term:\n\n");
-            concreteBody.PrettyPrint(content, format);
-            content.switchToDefaultFormat();
-        }
-
         public void printNoMatchdisclaimer(InfoPanelContent content)
         {
             content.switchFormat(PrintConstants.ItalicFont, PrintConstants.warningTextColor);
@@ -172,7 +123,7 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
         }
 
-        private void FancyInfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
+        public override void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
             SummaryInfo(content);
             content.Append("Highlighted terms are ");
@@ -350,8 +301,6 @@ namespace AxiomProfiler.QuantifierModel
 
         public void tempHighlightBlameBindTerms(PrettyPrintFormat format)
         {
-            if (bindingInfo == null) return;
-
             if (!bindingInfo.IsPatternMatch())
             {
                 foreach (var binding in bindingInfo.bindings)

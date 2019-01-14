@@ -691,7 +691,7 @@ namespace AxiomProfiler
             if (!instantiations.Any()) return path;
             var instantiation = instantiations.First();
             var nodeInst = (Instantiation)node.UserData;
-            if (instantiation.Item1 != nodeInst.Quant || nodeInst.bindingInfo == null || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
+            if (instantiation.Item1 != nodeInst.Quant || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
             var extendedPath = new InstantiationPath(path);
             extendedPath.prepend(nodeInst);
             var bestPath = extendedPath;

@@ -194,25 +194,13 @@ namespace AxiomProfiler.QuantifierModel
             content.switchToDefaultFormat();
 
             var termNumbering = 1;
-            if (current.bindingInfo == null)
-            {
-                legacyInstantiationInfo(content, format, current);
-            }
-            else
-            {
-                termNumbering = printPathHead(content, format, current);
-            }
+            termNumbering = printPathHead(content, format, current);
             
             while (pathEnumerator.MoveNext() && pathEnumerator.Current != null)
             {
                 // between stuff
                 var previous = current;
                 current = pathEnumerator.Current;
-                if (current.bindingInfo == null)
-                {
-                    legacyInstantiationInfo(content, format, current);
-                    continue;
-                }
                 termNumbering = printInstantiationWithPredecessor(content, format, current, previous, cycleDetector, termNumbering);
             }
 
@@ -1176,39 +1164,6 @@ namespace AxiomProfiler.QuantifierModel
                 content.Append("\" indicates that a generalization is hidden below the max term depth");
             }
             content.Append(".\n");
-        }
-
-        private static void legacyInstantiationInfo(InfoPanelContent content, PrettyPrintFormat format, Instantiation instantiation)
-        {
-            instantiation.printNoMatchdisclaimer(content);
-            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
-            content.Append("\n\nBlamed terms:\n\n");
-            content.switchToDefaultFormat();
-
-            foreach (var t in instantiation.Responsible)
-            {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
-                content.Append("\n\n");
-            }
-
-            content.Append('\n');
-            content.switchToDefaultFormat();
-            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
-            content.Append("Bound terms:\n\n");
-            content.switchToDefaultFormat();
-            foreach (var t in instantiation.Bindings)
-            {
-                content.Append("\n");
-                t.PrettyPrint(content, format);
-                content.Append("\n\n");
-            }
-
-            content.switchFormat(PrintConstants.SubtitleFont, Color.DarkMagenta);
-            content.Append("Quantifier Body:\n\n");
-
-            instantiation.concreteBody?.PrettyPrint(content, format);
-            content.switchToDefaultFormat();
         }
 
         public IEnumerable<Instantiation> getInstantiations()
