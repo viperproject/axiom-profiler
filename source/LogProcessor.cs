@@ -986,19 +986,29 @@ namespace AxiomProfiler
                         try 
                         {
 #endif
+                            var identifier = parseIdentifier(words[1]);
+                            var term = model.terms[identifier];
+
                             var varNameIterator = varNamesParser.Match(line);
                             var varInfos = new List<Tuple<string, string>>();
+                            var idx = 0;
                             while (varNameIterator.Success)
                             {
                                 var name = varNameIterator.Groups[1].Value;
                                 var sort = varNameIterator.Groups[2].Value;
-                                varInfos.Add(Tuple.Create(name == "" ? null : name, sort == "" ? null : sort));
-                                varNameIterator = varNameIterator.NextMatch();
-                            }
+                                
+                                if (name == "")
+                                {
+                                    name = term.QuantifiedVariables().First(qv => qv.varIdx == idx).PrettyName;
+                                }
 
-                            var identifier = parseIdentifier(words[1]);
-                            var term = model.terms[identifier];
-                            term = new Term(term, term.Args.Select(arg => arg.DeepCopy()).ToArray(), term.Name + " " + string.Join(", ", varInfos.Select(p => $"{p.Item1}: {p.Item2}")));
+                                varInfos.Add(Tuple.Create(name, sort == "" ? null : sort));
+                                varNameIterator = varNameIterator.NextMatch();
+                                ++idx;
+                            }
+                            
+                            term = new Term(term, term.Args.Select(arg => arg.DeepCopy()).ToArray(), term.Name + " " +
+                                string.Join(", ", varInfos.Select(p => p.Item2 == null ? p.Item1 : $"{p.Item1}: {p.Item2}")));
 
                             foreach (var qv in term.QuantifiedVariables())
                             {
