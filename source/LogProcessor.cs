@@ -36,6 +36,7 @@ namespace AxiomProfiler
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
         private bool toolVersionSeen = false;
+        private readonly Dictionary<Term, List<Term>> reverseProofSteps = new Dictionary<Term, List<Term>>();
 
         public readonly Model model = new Model();
 
@@ -932,6 +933,23 @@ namespace AxiomProfiler
                         Term[] args = GetArgs(words, 3);
 
                         var t = args.Last();
+
+                        if (!reverseProofSteps.TryGetValue(t, out var reverseList))
+                        {
+                            reverseList = new List<Term>();
+                            reverseProofSteps[t] = reverseList;
+                        }
+                        reverseList.AddRange(args.Take(args.Length - 1));
+                        if (t.Name == "=" || t.Name == "iff" || t.Name == "~")
+                        {
+                            if (!reverseProofSteps.TryGetValue(t.Args[1], out reverseList))
+                            {
+                                reverseList = new List<Term>();
+                                reverseProofSteps[t.Args[1]] = reverseList;
+                            }
+                            reverseList.Add(t.Args[0]);
+                        }
+
 #if !DEBUG
                         try
                         {
@@ -1018,6 +1036,20 @@ namespace AxiomProfiler
                         int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
                         if (lastInstStack.Any() && t.Responsible != lastInstStack.Peek())
                         {
+                            var lastInst = lastInstStack.Peek();
+
+                            var generation = new HashSet<Term>(Term.semanticTermComparer) { t };
+                            t = generation.FirstOrDefault(candidate => lastInst.concreteBody.isSubterm(candidate));
+                            while (t == null)
+                            {
+                                var nextGeneration = new HashSet<Term>();
+                                foreach (var term in generation) {
+                                    nextGeneration.UnionWith(reverseProofSteps[term]);
+                                }
+                                generation = nextGeneration;
+                                t = generation.FirstOrDefault(candidate => lastInst.concreteBody.isSubterm(candidate));
+                            }
+
                             if (t.Responsible != null)
                             {
                                 // make a copy of the term, since we are overriding the Responsible field
@@ -1033,8 +1065,7 @@ namespace AxiomProfiler
                                 catch (Exception) {}
 #endif
                             }
-
-                            var lastInst = lastInstStack.Peek();
+                            
                             t.Responsible = lastInst;
                             lastInst.dependentTerms.Add(t);
                         }
