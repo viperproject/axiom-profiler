@@ -222,14 +222,14 @@ namespace AxiomProfiler.QuantifierModel
 
         public void AccountLastDecision(Model m)
         {
-            string qid = this.LastDecisionQID();
+            /*string qid = this.LastDecisionQID();
             Quantifier q;
             if (qid != null && m.quantifiers.TryGetValue(qid, out q))
             {
                 q.GeneratedConflicts++;
             }
             foreach (var c in ChildrenScopes)
-                c.AccountLastDecision(m);
+                c.AccountLastDecision(m);*/
         }
 
         public void ComputeConflictCost(List<Conflict> acc)

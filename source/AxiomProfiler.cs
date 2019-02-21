@@ -338,7 +338,7 @@ namespace AxiomProfiler
             root.AccountLastDecision(model);
             model.rootScope = root;
 
-            List<Quantifier> quantByCnfls = model.quantifiers.Values.Where(q => q.GeneratedConflicts > 0).ToList();
+            List<Quantifier> quantByCnfls = model.GetRootNamespaceQuantifiers().Values.Where(q => q.GeneratedConflicts > 0).ToList();
             quantByCnfls.Sort((q1, q2) => q2.GeneratedConflicts.CompareTo(q1.GeneratedConflicts));
             if (quantByCnfls.Count > 0)
                 AddTopNode(Common.Callback("Quant. by last conflict", () => quantByCnfls));

@@ -10,6 +10,7 @@ namespace AxiomProfiler.QuantifierModel
     public class Quantifier : Common
     {
         public string Qid;
+        public string Namespace;
         public string PrintName;
         public string BoogieBody;
         public Term BodyTerm;

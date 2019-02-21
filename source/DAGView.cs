@@ -129,15 +129,26 @@ namespace AxiomProfiler
         private void formatNode(Node currNode)
         {
             var inst = (Instantiation)currNode.UserData;
-            var nodeColor = getColor(inst.Quant);
-            currNode.Attr.LineWidth = 1;
-            currNode.Attr.LabelMargin = 5;
-            currNode.Attr.Color = Color.Black;
-            currNode.Attr.FillColor = nodeColor;
-
-            if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186.0)
+            if (inst.Quant.Namespace == "")
             {
-                currNode.Label.FontColor = Color.White;
+                var nodeColor = getColor(inst.Quant);
+                currNode.Attr.LineWidth = 1;
+                currNode.Attr.LabelMargin = 5;
+                currNode.Attr.Color = Color.Black;
+                currNode.Attr.FillColor = nodeColor;
+
+                if (nodeColor.R * 0.299 + nodeColor.G * 0.587 + nodeColor.B * 0.114 <= 186.0)
+                {
+                    currNode.Label.FontColor = Color.White;
+                }
+            }
+            else
+            {
+                currNode.Attr.Shape = Shape.Diamond;
+                currNode.Attr.LineWidth = 1;
+                currNode.Attr.LabelMargin = 0;
+                currNode.Attr.Color = Color.DimGray;
+                currNode.Attr.FillColor = Color.Transparent;
             }
             currNode.LabelText = " ";
         }
@@ -549,7 +560,8 @@ namespace AxiomProfiler
 
             //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
             var pathInstantiations = instantiationPath.getInstantiations();
-            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) =>
+            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) => !next.bindingInfo.IsPatternMatch() ?
+                Enumerable.Repeat(Tuple.Create<Quantifier, Term, Term>(next.Quant, null, null), 1) :
                 next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
                 .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
 

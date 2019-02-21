@@ -404,9 +404,8 @@ namespace AxiomProfiler.PrettyPrinting
         {
             if (rule.historyConstraints.Count == 0) return true;
             var constraint = rule.historyConstraints;
-            if (constraint.Count > history.Count) return false;
-            var slice = history.GetRange(history.Count - constraint.Count, constraint.Count);
-            var intermediate = slice.Zip(constraint, (term1, term2) => term1.Item1.id == term2.Item1.id && term1.Item2 == term2.Item2);
+            if (constraint.Count != history.Count) return false;
+            var intermediate = history.Zip(constraint, (term1, term2) => term1.Item1.id == term2.Item1.id && term1.Item2 == term2.Item2);
             return intermediate.All(val => val);
         }
 

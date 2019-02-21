@@ -63,7 +63,9 @@ namespace AxiomProfiler.QuantifierModel
         public IEnumerable<Tuple<Tuple<Quantifier, Term, Term>, int>> Statistics()
         {
             return pathInstantiations.Zip(pathInstantiations.Skip(1), Tuple.Create)
-                .SelectMany(i => i.Item2.bindingInfo.bindings.Where(kv => i.Item1.dependentTerms.Any(t => t.id == kv.Value.Item2.id))
+                .SelectMany(i => !i.Item2.bindingInfo.IsPatternMatch() ?
+                    Enumerable.Repeat(Tuple.Create<Quantifier, Term, Term>(i.Item2.Quant, null, null), 1) :
+                    i.Item2.bindingInfo.bindings.Where(kv => i.Item1.dependentTerms.Any(t => t.id == kv.Value.Item2.id))
                     .Select(kv => Tuple.Create(i.Item2.Quant, i.Item2.bindingInfo.fullPattern, kv.Key)))
                     .GroupBy(x => x).Select(group => Tuple.Create(group.Key, group.Count()));
         }
@@ -608,20 +610,6 @@ namespace AxiomProfiler.QuantifierModel
                 format.termNumbers[step.Item1] = numbering;
                 ++numbering;
 
-                foreach (var kv in step.Item4)
-                {
-                    foreach (var tc in kv.Value)
-                    {
-                        var constraintExplanation = step.Item5.FirstOrDefault(ee => Term.semanticTermComparer.Equals(ee.target, tc));
-                        if (constraintExplanation != null)
-                        {
-                            format.equalityNumbers[constraintExplanation] = numbering;
-                        }
-                        format.termNumbers[tc] = numbering;
-                        ++numbering;
-                    }
-                }
-
                 foreach (var ee in step.Item2.EqualityExplanations)
                 {
                     format.equalityNumbers[ee] = numbering;
@@ -702,7 +690,7 @@ namespace AxiomProfiler.QuantifierModel
 
             var recursiveEqualityExplanations = new List<Tuple<int, EqualityExplanation>>();
             var firstStep = generalizationState.generalizedTerms.First();
-            printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, firstStep.Item1, firstStep.Item2, firstStep.Item3, firstStep.Item4, firstStep.Item5, false, recursiveEqualityExplanations);
+            printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, firstStep.Item1, firstStep.Item2, firstStep.Item3, false, recursiveEqualityExplanations);
 
             var count = 1;
             var loopSteps = generalizedTerms.Skip(1);
@@ -714,18 +702,21 @@ namespace AxiomProfiler.QuantifierModel
                 content.Append("\nApplication of ");
                 content.Append(insts.Current?.Quant.PrintName);
                 content.switchToDefaultFormat();
-                content.Append("\n\n");
+                if (insts.Current?.Quant.BodyTerm != null)
+                {
+                    content.Append("\n\n");
 
-                // print quantifier body with pattern
-                insts.Current?.tempHighlightBlameBindTerms(format);
-                insts.Current?.Quant.BodyTerm.PrettyPrint(content, format);
+                    // print quantifier body with pattern
+                    insts.Current.tempHighlightBlameBindTerms(format);
+                    insts.Current.Quant.BodyTerm.PrettyPrint(content, format);
+                }
                 content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
                 content.Append("\n\nThis yields:\n\n");
                 content.switchToDefaultFormat();
 
                 insts.MoveNext();
                 format.restoreAllOriginalRules();
-                printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, step.Item1, step.Item2, step.Item3, step.Item4, step.Item5, count == numberOfSteps, recursiveEqualityExplanations);
+                printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, step.Item1, step.Item2, step.Item3, count == numberOfSteps, recursiveEqualityExplanations);
                 count++;
             }
 
@@ -872,14 +863,9 @@ namespace AxiomProfiler.QuantifierModel
         }
 
         private static void printGeneralizedTermWithPrerequisites(InfoPanelContent content, PrettyPrintFormat format, GeneralizationState generalizationState, ISet<int> alreadyIntroducedGeneralizations,
-            Term term, BindingInfo bindingInfo, List<Term> assocTerms, Dictionary<string, List<Term>> theoryConstraintTerms, List<EqualityExplanation> theoryConstraintExplanations,
-            bool last, List<Tuple<int, EqualityExplanation>> recursiveEqualityExplanations)
+            Term term, BindingInfo bindingInfo, List<Term> assocTerms, bool last, List<Tuple<int, EqualityExplanation>> recursiveEqualityExplanations)
         {
             generalizationState.tmpHighlightGeneralizedTerm(format, term, bindingInfo, last);
-            foreach (var ee in theoryConstraintExplanations)
-            {
-                ee.source.highlightTemporarily(format, PrintConstants.equalityColor);
-            }
 
             var newlyIntroducedGeneralizations = term.GetAllGeneralizationSubtermsAndDependencies()
                     .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
@@ -894,52 +880,6 @@ namespace AxiomProfiler.QuantifierModel
             content.Append(numberingString);
             term.PrettyPrint(content, format, numberingString.Length);
             content.Append('\n');
-
-            if (theoryConstraintTerms.Any())
-            {
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\n\nAdded Theory Constraints:");
-                content.switchToDefaultFormat();
-                foreach (var kv in theoryConstraintTerms)
-                {
-                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                    content.Append($"\n\nConstraints Added by the {kv.Key} theory:\n\n");
-                    content.switchToDefaultFormat();
-
-                    foreach (var tc in kv.Value)
-                    {
-                        var constraintExplanation = theoryConstraintExplanations.FirstOrDefault(ee => ee.target == tc);
-                        if (constraintExplanation == null)
-                        {
-                            newlyIntroducedGeneralizations = tc.GetAllGeneralizationSubtermsAndDependencies()
-                                .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
-                                .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
-                            PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
-                            alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
-
-                            termNumber = format.termNumbers[tc];
-                            numberingString = $"({termNumber}) ";
-                            content.Append(numberingString);
-                            tc.PrettyPrint(content, format, numberingString.Length);
-                        }
-                        else
-                        {
-                            var newlyIntroducedGeneralizationTerms = new List<Term>();
-                            EqualityExplanationTermVisitor.singleton.visit(constraintExplanation, u => newlyIntroducedGeneralizationTerms.AddRange(u.GetAllGeneralizationSubterms()));
-
-                            newlyIntroducedGeneralizations = newlyIntroducedGeneralizationTerms
-                                .GroupBy(gen => gen.generalizationCounter).Select(group => group.First())
-                                .Where(gen => !alreadyIntroducedGeneralizations.Contains(gen.generalizationCounter));
-                            PrintNewlyIntroducedGeneralizations(content, format, newlyIntroducedGeneralizations);
-                            alreadyIntroducedGeneralizations.UnionWith(newlyIntroducedGeneralizations.Select(gen => gen.generalizationCounter));
-
-                            constraintExplanation.PrettyPrint(content, format, format.equalityNumbers[constraintExplanation]);
-                        }
-                        content.switchToDefaultFormat();
-                        content.Append("\n\n");
-                    }
-                }
-            }
 
             if (last)
             {
@@ -1118,19 +1058,23 @@ namespace AxiomProfiler.QuantifierModel
                 bindingInfo.PrintEqualitySubstitution(content, format);
             }
 
-            content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-            content.Append("\nBinding information:");
-            content.switchToDefaultFormat();
-
-            foreach (var bindings in bindingInfo.getBindingsToFreeVars())
+            var bindingsToFreeVars = bindingInfo.getBindingsToFreeVars();
+            if (bindingsToFreeVars.Any())
             {
-                content.Append("\n\n");
-                content.Append(bindings.Key.PrettyName).Append(" was bound to:\n");
-                bindings.Value.PrettyPrint(content, format);
+                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                content.Append("\nBinding information:");
                 content.switchToDefaultFormat();
-            }
 
-            content.Append("\n");
+                foreach (var bindings in bindingsToFreeVars)
+                {
+                    content.Append("\n\n");
+                    content.Append(bindings.Key.PrettyName).Append(" was bound to:\n");
+                    bindings.Value.PrettyPrint(content, format);
+                    content.switchToDefaultFormat();
+                }
+
+                content.Append("\n");
+            }
         }
 
         private void printPreamble(InfoPanelContent content, bool withGen)

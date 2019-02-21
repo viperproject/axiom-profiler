@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 
 namespace AxiomProfiler.QuantifierModel
@@ -17,14 +16,20 @@ namespace AxiomProfiler.QuantifierModel
     /// </summary>
     public class Model
     {
-        // dict with all terms seen so far.
-        public readonly Dictionary<int, Term> terms = new Dictionary<int, Term>();
+        private class Namespace
+        {
+            // dict with all terms seen so far.
+            public readonly Dictionary<int, Term> terms = new Dictionary<int, Term>();
+
+            // dict with all quanitfiers seen so far.
+            public readonly Dictionary<int, Quantifier> quantifiers = new Dictionary<int, Quantifier>();
+        }
+
+        // terms and quantifiers for each namespace
+        private readonly Dictionary<string, Namespace> namespaces = new Dictionary<string, Namespace>() { [""] = new Namespace() };
 
         // dict with equality explanations to a term's equivalence class' root (in z3)
         public readonly Dictionary<int, EqualityExplanation> equalityExplanations = new Dictionary<int, EqualityExplanation>();
-
-        // dict with all quanitfiers seen so far.
-        public readonly Dictionary<string, Quantifier> quantifiers = new Dictionary<string, Quantifier>();
 
         // Fingerprint (pointer) of specific instance to instantiation dict.
         public readonly Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
@@ -68,6 +73,61 @@ namespace AxiomProfiler.QuantifierModel
             Id = -13,
             Term = new Term("marker", new Term[] { })
         };
+
+        private void EnsureNamespaceExists(string ns)
+        {
+            if (!namespaces.ContainsKey(ns))
+            {
+                var newNamespace = new Namespace();
+                newNamespace.quantifiers[-1] = new Quantifier
+                {
+                    Qid = ns,
+                    PrintName = $"{ns}-axiom"
+                };
+                namespaces[ns] = newNamespace;
+            }
+        }
+
+        public Term GetTerm(string ns, int id)
+        {
+            return namespaces[ns].terms[id];
+        }
+
+        public Term GetTerm(int id)
+        {
+            return GetTerm("", id);
+        }
+
+        public void SetTerm(string ns, int id, Term t)
+        {
+            EnsureNamespaceExists(ns);
+            namespaces[ns].terms[id] = t;
+        }
+
+        public Quantifier GetQuantifier(string ns, int id)
+        {
+            if (id == -1)
+            {
+                EnsureNamespaceExists(ns);
+            }
+            return namespaces[ns].quantifiers[id];
+        }
+
+        public Quantifier GetQuantifier(int id)
+        {
+            return GetQuantifier("", id);
+        }
+
+        public void SetQuantifier(string ns, int id, Quantifier q)
+        {
+            EnsureNamespaceExists(ns);
+            namespaces[ns].quantifiers[id] = q;
+        }
+
+        public Dictionary<int, Quantifier> GetRootNamespaceQuantifiers()
+        {
+            return namespaces[""].quantifiers;
+        }
 
         // TODO: Find out, what these do!
         private readonly Dictionary<Instantiation, ImportantInstantiation> importants = new Dictionary<Instantiation, ImportantInstantiation>();
@@ -132,7 +192,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public List<Quantifier> GetQuantifiersSortedByInstantiations()
         {
-            List<Quantifier> qList = quantifiers.Values.ToList();
+            List<Quantifier> qList = GetRootNamespaceQuantifiers().Values.ToList();
             qList.Sort((q1, q2) => q2.Cost.CompareTo(q1.Cost));
             return qList;
         }
@@ -238,7 +298,7 @@ namespace AxiomProfiler.QuantifierModel
                 ComputeMaxDepth(r);
             }
 
-            List<Quantifier> quantsByMaxDepth = quantifiers.Values
+            List<Quantifier> quantsByMaxDepth = GetRootNamespaceQuantifiers().Values
                 .Where(q => q.MaxDepth > 0).ToList();
 
             quantsByMaxDepth.Sort((q1, q2) =>

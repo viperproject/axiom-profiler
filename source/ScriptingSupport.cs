@@ -44,9 +44,9 @@ namespace AxiomProfiler
                 {
                     using (var writer = new StreamWriter(basePath + ".basic", basicFileExists))
                     {
-                        writer.WriteLine("num quantifiers, " + model.quantifiers.Count());
+                        writer.WriteLine("num quantifiers, " + model.GetRootNamespaceQuantifiers().Count());
                         writer.WriteLine("tot number instantiations, " + model.instances.Count());
-                        foreach (var quant in model.quantifiers.Values)
+                        foreach (var quant in model.GetRootNamespaceQuantifiers().Values)
                         {
                             writer.WriteLine(quant.PrintName + ", " + quant.Instances.Count());
                         }

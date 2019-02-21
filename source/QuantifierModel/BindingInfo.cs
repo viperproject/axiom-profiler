@@ -201,12 +201,13 @@ namespace AxiomProfiler.QuantifierModel
         {
             fullPattern = null;
             BoundTerms = bindings;
-            foreach (var qv in quant.BodyTerm.QuantifiedVariables())
-            {
-                //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
-                _bindings[qv] = Tuple.Create(new List<ConstraintType>(), bindings[qv.varIdx]);
-                _patternMatchContext[qv.id] = new List<ConstraintType>() { new ConstraintType() };
-            }
+            if (quant.BodyTerm != null)
+                foreach (var qv in quant.BodyTerm.QuantifiedVariables())
+                {
+                    //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
+                    _bindings[qv] = Tuple.Create(new List<ConstraintType>(), bindings[qv.varIdx]);
+                    _patternMatchContext[qv.id] = new List<ConstraintType>() { new ConstraintType() };
+                }
             TopLevelTerms = noTerms;
             EqualityExplanations = noExplanations;
             numEq = 0;

@@ -196,7 +196,7 @@ namespace AxiomProfiler {
       const int MIN_COST = 0, MIN_COUNT = 0;
 
       var quantifierNameToInfo = new Dictionary<string, MergedQuantifierInfo>();
-      foreach (var source in model.quantifiers.Values) {
+      foreach (var source in model.GetRootNamespaceQuantifiers().Values) {
         MergedQuantifierInfo.UpdateBinding(source, quantifierNameToInfo);
       }
       

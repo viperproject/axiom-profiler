@@ -23,8 +23,7 @@ namespace AxiomProfiler
         private int eofSeen = 0;
         private Conflict curConfl;
         private readonly List<Literal> cnflResolveLits = new List<Literal>();
-        private Instantiation lastInst;
-        private readonly Stack<string> currentTheoryConstraints = new Stack<string>();
+        private readonly Stack<Instantiation> lastInstStack = new Stack<Instantiation>();
         private Term decideClause;
         private static readonly Term[] EmptyTerms = new Term[0];
         private readonly Dictionary<string, List<string>> boogieFiles = new Dictionary<string, List<string>>();
@@ -38,19 +37,16 @@ namespace AxiomProfiler
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
         private bool toolVersionSeen = false;
 
-        //TODO: estimate capacity based on file size
-        private readonly Dictionary<Term, Term> proofStepClosures = new Dictionary<Term, Term>(300_000); //every term that is obtained form a certain term
-
         public readonly Model model = new Model();
 
         private static readonly EqualityExplanation[] emptyEqualityExplanation = new EqualityExplanation[0];
         private static readonly char[] splitAtSpace = new char[] { ' ' };
-        private static readonly Regex varNamesParser = new Regex(@"\(\s*([\w\d]*)\s*;\s*([\w\d]*)\)");
+        private static readonly Regex varNamesParser = new Regex(@"\(\s*((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)\s*;\s*((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)\)");
+        private static readonly Regex idParser = new Regex(@"((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)#(\d*)");
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
             checkToConsider = cons;
-            lastInst = null;
             curlineNo = 0;
             this.skipDecisions = skipDecisions;
             if (bplFileInfos != null)
@@ -205,8 +201,8 @@ namespace AxiomProfiler
             try
             {
 #endif
-                int id = parseIdentifier(RemoveParen(key));
-                return model.terms[id];
+                var id = ParseIdentifier(RemoveParen(key));
+                return model.GetTerm(id.Item1, id.Item2);
 #if !DEBUG
             }
             catch (Exception)
@@ -480,25 +476,13 @@ namespace AxiomProfiler
             return a.Name == "not" ? a.Args[0] : new Term("not", new []{ a });
         }
 
-        private int parseIdentifier(string logId)
+        private static Tuple<string, int> ParseIdentifier(string logId)
         {
-            int id;
-            var sanitizedLogId = logId.Replace("#", "");
-            if (int.TryParse(sanitizedLogId, out id))
-            {
-                return id;
-            }
-
-            if (literalToTermId.ContainsKey(logId))
-            {
-                return literalToTermId[logId];
-            }
-            var term = model.terms.Values.FirstOrDefault(t => t.Name == logId);
-
-            if (term == null) throw new FileFormatException($"Cannot parse logfile with term id {logId}!");
-
-            literalToTermId.Add(logId, term.id);
-            return term.id;
+            var match = idParser.Match(logId);
+            if (!match.Success) throw new Exception($"Unable to parse identifier: {logId}");
+            var idString = match.Groups[2].Value;
+            var id = idString.Length == 0 ? -1 : int.Parse(idString);
+            return Tuple.Create(match.Groups[1].Value.Replace("|", ""), id);
         }
 
         internal static Term[] NegateAll(Term[] oargs)
@@ -534,8 +518,8 @@ namespace AxiomProfiler
                 }
                 else
                 {
-                    var sourceId = parseIdentifier(logInfo[i].Substring(1));
-                    var targetId = parseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1));
+                    var sourceId = ParseIdentifier(logInfo[i].Substring(1)).Item2;
+                    var targetId = ParseIdentifier(logInfo[i + 1].Substring(0, logInfo[i + 1].Length - 1)).Item2;
 #if !DEBUG
                     try
                     {
@@ -706,7 +690,7 @@ namespace AxiomProfiler
             }
             else
             {
-                return new TransitiveEqualityExplanation(model.terms[id], model.terms[it], explanations.Select(ee => {
+                return new TransitiveEqualityExplanation(model.GetTerm(id), model.GetTerm(it), explanations.Select(ee => {
                     var test = explanationFinalizer.visit(ee, this);
                     return test;
                     }).ToArray());
@@ -777,7 +761,7 @@ namespace AxiomProfiler
             {
                 if (sourceIterator == targetId)
                 {
-                    var targetTerm = model.terms[targetId];
+                    var targetTerm = model.GetTerm(targetId);
                     knownExplanation = new TransitiveEqualityExplanation(targetTerm, targetTerm, emptyEqualityExplanation);
                     break;
                 }
@@ -797,7 +781,7 @@ namespace AxiomProfiler
                 {
                     if (targetIterator == sourceId)
                     {
-                        var sourceTerm = model.terms[sourceId];
+                        var sourceTerm = model.GetTerm(sourceId);
                         knownExplanation = new TransitiveEqualityExplanation(sourceTerm, sourceTerm, emptyEqualityExplanation);
                         break;
                     }
@@ -823,7 +807,7 @@ namespace AxiomProfiler
                     knownExplanationSteps = knownExplanationSteps.Skip(commonSuffixLength);
 
                     var explanations = knownExplanationSteps.Concat(targetExplanations.Select(e => explanationReverser.visit(e, null)).Select(e => explanationFinalizer.visit(e, this)).Reverse());
-                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    var explanation = new TransitiveEqualityExplanation(model.GetTerm(sourceId), model.GetTerm(targetId), explanations.ToArray());
                     equalityExplanationCache[key] = explanation;
                     WorkingKeys.Remove(key);
                     return explanation;
@@ -839,7 +823,7 @@ namespace AxiomProfiler
                     knownExplanationSteps = knownExplanationSteps.Skip(commonSuffixLength);
 
                     var explanations = sourceExplanations.Select(e => explanationFinalizer.visit(e, this)).Concat(knownExplanationSteps);
-                    var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanations.ToArray());
+                    var explanation = new TransitiveEqualityExplanation(model.GetTerm(sourceId), model.GetTerm(targetId), explanations.ToArray());
                     equalityExplanationCache[key] = explanation;
                     WorkingKeys.Remove(key);
                     return explanation;
@@ -872,11 +856,18 @@ namespace AxiomProfiler
             }
             else
             {
-                var explanation = new TransitiveEqualityExplanation(model.terms[sourceId], model.terms[targetId], explanationPath.ToArray());
+                var explanation = new TransitiveEqualityExplanation(model.GetTerm(sourceId), model.GetTerm(targetId), explanationPath.ToArray());
                 equalityExplanationCache[key] = explanation;
                 WorkingKeys.Remove(key);
                 return explanation;
             }
+        }
+
+        private int ParseIdentifierRootNamespace(string idString)
+        {
+            var id = ParseIdentifier(idString);
+            if (id.Item1 != "") throw new Exception($"Invalid use of namespace in identifier: {idString} (l. {curlineNo}).");
+            return id.Item2;
         }
 
         private void ParseTraceLine(string line, string[] words)
@@ -905,11 +896,12 @@ namespace AxiomProfiler
                 case "[mk-lambda]":
                     {
                         Term[] args = GetArgs(words, 3);
+                        var id = ParseIdentifier(words[1]);
                         Term t = new Term("FORALL", args)
                         {
-                            id = parseIdentifier(words[1])
+                            id = id.Item2
                         };
-                        model.terms[parseIdentifier(words[1])] = t;
+                        model.SetTerm(id.Item1, id.Item2, t);
 
                         if (args.Length != 0)
                         {
@@ -925,13 +917,13 @@ namespace AxiomProfiler
 
                 case "[mk-var]":
                     {
-                        var id = parseIdentifier(words[1]);
-                        var term = new Term("qvar_" + id, EmptyTerms);
+                        var id = ParseIdentifier(words[1]);
+                        var term = new Term("qvar_" + id.Item2, EmptyTerms);
                         if (words.Length > 2 && int.TryParse(words[2], out var variableIndex))
                         {
                             term.varIdx = variableIndex;
                         }
-                        model.terms[id] = term;
+                        model.SetTerm(id.Item1, id.Item2, term);
                     }
                     break;
 
@@ -940,15 +932,15 @@ namespace AxiomProfiler
                         Term[] args = GetArgs(words, 3);
 
                         var t = args.Last();
-
-                        // We use thse to figgure out which new terms we got as the result of a quantifier instantiation.
-                        // e.g. if we have A ==> B, and we get A from a quantifier instantiation, this would include B.
-                        foreach (var prerequisite in args.Take(args.Length - 1))
+#if !DEBUG
+                        try
                         {
-                            proofStepClosures[prerequisite] = t;
+#endif
+                            model.SetTerm("", ParseIdentifierRootNamespace(words[1]), t);
+#if !DEBUG
                         }
-
-                        model.terms[parseIdentifier(words[1])] = t;
+                        catch (Exception) {}
+#endif
                     }
                     break;
 
@@ -957,19 +949,9 @@ namespace AxiomProfiler
                         Term[] args = GetArgs(words, 3);
                         
                         var t = new Term(words[2], args);
-                        model.terms[parseIdentifier(words[1])] = t;
-                        t.id = parseIdentifier(words[1]);
-
-                        if ((t.Name == "=" || t.Name == "iff" || t.Name == "~") && lastInst != null && currentTheoryConstraints.Any())
-                        {
-                            var theoryName = currentTheoryConstraints.Peek();
-                            if (!lastInst.TheoryConstraintsEqualities.TryGetValue(theoryName, out var equalities))
-                            {
-                                equalities = new List<Term>();
-                                lastInst.TheoryConstraintsEqualities[theoryName] = equalities;
-                            }
-                            equalities.Add(t);
-                        }
+                        var id = ParseIdentifier(words[1]);
+                        model.SetTerm(id.Item1, id.Item2, t);
+                        t.id = id.Item2;
                     }
                     break;
 
@@ -986,16 +968,16 @@ namespace AxiomProfiler
                         try 
                         {
 #endif
-                            var identifier = parseIdentifier(words[1]);
-                            var term = model.terms[identifier];
+                            var identifier = ParseIdentifier(words[1]);
+                            var term = model.GetTerm(identifier.Item1, identifier.Item2);
 
                             var varNameIterator = varNamesParser.Match(line);
                             var varInfos = new List<Tuple<string, string>>();
                             var idx = 0;
                             while (varNameIterator.Success)
                             {
-                                var name = varNameIterator.Groups[1].Value;
-                                var sort = varNameIterator.Groups[2].Value;
+                                var name = varNameIterator.Groups[1].Value.Replace("|", "");
+                                var sort = varNameIterator.Groups[2].Value.Replace("|", "");
                                 
                                 if (name == "")
                                 {
@@ -1010,7 +992,8 @@ namespace AxiomProfiler
                             term = new Term(term, term.Args.Select(arg => arg.DeepCopy()).ToArray(), term.Name + " " +
                                 string.Join(", ", varInfos.Select(p => p.Item2 == null ? p.Item1 : $"{p.Item1}: {p.Item2}")));
 
-                            foreach (var qv in term.QuantifiedVariables())
+                        var vars = term.QuantifiedVariables();
+                            foreach (var qv in vars)
                             {
                                 if (qv.varIdx >= 0)
                                 {
@@ -1019,8 +1002,8 @@ namespace AxiomProfiler
                                 }
                             }
 
-                            model.terms[identifier] = term;
-                            model.quantifiers[words[1]].BodyTerm = term;
+                            model.SetTerm(identifier.Item1, identifier.Item2, term);
+                            model.GetQuantifier(identifier.Item1, identifier.Item2).BodyTerm = term;
 
 #if !DEBUG
                         }
@@ -1033,42 +1016,53 @@ namespace AxiomProfiler
                     {
                         Term t = GetTerm(words[1]);
                         int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
-                        if (lastInst != null && t.Responsible != lastInst)
+                        if (lastInstStack.Any() && t.Responsible != lastInstStack.Peek())
                         {
                             if (t.Responsible != null)
                             {
                                 // make a copy of the term, since we are overriding the Responsible field
                                 //TODO: shallow copy
                                 t = new Term(t);
-                                model.terms[parseIdentifier(words[1])] = t;
+#if !DEBUG
+                                try
+                                {
+#endif
+                                    model.SetTerm("", ParseIdentifierRootNamespace(words[1]), t);
+#if !DEBUG
+                                }
+                                catch (Exception) {}
+#endif
                             }
 
+                            var lastInst = lastInstStack.Peek();
                             t.Responsible = lastInst;
                             lastInst.dependentTerms.Add(t);
-                            if (currentTheoryConstraints.Any() && t.Name != "=" && t.Name != "iff" && t.Name != "~")
-                            {
-                                var theoryName = currentTheoryConstraints.Peek();
-                                if (!lastInst.TheoryConstraintsDependentTerms.TryGetValue(theoryName, out var constraitTerms))
-                                {
-                                    constraitTerms = new List<Term>();
-                                    lastInst.TheoryConstraintsDependentTerms[theoryName] = constraitTerms;
-                                }
-                                constraitTerms.Add(t);
-                            }
                         }
                     }
                     break;
 
                 case "[eq-expl]":
                     {
-                        var fromId = parseIdentifier(words[1]);
+                        int fromId;
+#if !DEBUG
+                        try
+                        {
+#endif
+                            fromId = ParseIdentifierRootNamespace(words[1]);
+#if !DEBUG
+                        }
+                        catch (Exception)
+                        {
+                            break;
+                        }
+#endif
                         if (model.equalityExplanations.ContainsKey(fromId)) equalityExplanationCache.Clear();
                         if (words[2] == "root")
                         {
                             model.equalityExplanations.Remove(fromId);
                             break;
                         }
-                        var fromTerm = model.terms[fromId];
+                        var fromTerm = model.GetTerm(fromId);
                         var toTerm = GetTerm(words.Last());
                         switch (words[2])
                         {
@@ -1117,9 +1111,10 @@ namespace AxiomProfiler
                         if (words.Length < 3) break;
                         var separationIndex = Array.FindIndex(words, el => el == ";");
                         Term[] args = GetArgs(words, 4, separationIndex);
-                        var quant = model.quantifiers[words[2]];
-                        var id = parseIdentifier(words[3]);
-                        var pattern = quant.BodyTerm.Args.First(pat => pat.id == id);
+                        var qid = ParseIdentifier(words[2]);
+                        var quant = model.GetQuantifier(qid.Item1, qid.Item2);
+                        var id = ParseIdentifier(words[3]);
+                        var pattern = quant.BodyTerm.Args.First(pat => pat.id == id.Item2);
                         if (pattern.Name != "pattern") throw new InvalidOperationException($"Expected pattern but found {pattern}.");
                         var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
                         Instantiation inst = new Instantiation(bindingInfo, "trigger based instantiation")
@@ -1133,10 +1128,13 @@ namespace AxiomProfiler
                 case "[inst-discovered]":
                     {
                         var method = words[1];
-                        var quant = model.quantifiers[words[3]];
-                        var args = GetArgs(words, 4);
+                        var id = ParseIdentifier(words[3]);
+                        var quant = model.GetQuantifier(id.Item1, id.Item2);
+                        var separationIndex = Array.FindIndex(words, w => w == ";");
+                        var args = GetArgs(words, 4, separationIndex == -1 ? int.MaxValue : separationIndex);
+                        var blame = separationIndex == -1 ? EmptyTerms : GetArgs(words, separationIndex + 1);
                         var bindingInfo = new BindingInfo(quant, args);
-                        model.fingerprints[words[2]] = new Instantiation(bindingInfo, method)
+                        model.fingerprints[words[2]] = new Instantiation(bindingInfo, method, blame)
                         {
                             Quant = quant
                         };
@@ -1159,23 +1157,17 @@ namespace AxiomProfiler
                         int pos = 2;
                         if (words.Length > pos && words[pos] != ";")
                         {
-                            long id = GetId(words[pos]);
-                            var t = model.terms[(int)id];
-                            var originalBody = model.terms[(int)id];
-                            var body = GetOrIdTransitive(proofStepClosures, originalBody);
+                            var id = ParseIdentifier(words[pos]);
+                            var body = model.GetTerm(id.Item1, id.Item2);
                             var isSinglyReferenced = false;
 
                             if (body.Name == "or")
                             {
                                 body = GetBodyFromImplication(body, out isSinglyReferenced);
                             }
-                            if (originalBody.Name == "or")
+                            if (!isSinglyReferenced)
                             {
-                                originalBody = GetBodyFromImplication(originalBody, out _);
-                                if (!isSinglyReferenced)
-                                {
-                                    body = new Term(body);
-                                }
+                                body = new Term(body);
                             }
                             
                             inst.concreteBody = body;
@@ -1198,11 +1190,7 @@ namespace AxiomProfiler
                         AddInstance(inst);
                     }
                     break;
-                case "[end-of-instance]": lastInst = null; break;
-
-                case "[theory-constraints]": currentTheoryConstraints.Push(words[1]); break;
-
-                case "[end-theory-constraints]": currentTheoryConstraints.Pop(); break;
+                case "[end-of-instance]": lastInstStack.Pop(); break;
 
                 case "[decide-and-or]":
                     if (!interestedInCurrentCheck) break;
@@ -1327,96 +1315,6 @@ namespace AxiomProfiler
                             curConfl.Literals.Add(lit);
                     }
                     break;
-
-                // obsolete
-                case "[mk-enode]":
-                case "[mk-bool-var]":
-                    {
-                        int generation;
-                        if (words.Length < 3)
-                        {
-                            break;
-                        }
-                        words = StripGeneration(words, out generation);
-                        Term[] args = GetArgs(words, 3);
-                        Term t;
-                        if (lastInst == null &&
-                            model.terms.TryGetValue(parseIdentifier(words[1]), out t) &&
-                            t.Name == words[2] && t.Args.Length == args.Length &&
-                            ForAll2(t.Args, args, delegate (Term x, Term s) { return x == s; }))
-                        {
-                            // nothing
-                        }
-                        else
-                        {
-                            t = new Term(words[2], args)
-                            {
-                                Responsible = lastInst,
-                                id = parseIdentifier(words[1])
-                            };
-                            lastInst?.dependentTerms.Add(t);
-                            model.terms[parseIdentifier(words[1])] = t;
-                        }
-                    }
-                    break;
-
-                // V1 stuff
-                case "[create]":
-                    {
-                        if (words.Length < 4) break;
-                        Term[] args = GetArgs(words, 4);
-                        Term t = new Term(args.Length == 0 ? words[3] : words[3].Substring(1), args);
-                        t.Responsible = lastInst;
-                        lastInst?.dependentTerms.Add(t);
-                        model.terms[parseIdentifier(words[1])] = t;
-                        t.id = parseIdentifier(words[1]);
-                    }
-                    break;
-                case "[mk_const]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
-                case "[create_ite]": if (words.Length < 2) break; model.terms.Remove(parseIdentifier(words[1])); break;
-
-                case "[done-instantiate-fp]": lastInst = null; break;
-                case "[conflict-resolve]":
-                    if (!interestedInCurrentCheck) break;
-                    if (skipDecisions) break;
-                    cnflResolveLits.Add(GetLiteral(words[1], true));
-                    break;
-                case "[conflict-lit]":
-                    if (curConfl != null && words.Length >= 2)
-                    {
-                        Literal lit = new Literal();
-                        curConfl.Literals.Add(lit);
-                        int pos = 1;
-                        if (words[pos] == "(not")
-                        {
-                            lit.Negated = true;
-                            pos++;
-                        }
-                        if (words.Length <= pos) break;
-                        string no = words[pos].Substring(1).Replace(":", "").Replace(")", "");
-                        if (!int.TryParse(no, out lit.Id))
-                            Console.WriteLine("cannot get literal number of {0}", no);
-                        pos++;
-                        if (words.Length <= pos) break;
-                        if (words[pos] == "not") pos++;
-                        if (words.Length <= pos) break;
-                        string sym = words[pos].Replace("(", "");
-                        pos++;
-                        if (sym != "FORALL")
-                        {
-                            for (int i = pos; i < words.Length; i++)
-                            {
-                                int idx = words[i].IndexOf(":");
-                                if (idx > 0) words[i] = words[i].Substring(0, idx);
-                            }
-                            lit.Term = new Term(sym, GetArgs(words, pos));
-                        }
-                    }
-                    break;
-                case "[end-conflict]": break;
-
-
-                case "[used]": break;
                 case "WARNING:": break;
                 default:
                     Console.WriteLine("wrong line: '{0}'", line);
@@ -1448,7 +1346,7 @@ namespace AxiomProfiler
             model.NumChecks = beginCheckSeen;
 
             //unify quantifiers with the same name and body
-            var unifiedQuantifiers = model.quantifiers.Values.GroupBy(quant => quant.Qid).SelectMany(group => {
+            var unifiedQuantifiers = model.GetRootNamespaceQuantifiers().Values.GroupBy(quant => quant.Qid).SelectMany(group => {
                 var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
                 foreach (var quant in group)
                 {
@@ -1476,10 +1374,10 @@ namespace AxiomProfiler
                 }
                 return patternsForBodies.Select(kv => kv.Value.Item1);
             }).ToList();
-            model.quantifiers.Clear();
+            model.GetRootNamespaceQuantifiers().Clear();
             foreach (var quant in unifiedQuantifiers)
             {
-                model.quantifiers.Add("#" + quant.BodyTerm.id, quant);
+                model.GetRootNamespaceQuantifiers().Add(quant.BodyTerm.id, quant);
             }
 
             //code used to test several heuristics for choosing a path to try to find a matching loop on
@@ -1835,7 +1733,7 @@ namespace AxiomProfiler
         {
             Quantifier quant = inst.Quant;
             inst.LineNo = curlineNo;
-            lastInst = inst;
+            lastInstStack.Push(inst);
             inst.Cost = 1.0;
             quant.Instances.Add(inst);
             model.AddInstance(inst);
@@ -1862,11 +1760,13 @@ namespace AxiomProfiler
 
         private Quantifier CreateQuantifier(string name, string qid)
         {
+            var id = ParseIdentifier(name);
             var quant = new Quantifier
             {
-                Qid = qid
+                Qid = qid,
+                Namespace = id.Item1
             };
-            model.quantifiers[name] = quant;
+            model.SetQuantifier(id.Item1, id.Item2, quant);
             loadBoogieToken(quant);
             return quant;
         }
