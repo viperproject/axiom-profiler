@@ -41,7 +41,7 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
 ## Obtaining logs from Z3
 
-NOTE: at present, a fork of Z3 should be used to generate logs for the Axiom Profiler; there are some small modifications that we plan to get into the official version shortly. In the meantime, the correct fork of Z3 is available here: https://github.com/Nils-Becker/z3
+NOTE: The Axiom Profiler requires at least version 4.8.5 of z3. To build the latest version of z3 from source follow the instructions at https://github.com/Z3Prover/z3.
 
 Run Z3 with two extra command-line options:
 
@@ -59,7 +59,7 @@ Similarly, if you have a log file which takes too long to load into the Axiom Pr
 
 To obtain a Z3 log with Boogie, use e.g:
 
-    boogie /z3opt:trace=true /z3opt:PROOF=true ./file.bpl
+    boogie /vcsCores:1 /z3opt:trace=true /z3opt:PROOF=true ./file.bpl
 Note that you may also want to pass the /vcsCores:1 option to disable concurrency (since otherwise many Z3 instances may write to the same file)
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
@@ -73,6 +73,6 @@ If it complains about unrecognized argument, try this:
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
     carbon ./file.sil --print ./file.bpl
-    boogie /z3opt:trace=true /z3opt:proof=true ./file.bpl
+    boogie /vcsCores:1 /z3opt:trace=true /z3opt:proof=true ./file.bpl
 
 In all cases, the Z3 log should be stored in `./z3.log` (this can also be altered by correspondingly passing z3 the trace-file-name option described above)
