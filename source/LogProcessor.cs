@@ -1017,7 +1017,7 @@ namespace AxiomProfiler
                     {
                         var t = GetTerm(words[1]);
                         int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
-                        if (lastInstStack.Any() && t.Responsible != lastInstStack.Peek())
+                        if (lastInstStack.Any() && lastInstStack.Peek() != null && t.Responsible != lastInstStack.Peek())
                         {
                             if (t.Responsible != null)
                             {
@@ -1149,6 +1149,7 @@ namespace AxiomProfiler
                         if (!model.fingerprints.TryGetValue(words[1], out inst))
                         {
                             Console.WriteLine("fingerprint not found {0} {1}", words[0], words[1]);
+                            lastInstStack.Push(null);
                             break;
                         }
                         if (inst.LineNo != 0)
@@ -1191,7 +1192,18 @@ namespace AxiomProfiler
                         AddInstance(inst);
                     }
                     break;
-                case "[end-of-instance]": lastInstStack.Pop(); break;
+                case "[end-of-instance]":
+                    {
+                        if (interestedInCurrentCheck)
+                        {
+                            if (!lastInstStack.Any())
+                            {
+                                throw new Exception($"Line {curlineNo}: [instance] and [end-of-instance] lines not balanced.");
+                            }
+                            lastInstStack.Pop();
+                        }
+                        break;
+                    }
 
                 case "[decide-and-or]":
                     if (!interestedInCurrentCheck) break;
@@ -1347,7 +1359,7 @@ namespace AxiomProfiler
             model.NumChecks = beginCheckSeen;
 
             //unify quantifiers with the same name and body
-            var unifiedQuantifiers = model.GetRootNamespaceQuantifiers().Values.GroupBy(quant => quant.Qid).SelectMany(group => {
+            /*var unifiedQuantifiers = model.GetRootNamespaceQuantifiers().Values.GroupBy(quant => quant.Qid).SelectMany(group => {
                 var patternsForBodies = new Dictionary<Term, Tuple<Quantifier, HashSet<Term>>>();
                 foreach (var quant in group)
                 {
@@ -1379,7 +1391,7 @@ namespace AxiomProfiler
             foreach (var quant in unifiedQuantifiers)
             {
                 model.GetRootNamespaceQuantifiers().Add(quant.BodyTerm.id, quant);
-            }
+            }*/
 
             //code used to test several heuristics for choosing a path to try to find a matching loop on
             /*var random = new Random();
