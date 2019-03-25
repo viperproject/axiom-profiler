@@ -317,8 +317,7 @@ namespace AxiomProfiler
             }
 
             model.NewModel();
-            foreach (var c in model.models)
-                AddTopNode(c);
+            AddTopNodes(model.models);
 
             model.PopScopes(model.scopes.Count - 1, null, 0);
 
@@ -345,10 +344,7 @@ namespace AxiomProfiler
 
             AddTopNode(root);
 
-            foreach (Quantifier q in model.GetQuantifiersSortedByInstantiations())
-            {
-                AddTopNode(q);
-            }
+            AddTopNodes(model.GetQuantifiersSortedByInstantiations());
         }
 
 
@@ -357,7 +353,10 @@ namespace AxiomProfiler
             return z3AxiomTree.Nodes.Add(makeNode(cfl));
         }
 
-
+        private void AddTopNodes(IEnumerable<Common> cfls)
+        {
+            z3AxiomTree.Nodes.AddRange(cfls.Select(makeNode).ToArray());
+        }
 
         void HandleExpand(object sender, TreeViewCancelEventArgs args)
         {
