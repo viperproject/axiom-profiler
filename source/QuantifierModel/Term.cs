@@ -17,7 +17,7 @@ namespace AxiomProfiler.QuantifierModel
         {
             public bool Equals(Term t1, Term t2)
             {
-                return t1.generalizationCounter >= 0 ? t1.generalizationCounter == t2.generalizationCounter : t1.id == t2.id && t1.Name == t2.Name && t1.isPrime == t2.isPrime && t1.iterationOffset == t2.iterationOffset;
+                return t1.generalizationCounter >= 0 ? t1.generalizationCounter == t2.generalizationCounter : t1.id == t2.id && t1.Name == t2.Name && t1.isPrime == t2.isPrime && t1.iterationOffset == t2.iterationOffset && t1.varIdx == t2.varIdx && t1.bindingQuantifier == t2.bindingQuantifier;
             }
 
             public int GetHashCode(Term t)
@@ -37,7 +37,14 @@ namespace AxiomProfiler.QuantifierModel
             {
                 if (TheorySpecificMeaning == null)
                 {
-                    return Name;
+                    if (id == -1 && Name == "")
+                    {
+                        return "qvar_" + (nameOffset + varIdx);
+                    }
+                    else
+                    {
+                        return Name;
+                    }
                 }
                 return TheoryMeaningInterpretation.singleton.GetPrettyStringForTheoryMeaning(Theory, TheorySpecificMeaning);
             }
@@ -54,6 +61,10 @@ namespace AxiomProfiler.QuantifierModel
         private static readonly Regex TypeRegex = new Regex(@"([\s\S]+)(<[\s\S]*>)");
         public int generalizationCounter = -1;
         public int varIdx = -1;
+        private int nameOffset = 0;
+        private int numVars = 0; // Indicates how many variables are bound by a quantifier.
+        private int maxActiveVarsCache = -1;
+        public Quantifier bindingQuantifier;
 
         // isPrime and generationOffset represent a similar concept: they indicate that a generalized term is written in terms of a different
         // (generalized) loop iteration than the one we are currently in. iterationOffset is used by the algorithms whereas isPrime is used for
@@ -107,6 +118,36 @@ namespace AxiomProfiler.QuantifierModel
             dependentInstantiationsBind = new List<Instantiation>(t.dependentInstantiationsBind);
             dependentTerms = new List<Term>(t.dependentTerms);
             varIdx = t.varIdx;
+            numVars = t.numVars;
+            bindingQuantifier = t.bindingQuantifier;
+        }
+
+        public void FixQVarsToQuantifier(Quantifier q, int numVars)
+        {
+            if (bindingQuantifier != null)
+            {
+                if (bindingQuantifier != q) throw new ArgumentException("Trying to fix quantifier term to a quantfier that was already fixed to a different quantifier.");
+                else return;
+            }
+            if (Name != "FORALL") throw new InvalidOperationException("Trying to fix a non-quantifier term to a quantifier.");
+            if (Args.SelectMany(arg => arg.AllSubterms()).Any(st => st.Name.StartsWith("FORALL") && st.bindingQuantifier == null)) throw new InvalidOperationException("All inner quantifier terms need to be fixed to a quantifier before fixing the outer one.");
+
+            this.numVars = numVars;
+            bindingQuantifier = q;
+
+            var varNameOffset = MaxActiveVars() - numVars;
+            foreach (var qvar in Args.SelectMany(arg => arg.FreeVariables()))
+            {
+                if (qvar.varIdx < numVars)
+                {
+                    qvar.bindingQuantifier = q;
+                    qvar.nameOffset = varNameOffset;
+                }
+                else
+                {
+                    qvar.varIdx -= numVars;
+                }
+            }
         }
 
         public Term DeepCopy()
@@ -114,26 +155,55 @@ namespace AxiomProfiler.QuantifierModel
             return new Term(this, Args.Select(arg => arg.DeepCopy()).ToArray());
         }
 
-        public IEnumerable<Term> QuantifiedVariables()
+        public IEnumerable<Term> AllSubterms()
         {
+            yield return this;
+            foreach (var subterm in Args.SelectMany(arg => arg.AllSubterms()))
+            {
+                yield return subterm;
+            }
+        }
+
+        private int MaxActiveVars()
+        {
+            if (maxActiveVarsCache != -1) return maxActiveVarsCache;
+            if (Name.StartsWith("FORALL") && bindingQuantifier == null) throw new InvalidOperationException("Need to fix all quantifier terms to quantifiers first.");
+
+            maxActiveVarsCache = (Args.Any() ? Args.Max(arg => arg.MaxActiveVars()) : 0) + numVars;
+            return maxActiveVarsCache;
+        }
+
+        private IEnumerable<Term> FreeVariables()
+        {
+            if (Name.StartsWith("FORALL") && bindingQuantifier == null) throw new InvalidOperationException("Need to fix to quantifier before calling FreeVariables().");
+
             if (id == -1)
             {
                 yield return this;
-            } else
+            }
+            else
             {
                 foreach (var arg in Args)
                 {
-                    foreach (var result in arg.QuantifiedVariables())
+                    foreach (var result in arg.FreeVariables())
                     {
-                        yield return result;
+                        if (!Name.StartsWith("FORALL") || result.bindingQuantifier != bindingQuantifier)
+                        {
+                            yield return result;
+                        }
                     }
                 }
             }
         }
 
-        public bool ContainsQuantifiedVar()
+        public IEnumerable<Term> QuantifiedVariables()
         {
-            return QuantifiedVariables().Any();
+            return AllSubterms().Where(st => st.id == -1 && st.bindingQuantifier == bindingQuantifier);
+        }
+
+        public bool ContainsFreeVar()
+        {
+            return FreeVariables().Any();
         }
 
         public bool ContainsGeneralization()
@@ -158,14 +228,7 @@ namespace AxiomProfiler.QuantifierModel
         /// </summary>
         public IEnumerable<Term> GetAllGeneralizationSubtermsAndDependencies()
         {
-            if (generalizationCounter >= 0)
-            {
-                return Enumerable.Repeat(this, 1).Concat(Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies()));
-            }
-            else
-            {
-                return Args.SelectMany(arg => arg.GetAllGeneralizationSubtermsAndDependencies());
-            }
+            return AllSubterms().Where(st => st.generalizationCounter >= 0);
         }
 
         /// <summary>
@@ -173,7 +236,7 @@ namespace AxiomProfiler.QuantifierModel
         /// </summary>
         public bool ReferencesOtherIteration(int iteration = 0)
         {
-            return iterationOffset != iteration || Args.Any(arg => arg.ReferencesOtherIteration(iteration));
+            return AllSubterms().Any(st => st.iterationOffset != iteration);
         }
 
         public void highlightTemporarily(PrettyPrintFormat format, Color color)

@@ -2528,7 +2528,7 @@ namespace AxiomProfiler.CycleDetection
             if (concrete == null) return null;
             var copy = new Term(concrete); //do not modify the original term
             usedConcreteTerm = new Term(concrete);
-            if (!quantifier.ContainsQuantifiedVar()) return copy; //nothing left to replace
+            if (!quantifier.ContainsFreeVar()) return copy; //nothing left to replace
             if (concrete.Args.Count() != quantifier.Args.Count() || concrete.Name != quantifier.Name || concrete.GenericType != quantifier.GenericType)
             {
                 //If the concrete term doesn't structually match the quantifier body we fail. The caller will backtrack if possible.

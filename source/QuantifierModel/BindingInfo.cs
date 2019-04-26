@@ -311,60 +311,20 @@ namespace AxiomProfiler.QuantifierModel
             // Quantified variable?
             if (patternTerm.id == -1)
             {
-                if (patternTerm.varIdx != -1)
+                //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
+                var boundTerm = BoundTerms[patternTerm.varIdx];
+                if (boundTerm.id == matchedTerm.id)
                 {
-                    //TODO: index out of bounds => wrong log (not enough bound terms provided). Provide user with line number so they can check themselves.
-                    var boundTerm = BoundTerms[patternTerm.varIdx];
-                    if (boundTerm.id == matchedTerm.id)
-                    {
-                        return AddPatternMatch(patternTerm, boundTerm, null, context, nextMatches, multipatternArg);
-                    }
-                    else
-                    {
-                        // Check that equality actually exists.
-                        if (!EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == boundTerm.id))
-                        {
-                            return false;
-                        }
-                        return AddPatternMatch(patternTerm, boundTerm, matchedTerm, context, nextMatches, multipatternArg);
-                    }
-                }
-                else if (_bindings.TryGetValue(patternTerm, out var existingBinding))
-                {
-                    // Make sure same term was bound to quantified variable in both cases.
-                    Term equality = null;
-                    if (existingBinding.Item2.id != matchedTerm.id)
-                    {
-                        if (EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == existingBinding.Item2.id))
-                        {
-                            equality = matchedTerm;
-                            matchedTerm = existingBinding.Item2;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                    return AddPatternMatch(patternTerm, matchedTerm, equality, context, nextMatches, multipatternArg);
+                    return AddPatternMatch(patternTerm, boundTerm, null, context, nextMatches, multipatternArg);
                 }
                 else
                 {
-                    // Try without equality first.
-                    if (BoundTerms.Any(bt => bt.id == matchedTerm.id) && AddPatternMatch(patternTerm, matchedTerm, null, context, nextMatches, multipatternArg))
+                    // Check that equality actually exists.
+                    if (!EqualityExplanations.Any(ee => ee.source.id == matchedTerm.id && ee.target.id == boundTerm.id))
                     {
-                        return true;
+                        return false;
                     }
-
-                    // If that fails try equalities.
-                    var feasibleEqualities = EqualityExplanations.Where(ee => ee.source.id == matchedTerm.id && BoundTerms.Any(bt => ee.target.id == bt.id));
-                    foreach (var equalityExplanation in feasibleEqualities)
-                    {
-                        if (AddPatternMatch(patternTerm, equalityExplanation.target, matchedTerm, context, nextMatches, multipatternArg))
-                        {
-                            return true;
-                        }
-                    }
-                    return false;
+                    return AddPatternMatch(patternTerm, boundTerm, matchedTerm, context, nextMatches, multipatternArg);
                 }
             }
             else

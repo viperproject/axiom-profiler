@@ -24,7 +24,7 @@ There are 3 kinds of log lines which can be used to declare terms: \texttt{mk-ap
 
 \texttt{[mk-var]} is followed by the identifier of a newly created quantified variable and the index (starting from 0) of the variable which will be used to determine which term in a list of bound terms was bound to this variable (it is possible to redefine variables each time a quantifier instantiation is triggered to update these indices).
 
-\texttt{[mk-quant]} is followed by the identifier of a quantifier, the name of the quantifier, 1 or more triggers (these must be applications of \texttt{pattern} which is a reserved function name), and the body of the quantifier. For theory axioms namespaces can be used for the identifiers of terms, variables and quantifiers. E.g. the identifier \texttt{datatype\#1} refers to the element with the identifier \texttt{1} in the \texttt{datatype} namespace. The name of the namespaces should be indicative of the theory the element belongs to.
+\texttt{[mk-quant]} is followed by the identifier of a quantifier, the name of the quantifier, the number of variables the quantifier quantifies over, 1 or more triggers (these must be applications of \texttt{pattern} which is a reserved function name), and the body of the quantifier. For theory axioms namespaces can be used for the identifiers of terms, variables and quantifiers. E.g. the identifier \texttt{datatype\#1} refers to the element with the identifier \texttt{1} in the \texttt{datatype} namespace. The name of the namespaces should be indicative of the theory the element belongs to.
 
 \subsection{Pretty Printing Hints}
 \noskip

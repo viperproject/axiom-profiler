@@ -895,30 +895,29 @@ namespace AxiomProfiler
                 case "[mk-quant]":
                 case "[mk-lambda]":
                     {
-                        Term[] args = GetArgs(words, 3);
+                        Term[] args = GetArgs(words, 4).Select(arg => arg.DeepCopy()).ToArray();
                         var id = ParseIdentifier(words[1]);
                         Term t = new Term("FORALL", args)
                         {
                             id = id.Item2
                         };
-                        model.SetTerm(id.Item1, id.Item2, t);
+                        
+                        Quantifier q = CreateQuantifier(words[1], words[2]);
+                        q.BodyTerm = t;
+                        if (words[2] != "null")
+                            q.PrintName = words[2] + "[" + words[1] + "]";
+                        else
+                            q.PrintName = words[1];
+                        t.FixQVarsToQuantifier(q, int.Parse(words[3]));
 
-                        if (args.Length != 0)
-                        {
-                            Quantifier q = CreateQuantifier(words[1], words[2]);
-                            q.BodyTerm = t;
-                            if (words[2] != "null")
-                                q.PrintName = words[2] + "[" + words[1] + "]";
-                            else
-                                q.PrintName = words[1];
-                        }
+                        model.SetTerm(id.Item1, id.Item2, t);
                     }
                     break;
 
                 case "[mk-var]":
                     {
                         var id = ParseIdentifier(words[1]);
-                        var term = new Term("qvar_" + id.Item2, EmptyTerms);
+                        var term = new Term("", EmptyTerms);
                         if (words.Length > 2 && int.TryParse(words[2], out var variableIndex))
                         {
                             term.varIdx = variableIndex;
@@ -990,17 +989,14 @@ namespace AxiomProfiler
                                 ++idx;
                             }
                             
-                            term = new Term(term, term.Args.Select(arg => arg.DeepCopy()).ToArray(), term.Name + " " +
+                            term = new Term(term, term.Args, term.Name + " " +
                                 string.Join(", ", varInfos.Select(p => p.Item2 == null ? p.Item1 : $"{p.Item1}: {p.Item2}")));
 
-                        var vars = term.QuantifiedVariables();
+                            var vars = term.QuantifiedVariables();
                             foreach (var qv in vars)
                             {
-                                if (qv.varIdx >= 0)
-                                {
-                                    qv.Theory = "quantifiers";
-                                    qv.TheorySpecificMeaning = varInfos[qv.varIdx].Item1;
-                                }
+                                qv.Theory = "quantifiers";
+                                qv.TheorySpecificMeaning = varInfos[qv.varIdx].Item1;
                             }
 
                             model.SetTerm(identifier.Item1, identifier.Item2, term);
