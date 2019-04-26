@@ -41,7 +41,7 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
 ## Obtaining logs from Z3
 
-NOTE: The Axiom Profiler requires at least version 4.8.5 of z3. To build the latest version of z3 from source follow the instructions at https://github.com/Z3Prover/z3.
+NOTE: The Axiom Profiler currently requires a forked version of z3 that can be obtained from https://github.com/Nils-Becker/z3. To build z3 from source follow the instructions there.
 
 Run Z3 with two extra command-line options:
 
