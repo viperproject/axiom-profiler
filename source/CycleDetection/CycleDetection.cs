@@ -3116,8 +3116,7 @@ namespace AxiomProfiler.CycleDetection
             var onlyOne = !generalizationTerms.Where(gen => gen.Args.Count() == 0).GroupBy(gen => gen.generalizationCounter).Skip(1).Any();
 
             //Print generalizations and terms that correspond to generalizations when wrapping around the loop in the correct color
-            var allGeneralizations = last ? generalizationTerms.Concat(genReplacementTermsForNextIteration.Where(kv => kv.Key.generalizationCounter >= 0).Select(kv => kv.Value)) : generalizationTerms;
-            foreach (var term in allGeneralizations)
+            foreach (var term in generalizationTerms)
             {
                 var rule = format.getPrintRule(term);
                 rule.color = PrintConstants.generalizationColor;
