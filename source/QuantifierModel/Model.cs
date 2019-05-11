@@ -82,7 +82,8 @@ namespace AxiomProfiler.QuantifierModel
                 newNamespace.quantifiers[-1] = new Quantifier
                 {
                     Qid = ns,
-                    PrintName = $"{ns}-axiom"
+                    PrintName = $"{ns}-axiom",
+                    Namespace = ns
                 };
                 namespaces[ns] = newNamespace;
             }

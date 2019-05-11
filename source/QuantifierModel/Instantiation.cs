@@ -10,6 +10,27 @@ namespace AxiomProfiler.QuantifierModel
     {
         private static readonly Term[] emptyTerms = new Term[0];
 
+        private class DirectEqualityColloctor : EqualityExplanationVisitor<IEnumerable<Term>, object>
+        {
+            public static readonly DirectEqualityColloctor singleton = new DirectEqualityColloctor();
+
+            public override IEnumerable<Term> Congruence(CongruenceExplanation target, object arg)
+            {
+                return target.sourceArgumentEqualities.SelectMany(ee => visit(ee, arg));
+            }
+
+            public override IEnumerable<Term> Direct(DirectEqualityExplanation target, object arg) { yield return target.equality; }
+
+            public override IEnumerable<Term> RecursiveReference(RecursiveReferenceEqualityExplanation target, object arg) { return Enumerable.Empty<Term>(); }
+
+            public override IEnumerable<Term> Theory(TheoryEqualityExplanation target, object arg) { return Enumerable.Empty<Term>(); }
+
+            public override IEnumerable<Term> Transitive(TransitiveEqualityExplanation target, object arg)
+            {
+                return target.equalities.SelectMany(ee => visit(ee, arg));
+            }
+        }
+
         public Quantifier Quant;
         public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
@@ -30,8 +51,10 @@ namespace AxiomProfiler.QuantifierModel
             {
                 if (_Responsible == null)
                 {
+                    var requiredEqualityExplanations = bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.target));
                     _Responsible = bindingInfo.TopLevelTerms
-                        .Concat(bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.target)).Select(expl => expl.target))
+                        .Concat(requiredEqualityExplanations.Select(expl => expl.target))
+                        .Concat(requiredEqualityExplanations.SelectMany(ee => DirectEqualityColloctor.singleton.visit(ee, null)))
                         .Concat(explicitlyBlamedTerms)
                         .ToArray();
                 }
@@ -58,7 +81,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public Instantiation Copy()
         {
-            return new Instantiation(bindingInfo, InstantiationMethod)
+            return new Instantiation(bindingInfo, InstantiationMethod, explicitlyBlamedTerms)
             {
                 Quant = Quant,
                 concreteBody = concreteBody
@@ -67,7 +90,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public Instantiation CopyForBindingInfoModification()
         {
-            var copy = new Instantiation(bindingInfo.Clone(), InstantiationMethod)
+            var copy = new Instantiation(bindingInfo.Clone(), InstantiationMethod, explicitlyBlamedTerms)
             {
                 Quant = Quant,
                 concreteBody = concreteBody

@@ -36,6 +36,7 @@ namespace AxiomProfiler
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
         private bool toolVersionSeen = false;
+        private Dictionary<Term, Term> reverseMonotonicitySteps = new Dictionary<Term, Term>();
 
         public readonly Model model = new Model();
 
@@ -513,7 +514,31 @@ namespace AxiomProfiler
             {
                 if (logInfo[i][0] == '#')
                 {
-                    topLevelTerms.Add(GetTerm(logInfo[i]));
+                    var topLevelTerm = GetTerm(logInfo[i]);
+                    
+                    if (topLevelTerm.Responsible != null && !topLevelTerm.Responsible.concreteBody.isSubterm(topLevelTerm))
+                    {
+                        var responsibleBody = topLevelTerm.Responsible.concreteBody;
+                        var to = topLevelTerm;
+                        do
+                        {
+                            if (!reverseMonotonicitySteps.TryGetValue(topLevelTerm, out topLevelTerm))
+                            {
+                                break;
+                            }
+                        } while (!responsibleBody.isSubterm(topLevelTerm));
+
+                        if (topLevelTerm != null)
+                        {
+                            explanations.Add(GetExplanation(topLevelTerm.id, to.id));
+                        }
+                        else
+                        {
+                            topLevelTerm = to;
+                        }
+                    }
+
+                    topLevelTerms.Add(topLevelTerm);
                     ++i;
                 }
                 else
@@ -937,6 +962,23 @@ namespace AxiomProfiler
                         {
 #endif
                             model.SetTerm("", ParseIdentifierRootNamespace(words[1]), t);
+
+                            if (words[2] == "monotonicity")
+                            {
+                                var from = t.Args.First();
+                                var to = t.Args.Last();
+                                if (from != to)
+                                {
+                                    var agumentEqualities = from.Args.Zip(to.Args, (first, second) => new TransitiveEqualityExplanation(first, second, emptyEqualityExplanation)).ToArray();
+                                    model.equalityExplanations[from.id] = new CongruenceExplanation(from, to, agumentEqualities);
+                                    reverseMonotonicitySteps[to] = from;
+                                }
+                            }
+                            else if (words[2] == "rewrite")
+                            {
+                                model.equalityExplanations[t.Args.First().id] = new DirectEqualityExplanation(t.Args.First(), t.Args.Last(), t);
+                                reverseMonotonicitySteps[t.Args.Last()] = t.Args.First();
+                            }
 #if !DEBUG
                         }
                         catch (Exception) {}
@@ -1012,28 +1054,22 @@ namespace AxiomProfiler
                 case "[attach-enode]":
                     {
                         var t = GetTerm(words[1]);
-                        int gen = words.Length > 2 ? int.Parse(words[2]) : 0;
-                        if (lastInstStack.Any() && lastInstStack.Peek() != null && t.Responsible != lastInstStack.Peek())
-                        {
-                            if (t.Responsible != null)
-                            {
-                                // make a copy of the term, since we are overriding the Responsible field
-                                //TODO: shallow copy
-                                t = new Term(t);
-#if !DEBUG
-                                try
-                                {
-#endif
-                                    model.SetTerm("", ParseIdentifierRootNamespace(words[1]), t);
-#if !DEBUG
-                                }
-                                catch (Exception) {}
-#endif
-                            }
+                        AttachEnode(t);
 
-                            var lastInst = lastInstStack.Peek();
-                            t.Responsible = lastInst;
-                            lastInst.dependentTerms.Add(t);
+                        if (lastInstStack.Any() && lastInstStack.Peek() != null)
+                        {
+                            var bodyTerm = lastInstStack.Peek().concreteBody;
+                            if (!bodyTerm.isSubterm(t))
+                            {
+                                do
+                                {
+                                    if (!reverseMonotonicitySteps.TryGetValue(t, out t))
+                                    {
+                                        break;
+                                    }
+                                } while (!bodyTerm.isSubterm(t));
+                                if (t != null) AttachEnode(t);
+                            }
                         }
                     }
                     break;
@@ -1328,6 +1364,36 @@ namespace AxiomProfiler
                 default:
                     Console.WriteLine("wrong line: '{0}'", line);
                     break;
+            }
+        }
+
+        private void AttachEnode(Term t)
+        {
+            if (lastInstStack.Any() && lastInstStack.Peek() != null && t.Responsible != lastInstStack.Peek())
+            {
+                if (t.Responsible != null)
+                {
+                    // make a copy of the term, since we are overriding the Responsible field
+                    t = new Term(t);
+#if !DEBUG
+                    try
+                    {
+#endif
+                        model.SetTerm("", t.id, t);
+#if !DEBUG
+                    }
+                    catch (Exception) {}
+#endif
+                }
+
+                var lastInst = lastInstStack.Peek();
+                t.Responsible = lastInst;
+                lastInst.dependentTerms.Add(t);
+                foreach (var dependentInstantiation in t.dependentInstantiationsBlame)
+                {
+                    dependentInstantiation.ResponsibleInstantiations.Add(lastInst);
+                    lastInst.DependantInstantiations.Add(dependentInstantiation);
+                } 
             }
         }
 

@@ -139,7 +139,8 @@ namespace AxiomProfiler.QuantifierModel
             {
                 var effectiveTerm = pair.Item1;
                 var usedPattern = pair.Item2;
-                var topLevelTerm = format.termNumbers.First(kv => kv.Key.isSubterm(effectiveTerm.id));
+                var rootTerm = equalities.FirstOrDefault(eq => eq.Key == usedPattern).Value?.FirstOrDefault(eqSource => TopLevelTerms.Contains(eqSource.Item2))?.Item2 ?? effectiveTerm;
+                var topLevelTermNumber = format.termNumbers.First(kv => kv.Key.isSubterm(rootTerm.id));
                 var usedEqualityNumbers = equalities.Keys.Where(k => usedPattern.isSubterm(k)).Select(k => bindings[k])
                     .Select(b => {
 #if !DEBUG
@@ -155,7 +156,7 @@ namespace AxiomProfiler.QuantifierModel
                         }
 #endif
                     }).Distinct();
-                content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTerm.Value}):\n");
+                content.Append($"Substituting ({String.Join("), (", usedEqualityNumbers)}) in ({topLevelTermNumber.Value}):\n");
                 effectiveTerm.PrettyPrint(content, format);
                 content.Append("\n\n");
                 content.switchToDefaultFormat();
@@ -414,6 +415,13 @@ namespace AxiomProfiler.QuantifierModel
                     {
                         return true;
                     }
+                    else foreach (var eq in EqualityExplanations.Where(ee => Term.semanticTermComparer.Equals(ee.source, match)))
+                    {
+                        if (AddPatternMatch(pattern, eq.target, match, Enumerable.Empty<ConstraintElementType>(), Enumerable.Empty<Tuple<Term, Term, IEnumerable<ConstraintElementType>>>(), index))
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
             return false;
@@ -487,6 +495,7 @@ namespace AxiomProfiler.QuantifierModel
             return blameTerms
                 .Where(t1 => t1 == default(Tuple<List<ConstraintType>, Term>) ? false : t1.Item1.Any(l => l.Count == 0))
                 .Select(t => t.Item2)
+                .Concat(TopLevelTerms)
                 .Distinct(Term.semanticTermComparer)
                 .ToList();
         }

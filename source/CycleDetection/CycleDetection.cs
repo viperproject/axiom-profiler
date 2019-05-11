@@ -113,7 +113,7 @@ namespace AxiomProfiler.CycleDetection
                     // there is no reason why it should follow any kind of pattern.
                     var cycleFingerprints = cycleInstantiations.Zip(cycleInstantiations.Skip(1), (prev, next) => !next.bindingInfo.IsPatternMatch() ?
                         Enumerable.Repeat(Tuple.Create<Quantifier, Term, Term>(next.Quant, null, null), 1) :
-                        next.bindingInfo.bindings.Where(kv => kv.Key.id != -1 && prev.dependentTerms.Any(t => t.id == kv.Value.Item2.id))
+                        next.bindingInfo.bindings.Where(kv => prev.dependentTerms.Any(t => t.id == kv.Value.Item2.id))
                         .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
 
                     // We will count how often each fingerprint (edge type) occurs for each quantifier in the cycle
@@ -363,21 +363,46 @@ namespace AxiomProfiler.CycleDetection
                      * trigger, i.e. any unnecessary higher level structure a term might have is automatically omitted.
                      */
 
-                    var boundToCandidates = loopInstantiationsWorkSpace[i].Zip(loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0), (p, c) =>
+                    IEnumerable<Term> concreteTerms;
+                    if (loopInstantiationsWorkSpace[j].All(inst => inst.bindingInfo.IsPatternMatch()))
                     {
-                        var parentConcreteTerms = c.bindingInfo.getDistinctBlameTerms().Where(t => p.dependentTerms.Contains(t, Term.semanticTermComparer));
-                        return c.bindingInfo.bindings.Where(kv => parentConcreteTerms.Contains(kv.Value.Item2)).Select(kv => kv.Key);
-                    });
-                    var boundTo = boundToCandidates.Skip(1).Aggregate(new HashSet<Term>(boundToCandidates.First()), (set, iterationResult) =>
-                    {
-                        set.IntersectWith(iterationResult);
-                        return set;
-                    }).FirstOrDefault();
-                    if (boundTo == null) throw new Exception("Couldn't generalize!");
-                    interestingBoundTos.Add(boundTo);
+                        var boundToCandidates = loopInstantiationsWorkSpace[i].Zip(loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0), (p, c) =>
+                            c.bindingInfo.bindings.Where(kv => p.dependentTerms.Contains(kv.Value.Item2, Term.semanticTermComparer)).Select(kv => kv.Key));
+                        var boundTo = boundToCandidates.Skip(1).Aggregate(new HashSet<Term>(boundToCandidates.First()), (set, iterationResult) =>
+                        {
+                            set.IntersectWith(iterationResult);
+                            return set;
+                        }).FirstOrDefault();
+                        if (boundTo == null) throw new Exception("Couldn't generalize!");
+                        interestingBoundTos.Add(boundTo);
 
-                    parentConcreteTerm = child.bindingInfo.bindings[boundTo].Item2;
-                    var concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.bindingInfo.bindings[boundTo].Item2);
+                        parentConcreteTerm = child.bindingInfo.bindings[boundTo].Item2;
+                        concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.bindingInfo.bindings[boundTo].Item2);
+                    }
+                    else
+                    {
+                        // This shouldn't happen since the cycle detection treats MBQI and triggered instantiations as separate quantifiers
+                        if (loopInstantiationsWorkSpace[j].Any(inst => inst.bindingInfo.IsPatternMatch())) throw new Exception("Couldn't generalize!");
+
+                        var indexCandidates = loopInstantiationsWorkSpace[i].Zip(loopInstantiationsWorkSpace[j].Skip(j <= i ? 1 : 0), (p, c) =>
+                            Enumerable.Range(0, c.explicitlyBlamedTerms.Length).Where(idx => p.dependentTerms.Contains(c.explicitlyBlamedTerms[idx], Term.semanticTermComparer)));
+                        int blameIdx;
+                        try
+                        {
+                            blameIdx = indexCandidates.Skip(1).Aggregate(new HashSet<int>(indexCandidates.First()), (set, iterationResult) =>
+                            {
+                                set.IntersectWith(iterationResult);
+                                return set;
+                            }).First();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            throw new Exception("Couldn't generalize!");
+                        }
+
+                        parentConcreteTerm = child.explicitlyBlamedTerms[blameIdx];
+                        concreteTerms = loopInstantiationsWorkSpace[j].Select(inst => inst.explicitlyBlamedTerms[blameIdx]);
+                    }
 
                     generalizedYield = generalizeTerms(concreteTerms, loopInstantiationsWorkSpace[j], nextBindingInfo, false, false);
                 }
