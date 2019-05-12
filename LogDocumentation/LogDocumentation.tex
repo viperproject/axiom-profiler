@@ -61,7 +61,14 @@ Finally \texttt{[instance]} is followed by the fingerprint of the match and the 
 \noskip
 \texttt{[tool-version]} followed by the name of the tool that generated the log and its version as the first log line. These lines are used for compatibility checks.
 
-\texttt{[mk-proof]} followed by an identifier (same namespace as \texttt{[mk-app]}, \texttt{[mk-quant]}, and \texttt{[mk-var]}) the name of the proof step (currently ignored by the Axiom Profiler), the identifiers of the prerequisites of the proof step and the identifier of the result of the proof step. Used to justify a proof step. Can only be declared in the main namespace. Referencing a proof step is the same as referencing its result term.
+\texttt{[mk-proof]} followed by an identifier (same namespace as \texttt{[mk-app]}, \texttt{[mk-quant]}, and \texttt{[mk-var]}) the name of the proof step, the identifiers of the prerequisites of the proof step and the identifier of the result of the proof step. Used to justify a proof step. Can only be declared in the main namespace. Referencing a proof step is the same as referencing its result term.
+
+Currently two types of proof steps are relevant for the Axiom Profiler:
+
+\begin{itemize}
+\item \texttt{rewrite} followed by an equality indicates that a term was rewritten (e.g. $ 1 + 1 $ to $ 2 $) and can be used to ensure that the causality between instantiations is interpreted correctly even if the original term is never added to the e-graph, i.e. an instantiation would produce the term $ 1 + 1 $ but we only see an \texttt{[attach-enode]} line for $ 2 $.
+\item \texttt{monotonicity} followed by argument equalities and an equality representing the final rewriting is used e.g. to rewrite $ f(1 + 1) $ to $ f(2) $ after we already rewrote $ 1 + 1 $ to $ 2 $.
+\end{itemize}
 
 \texttt{[begin-check]} indicates that a \texttt{(check-sat)} command is being executed. This allows the user of the tool to only load data from a single check if they generated a log from a SMT file containing multiple checks.
 
