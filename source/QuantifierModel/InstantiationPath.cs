@@ -891,22 +891,25 @@ namespace AxiomProfiler.QuantifierModel
                     generalizationState.PrintGeneralizationsForNextIteration(content, format);
                 }
 
-                content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
-                content.Append("\nBindings to Start Next Iteration:\n\n");
-                content.switchToDefaultFormat();
-
-                foreach (var binding in bindingInfo.getBindingsToFreeVars())
+                if (bindingInfo.getBindingsToFreeVars().Any())
                 {
-                    if (binding.Value == null)
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("\nBindings to Start Next Iteration:\n\n");
+                    content.switchToDefaultFormat();
+
+                    foreach (var binding in bindingInfo.getBindingsToFreeVars())
                     {
-                        content.Append($"A generalized binding for {binding.Key.PrettyName} in the next iteration\ncould not be generated (This pattern cannot repeat indefinetly).");
-                    }
-                    else
-                    {
-                        content.Append(binding.Key.PrettyName).Append(" will be bound to:\n");
-                        binding.Value.PrettyPrint(content, format);
-                        content.switchToDefaultFormat();
-                        content.Append("\n\n");
+                        if (binding.Value == null)
+                        {
+                            content.Append($"A generalized binding for {binding.Key.PrettyName} in the next iteration\ncould not be generated (This pattern cannot repeat indefinetly).");
+                        }
+                        else
+                        {
+                            content.Append(binding.Key.PrettyName).Append(" will be bound to:\n");
+                            binding.Value.PrettyPrint(content, format);
+                            content.switchToDefaultFormat();
+                            content.Append("\n\n");
+                        }
                     }
                 }
 

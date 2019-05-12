@@ -1166,8 +1166,8 @@ namespace AxiomProfiler
                         var separationIndex = Array.FindIndex(words, w => w == ";");
                         var args = GetArgs(words, 4, separationIndex == -1 ? int.MaxValue : separationIndex);
                         var blame = separationIndex == -1 ? EmptyTerms : GetArgs(words, separationIndex + 1);
-                        var bindingInfo = new BindingInfo(quant, args);
-                        model.fingerprints[words[2]] = new Instantiation(bindingInfo, method, blame)
+                        var bindingInfo = new BindingInfo(quant, args, blame);
+                        model.fingerprints[words[2]] = new Instantiation(bindingInfo, method)
                         {
                             Quant = quant
                         };

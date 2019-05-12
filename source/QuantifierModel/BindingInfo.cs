@@ -20,6 +20,7 @@ namespace AxiomProfiler.QuantifierModel
         public readonly Term[] BoundTerms;
         public readonly Term[] TopLevelTerms;
         public EqualityExplanation[] EqualityExplanations;
+        public readonly Term[] explicitlyBlamedTerms = noTerms;
 
         private bool processed = false;
         private Exception cachedException = null;
@@ -198,7 +199,7 @@ namespace AxiomProfiler.QuantifierModel
             numEq = EqualityExplanations.Length;
         }
 
-        public BindingInfo(Quantifier quant, Term[] bindings)
+        public BindingInfo(Quantifier quant, Term[] bindings, Term[] explicitlyBlamedTerms = null)
         {
             fullPattern = null;
             BoundTerms = bindings;
@@ -213,6 +214,7 @@ namespace AxiomProfiler.QuantifierModel
             EqualityExplanations = noExplanations;
             numEq = 0;
             processed = true;
+            this.explicitlyBlamedTerms = explicitlyBlamedTerms ?? noTerms;
         }
 
         private BindingInfo(BindingInfo other)
@@ -224,6 +226,8 @@ namespace AxiomProfiler.QuantifierModel
             EqualityExplanations = other.EqualityExplanations;
             fullPattern = other.fullPattern;
             numEq = other.numEq;
+            explicitlyBlamedTerms = new Term[other.explicitlyBlamedTerms.Length];
+            Array.Copy(other.explicitlyBlamedTerms, explicitlyBlamedTerms, other.explicitlyBlamedTerms.Length);
 
             // 'deeper' copy
             _patternMatchContext = new Dictionary<int, List<ConstraintType>>();
@@ -496,6 +500,7 @@ namespace AxiomProfiler.QuantifierModel
                 .Where(t1 => t1 == default(Tuple<List<ConstraintType>, Term>) ? false : t1.Item1.Any(l => l.Count == 0))
                 .Select(t => t.Item2)
                 .Concat(TopLevelTerms)
+                .Concat(explicitlyBlamedTerms)
                 .Distinct(Term.semanticTermComparer)
                 .ToList();
         }

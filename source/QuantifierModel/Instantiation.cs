@@ -55,14 +55,13 @@ namespace AxiomProfiler.QuantifierModel
                     _Responsible = bindingInfo.TopLevelTerms
                         .Concat(requiredEqualityExplanations.Select(expl => expl.target))
                         .Concat(requiredEqualityExplanations.SelectMany(ee => DirectEqualityColloctor.singleton.visit(ee, null)))
-                        .Concat(explicitlyBlamedTerms)
+                        .Concat(bindingInfo.explicitlyBlamedTerms)
                         .ToArray();
                 }
                 return _Responsible;
             }
         }
         public readonly string InstantiationMethod;
-        public readonly Term[] explicitlyBlamedTerms;
 
         public Term[] Bindings
         {
@@ -72,16 +71,15 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
-        public Instantiation(BindingInfo bindingInfo, string method, Term[] explicitlyBlamed = null)
+        public Instantiation(BindingInfo bindingInfo, string method)
         {
             this.bindingInfo = bindingInfo;
             InstantiationMethod = method;
-            explicitlyBlamedTerms = explicitlyBlamed ?? emptyTerms;
         }
 
         public Instantiation Copy()
         {
-            return new Instantiation(bindingInfo, InstantiationMethod, explicitlyBlamedTerms)
+            return new Instantiation(bindingInfo, InstantiationMethod)
             {
                 Quant = Quant,
                 concreteBody = concreteBody
@@ -90,7 +88,7 @@ namespace AxiomProfiler.QuantifierModel
 
         public Instantiation CopyForBindingInfoModification()
         {
-            var copy = new Instantiation(bindingInfo.Clone(), InstantiationMethod, explicitlyBlamedTerms)
+            var copy = new Instantiation(bindingInfo.Clone(), InstantiationMethod)
             {
                 Quant = Quant,
                 concreteBody = concreteBody
@@ -159,15 +157,17 @@ namespace AxiomProfiler.QuantifierModel
                 content.Append(PrintConstants.LargeTextMode ? "matched using\nequality" : "matched using equality");
                 content.switchToDefaultFormat();
                 content.Append(" or ");
-                content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
-                content.Append("blamed");
-                content.switchToDefaultFormat();
-                content.Append(" or ");
             }
+            content.switchFormat(PrintConstants.DefaultFont, PrintConstants.blameColor);
+            content.Append("blamed");
+            content.switchToDefaultFormat();
+            content.Append(" or ");
             content.switchFormat(PrintConstants.DefaultFont, PrintConstants.bindColor);
             content.Append("bound");
             content.switchToDefaultFormat();
             content.Append(".\n\n");
+
+            tempHighlightBlameBindTerms(format);
 
             if (!bindingInfo.IsPatternMatch())
             {
@@ -181,9 +181,31 @@ namespace AxiomProfiler.QuantifierModel
                     content.Append($"Instantiated using {InstantiationMethod}.\n\n");
                 }
                 content.switchToDefaultFormat();
-            }
 
-            tempHighlightBlameBindTerms(format);
+                if (bindingInfo.explicitlyBlamedTerms.Any())
+                {
+                    content.switchFormat(PrintConstants.SubtitleFont, PrintConstants.sectionTitleColor);
+                    content.Append("Blamed Terms:\n");
+                    content.switchToDefaultFormat();
+                }
+
+                var termNumbering = 1;
+
+                foreach (var t in bindingInfo.explicitlyBlamedTerms)
+                {
+                    if (!format.termNumbers.TryGetValue(t, out var termNumber))
+                    {
+                        termNumber = termNumbering;
+                        ++termNumbering;
+                        format.termNumbers[t] = termNumber;
+                    }
+                    var numberingString = $"({termNumber}) ";
+                    content.Append($"\n{numberingString}");
+                    t.PrettyPrint(content, format, numberingString.Length);
+                    content.switchToDefaultFormat();
+                    content.Append("\n\n");
+                }
+            }
 
             if (bindingInfo.IsPatternMatch())
             {
@@ -317,6 +339,10 @@ namespace AxiomProfiler.QuantifierModel
 
                     patternTerm.highlightTemporarily(format, color, bindingInfo.patternMatchContext[patternTerm.id]);
                     term.Item2.highlightTemporarily(format, color, term.Item1);
+                }
+                foreach (var blameTerm in bindingInfo.explicitlyBlamedTerms)
+                {
+                    blameTerm.highlightTemporarily(format, PrintConstants.blameColor);
                 }
                 return;
             }
