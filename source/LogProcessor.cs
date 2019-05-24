@@ -1375,6 +1375,9 @@ namespace AxiomProfiler
                 {
                     // make a copy of the term, since we are overriding the Responsible field
                     t = new Term(t);
+                    t.dependentInstantiationsBlame.Clear();
+                    t.dependentInstantiationsBind.Clear();
+                    t.dependentTerms.Clear();
 #if !DEBUG
                     try
                     {
@@ -1389,7 +1392,9 @@ namespace AxiomProfiler
                 var lastInst = lastInstStack.Peek();
                 t.Responsible = lastInst;
                 lastInst.dependentTerms.Add(t);
-                foreach (var dependentInstantiation in t.dependentInstantiationsBlame)
+
+                // rewriting steps may be logged before an instantiation that produces the rewritten term so we need to update the causality graph
+                foreach (var dependentInstantiation in t.dependentInstantiationsBlame.Where(inst => inst.Quant.Namespace != ""))
                 {
                     dependentInstantiation.ResponsibleInstantiations.Add(lastInst);
                     lastInst.DependantInstantiations.Add(dependentInstantiation);
