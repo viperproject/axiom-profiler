@@ -64,15 +64,15 @@ Note that you may also want to pass the /vcsCores:1 option to disable concurrenc
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
 
-    silicon ./file.sil --z3Args "trace=true proof=true"
+    silicon --numberOfParallelVerifiers 1 --z3Args "trace=true proof=true" ./file.sil
 
-If it complains about unrecognized argument, try this:
+If it complains about an unrecognized argument, try this:
 
-    silicon ./file.sil --z3Args '"trace=true proof=true"'
+    silicon --numberOfParallelVerifiers 1 --z3Args '"trace=true proof=true"' ./file.sil
 
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
-    carbon ./file.sil --print ./file.bpl
+    carbon --print ./file.bpl ./file.sil
     boogie /vcsCores:1 /z3opt:trace=true /z3opt:proof=true ./file.bpl
 
 In all cases, the Z3 log should be stored in `./z3.log` (this can also be altered by correspondingly passing z3 the trace-file-name option described above)
