@@ -19,16 +19,17 @@ namespace AxiomProfiler
 
         static void printUsage()
         {
-            Console.WriteLine("Usage: AxiomProfiler [options] <prelude-file> <filename>");
-            Console.WriteLine("       prelude-file       : VCC prelude file location");
-            Console.WriteLine("       filename           : Boogie input file");
-            Console.WriteLine("       options ");
-            Console.WriteLine("          /f:<function>   : Function name");
-            Console.WriteLine("          /t:<seconds>    : Verification timeout");
-            Console.WriteLine("          /l:<file>       : Log file to process");
-            Console.WriteLine("          /s              : Skip conflicts/decisions (conserves memory)");
-            Console.WriteLine("          /v1             : Start Z3 v1 (default)");
-            Console.WriteLine("          /v2             : Start Z3 v2");
+            Console.WriteLine("Usage: AxiomProfiler [options]");
+            Console.WriteLine("     options ");
+            Console.WriteLine("         /l:<file>                      : Log file to process");
+            Console.WriteLine("         /c:<check>                     : Only load instantiations from <check>-th check-sat command");
+            Console.WriteLine("         /s                             : Skip conflicts/decisions (conserves memory)");
+            Console.WriteLine("         /loops:<num paths>             : Checks heaviest paths for potential matiching loops (printed to CSV)");
+            Console.WriteLine("         /showNumChecks                 : Get total number of checks-sat commands executed (printed to CSV)");
+            Console.WriteLine("         /showQuantStatistics           : Get statistics about quantifiers (printed to CSV)");
+            Console.WriteLine("         /findHighBranching:<threshold> : Find instantiations with at least <threshold> children (printed to CSV)");
+            Console.WriteLine("         /outPrefix:<prefix>            : Prefix for generated CSV files");
+            Console.WriteLine("         /autoQuit                      : Automatically quit after completing automated analysis");
             Environment.Exit(0);
         }
 

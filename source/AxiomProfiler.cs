@@ -132,15 +132,6 @@ namespace AxiomProfiler
                         }
                         config.checkToConsider = (int)ch;
                     }
-                    else if (args[idx] == "/v2")
-                    {
-                        // Silently accept old command line argument
-                    }
-                    else if (args[idx] == "/v1")
-                    {
-                        error = "Z3 version 1 is no longer supported.";
-                        return false;
-                    }
                     else if (args[idx] == "/s")
                     {
                         config.skipDecisions = true;
@@ -224,7 +215,7 @@ namespace AxiomProfiler
                     }
                     else
                     {
-                        error = "Multiple inputs files specified.";
+                        error = "Incorrect file format.";
                         return false;
                     }
                 }

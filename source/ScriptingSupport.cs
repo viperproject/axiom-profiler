@@ -37,18 +37,18 @@ namespace AxiomProfiler
                     basicFileExists = true;
                     using (var writer = new StreamWriter(basePath + ".basic", false))
                     {
-                        writer.WriteLine("checks, " + model.NumChecks);
+                        writer.WriteLine("checks," + model.NumChecks);
                     }
                 }
                 if (tasks.ShowQuantStatistics)
                 {
                     using (var writer = new StreamWriter(basePath + ".basic", basicFileExists))
                     {
-                        writer.WriteLine("num quantifiers, " + model.GetRootNamespaceQuantifiers().Count());
-                        writer.WriteLine("tot number instantiations, " + model.instances.Count());
+                        writer.WriteLine("num quantifiers," + model.GetRootNamespaceQuantifiers().Count());
+                        writer.WriteLine("tot number instantiations," + model.instances.Count());
                         foreach (var quant in model.GetRootNamespaceQuantifiers().Values)
                         {
-                            writer.WriteLine(quant.PrintName + ", " + quant.Instances.Count());
+                            writer.WriteLine(quant.PrintName + "," + quant.Instances.Count());
                         }
                     }
                 }
@@ -62,13 +62,13 @@ namespace AxiomProfiler
                 {
                     using (var writer = new StreamWriter(basePath + ".loops", false))
                     {
-                        writer.WriteLine("# repetitions, repeating pattern");
+                        writer.WriteLine("# repetitions,repeating pattern");
                         foreach (var path in pathsToCheck)
                         {
                             var cycleDetection = new CycleDetection.CycleDetection(path.getInstantiations(), 3);
                             if (cycleDetection.hasCycle())
                             {
-                                writer.WriteLine(cycleDetection.GetNumRepetitions() + ", " + string.Join(" -> ", cycleDetection.getCycleQuantifiers().Select(quant => quant.PrintName)));
+                                writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", cycleDetection.getCycleQuantifiers().Select(quant => quant.PrintName)));
                             }
                         }
                     }
@@ -80,10 +80,10 @@ namespace AxiomProfiler
                 {
                     using (var writer = new StreamWriter(basePath + ".branching"))
                     {
-                        writer.WriteLine($"Quantifier, # instances with ≥ {tasks.FindHighBranchingThreshold} direct children");
+                        writer.WriteLine($"Quantifier,# instances with ≥ {tasks.FindHighBranchingThreshold} direct children");
                         foreach (var quant in highBranchingInsts.GroupBy(inst => inst.Quant))
                         {
-                            writer.WriteLine(quant.Key.PrintName + ", " + quant.Count());
+                            writer.WriteLine(quant.Key.PrintName + "," + quant.Count());
                         }
                     }
                 }
