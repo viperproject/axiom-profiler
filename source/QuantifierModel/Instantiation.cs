@@ -31,6 +31,7 @@ namespace AxiomProfiler.QuantifierModel
             }
         }
 
+        public bool flag = false;
         public Quantifier Quant;
         public Term concreteBody;
         public readonly List<Term> dependentTerms = new List<Term>();
@@ -104,13 +105,24 @@ namespace AxiomProfiler.QuantifierModel
         {
             get
             {
+                if (flag)
+                {
+#if DEBUG
+                    throw new Exception("Found cycle in causality graph!");
+#else
+                    return 0;
+#endif
+                }
+
                 if (depth != 0)
                 {
                     return depth;
                 }
 
+                flag = true;
                 int max = (from t in Responsible where t.Responsible != null select t.Responsible.Depth)
                     .Concat(new[] { 0 }).Max();
+                flag = false;
                 depth = max + 1;
                 return depth;
             }
@@ -120,10 +132,21 @@ namespace AxiomProfiler.QuantifierModel
         {
             get
             {
+                if (flag)
+                {
+#if DEBUG
+                    throw new Exception("Found cycle in causality graph!");
+#else
+                    return 0;
+#endif
+                }
+
                 if (wdepth == -1)
                 {
+                    flag = true;
                     int max = (from t in Responsible where t.Responsible != null select t.Responsible.WDepth)
                         .Concat(new[] { 0 }).Max();
+                    flag = false;
                     wdepth = max + Quant.Weight;
                 }
                 return wdepth;

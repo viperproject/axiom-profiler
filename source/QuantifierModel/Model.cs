@@ -151,12 +151,27 @@ namespace AxiomProfiler.QuantifierModel
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
+                if (current.flag)
+                {
+#if DEBUG
+                    throw new Exception("Found cycle in causality graph!");
+#else
+                    continue;
+#endif
+                }
+                current.flag = true;
+
                 foreach (Instantiation inst in current.ResponsibleInstantiations
                     .Where(inst => current.DeepestSubpathDepth >= inst.DeepestSubpathDepth))
                 {
                     inst.DeepestSubpathDepth = current.DeepestSubpathDepth + 1;
                     todo.Enqueue(inst);
                 }
+            }
+
+            foreach (var inst in instances)
+            {
+                inst.flag = false;
             }
         }
 
