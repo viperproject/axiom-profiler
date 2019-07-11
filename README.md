@@ -74,7 +74,11 @@ on Unix-like systems or:
 
     silicon --numberOfParallelVerifiers 1 --z3Args """trace=true proof=true""" ./file.sil
 
-on Windows.
+in Windows command prompt or:
+
+    silicon --numberOfParallelVerifiers 1 --z3Args """""trace=true proof=true""""" ./file.sil
+
+in Windows PowerShell.
 
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
