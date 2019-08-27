@@ -560,7 +560,7 @@ namespace AxiomProfiler
         private void HandleTreeNodeSelect(object sender, TreeViewEventArgs e)
         {
             TreeNode t = z3AxiomTree.SelectedNode;
-            Common c = t.Tag as Common;
+            Common c = t?.Tag as Common;
             SetInfoPanel(c);
 
             Scope scope = c as Scope;
