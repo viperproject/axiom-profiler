@@ -650,6 +650,7 @@ namespace AxiomProfiler
                     // Notify user
                     Interlocked.Decrement(ref workCounter);
                     DisplayMessage($"An exception was thrown. Please report this bug to viper@inf.ethz.ch.\nDescription of the exception: {e.Message}");
+		    Console.WriteLine(e);
                 }
 #endif
             }
