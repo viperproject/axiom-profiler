@@ -420,7 +420,7 @@ namespace AxiomProfiler.QuantifierModel
 		current.Quant.BodyTerm.PrettyPrint(content, format);
 	    }
 	    catch(Exception) {
-		content.Append("Exception was thrown while printing the body of the quantifier");
+		content.Append("Exception was thrown while printing the body of the quantifier\n");
 
 	    }
             content.switchToDefaultFormat();
