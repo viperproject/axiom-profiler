@@ -218,7 +218,7 @@ namespace AxiomProfiler {
           }
           foreach (var other in edgesTo.Keys) {
             var count = edgesTo[other];
-            if (quantifierNameToInfo[other].Cost > MIN_COST && count > MIN_COUNT) {
+            if (quantifierNameToInfo.ContainsKey(other) && quantifierNameToInfo[other].Cost > MIN_COST && count > MIN_COUNT) {
               quantifiers.Add(quantifierNameToInfo[other]);
               edges.Add(new Edge { from = source.Name, to = other, value = count });
             }
