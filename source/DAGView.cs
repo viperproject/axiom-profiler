@@ -553,7 +553,8 @@ namespace AxiomProfiler
             //There may be some "outiers" before or after a matching loop.
             //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
             var statistics = instantiationPath.Statistics();
-            var eliminationTreshhold = Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
+            var eliminationTreshhold = (statistics == null || !statistics.Any()) ? 1 :
+		Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
             var nonEliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term, Term>>(statistics
                 .Where(dp => dp.Item2 > eliminationTreshhold)
                 .Select(dp => dp.Item1));
