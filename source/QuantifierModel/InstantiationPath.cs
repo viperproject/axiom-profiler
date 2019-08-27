@@ -320,8 +320,12 @@ namespace AxiomProfiler.QuantifierModel
             content.Append(current.Quant.PrintName);
             content.switchToDefaultFormat();
             content.Append("\n\n");
-
-            current.Quant.BodyTerm.PrettyPrint(content, format);
+	    try {
+                current.Quant.BodyTerm.PrettyPrint(content, format);
+	    }
+	    catch (Exception) {
+		content.Append("Exception was thrown while printing the body of the quantifier\n");
+	    }
             content.switchToDefaultFormat();
             format.restoreAllOriginalRules();
             return termNumbering;
