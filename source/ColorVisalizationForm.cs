@@ -39,6 +39,7 @@ namespace AxiomProfiler
 
         private void DisplayResults()
         {
+	    if(quantifiers == null) return;
             ImageWidth = this.panel1.Width;
             ImageHeight = quantifiers.Count / ImageWidth + 1;
             if (ImageHeight < this.panel1.Height)
