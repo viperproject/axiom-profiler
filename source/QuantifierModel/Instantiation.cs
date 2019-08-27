@@ -53,11 +53,19 @@ namespace AxiomProfiler.QuantifierModel
                 if (_Responsible == null)
                 {
                     var requiredEqualityExplanations = bindingInfo.EqualityExplanations.Where(expl => !bindingInfo.BoundTerms.Contains(expl.target));
-                    _Responsible = bindingInfo.TopLevelTerms
+                    var tmp = bindingInfo.TopLevelTerms
                         .Concat(requiredEqualityExplanations.Select(expl => expl.target))
                         .Concat(requiredEqualityExplanations.SelectMany(ee => DirectEqualityColloctor.singleton.visit(ee, null)))
-                        .Concat(bindingInfo.explicitlyBlamedTerms)
-                        .ToArray();
+                        .Concat(bindingInfo.explicitlyBlamedTerms);
+		    int len = 0;
+		    foreach (var k in tmp) {
+			    len++;
+		    }
+		    _Responsible = new Term[len];
+		    len = 0;
+		    foreach (var k in tmp) {
+			    _Responsible[len++] = k;
+		    }
                 }
                 return _Responsible;
             }
