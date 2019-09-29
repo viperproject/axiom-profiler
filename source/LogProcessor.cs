@@ -36,7 +36,7 @@ namespace AxiomProfiler
         private readonly bool skipDecisions;
         private readonly Dictionary<string, int> literalToTermId = new Dictionary<string, int>();
         private bool toolVersionSeen = false;
-        private Dictionary<Term, Term> reverseMonotonicitySteps = new Dictionary<Term, Term>();
+        private Dictionary<Term, List<EqualityExplanation>> reverseMonotonicitySteps = new Dictionary<Term, List<EqualityExplanation>>();
 
         public readonly Model model = new Model();
 
@@ -257,22 +257,6 @@ namespace AxiomProfiler
         {
             return long.Parse(w.Substring(1));
         }
-
-        private Term GetProofTerm(string w)
-        {
-            w = RemoveParen(w);
-            if (w[0] == '#')
-            {
-                long id = GetId(RemoveParen(w));
-                Common tmp;
-                if (model.proofSteps.TryGetValue(id, out tmp) && tmp is Term)
-                {
-                    return (Term)tmp;
-                }
-            }
-            return new Term(w, EmptyTerms);
-        }
-
 
         char[] sep = { ' ', '\r', '\n' };
 
@@ -496,6 +480,31 @@ namespace AxiomProfiler
             return args;
         }
 
+        private Tuple<Term, IEnumerable<EqualityExplanation>> UndoRewrite(Term term, Term originalSuperterm)
+        {
+            var start = Tuple.Create(term, Enumerable.Empty<EqualityExplanation>());
+            if (originalSuperterm.isSubterm(term)) return start;
+
+            var comparer = new Utilities.TupleEqulityComparers.FirstComparer<Term, IEnumerable<EqualityExplanation>>();
+            var alreadyVisited = new HashSet<Tuple<Term, IEnumerable<EqualityExplanation>>>(comparer);
+            var next = new HashSet<Tuple<Term, IEnumerable<EqualityExplanation>>>(comparer) { start };
+            while (next.Any())
+            {
+                alreadyVisited.UnionWith(next);
+                next = new HashSet<Tuple<Term, IEnumerable<EqualityExplanation>>>(next.SelectMany(t => reverseMonotonicitySteps.TryGetValue(t.Item1, out var ees) ?
+                    ees.Select(ee => Tuple.Create(ee.source, Enumerable.Concat(Enumerable.Repeat(ee, 1), t.Item2))) :
+                    Enumerable.Empty<Tuple<Term, IEnumerable<EqualityExplanation>>>()), comparer);
+                next.ExceptWith(alreadyVisited);
+                foreach (var t in next)
+                {
+                    if (originalSuperterm.isSubterm(t.Item1)) return t;
+                }
+            }
+
+            //TODO: This point is reached even though it shouldn't be. It seems that z3 does not log all the necessary rewritings (I've seen this only for additions so far).
+            return start;
+        }
+
         /// <summary>
         /// Generates a binding info from a [new-match] line.
         /// </summary>
@@ -520,21 +529,19 @@ namespace AxiomProfiler
                     {
                         var responsibleBody = topLevelTerm.Responsible.concreteBody;
                         var to = topLevelTerm;
-                        do
+                        var undone = UndoRewrite(topLevelTerm, responsibleBody);
+                        topLevelTerm = undone.Item1;
+                        var explanation = undone.Item2;
+                        if (explanation.Any())
                         {
-                            if (!reverseMonotonicitySteps.TryGetValue(topLevelTerm, out topLevelTerm))
+                            if (explanation.Take(2).Count() == 2)
                             {
-                                break;
+                                explanations.Add(new TransitiveEqualityExplanation(topLevelTerm, to, explanation.ToArray()));
                             }
-                        } while (!responsibleBody.isSubterm(topLevelTerm));
-
-                        if (topLevelTerm != null)
-                        {
-                            explanations.Add(GetExplanation(topLevelTerm.id, to.id));
-                        }
-                        else
-                        {
-                            topLevelTerm = to;
+                            else
+                            {
+                                explanations.Add(explanation.Single());
+                            }
                         }
                     }
 
@@ -585,7 +592,14 @@ namespace AxiomProfiler
                     try
                     {
 #endif
-                        return arg.GetExplanation(e.source.id, e.target.id);
+                        if (e.source.id == -1 && e.target.id == -1)
+                        {
+                            return e;
+                        }
+                        else
+                        {
+                            return arg.GetExplanation(e.source.id, e.target.id);
+                        }
 #if !DEBUG
                     }
                     catch (Exception)
@@ -705,8 +719,11 @@ namespace AxiomProfiler
         {
             var explanations = new List<EqualityExplanation>();
             int it;
+            var alreadyVisited = new HashSet<int>();
             for (it = id; model.equalityExplanations.TryGetValue(it, out var explanation); it = explanation.target.id)
             {
+                if (alreadyVisited.Contains(it)) throw new Exception($"Found cyclic equality explanation for term {model.GetTerm(it).PrettyName}[{it}]");
+                alreadyVisited.Add(it);
                 explanations.Add(explanation);
             }
             if (explanations.Count() == 1)
@@ -715,10 +732,7 @@ namespace AxiomProfiler
             }
             else
             {
-                return new TransitiveEqualityExplanation(model.GetTerm(id), model.GetTerm(it), explanations.Select(ee => {
-                    var test = explanationFinalizer.visit(ee, this);
-                    return test;
-                    }).ToArray());
+                return new TransitiveEqualityExplanation(model.GetTerm(id), model.GetTerm(it), explanations.Select(ee => explanationFinalizer.visit(ee, this)).ToArray());
             }
         }
 
@@ -782,8 +796,12 @@ namespace AxiomProfiler
             // Follow steps from the source.
             EqualityExplanation knownExplanation = null;
             var sourceExplanations = new List<EqualityExplanation>();
+            var alreadyVisited = new HashSet<int>();
             for (int sourceIterator = sourceId; model.equalityExplanations.TryGetValue(sourceIterator, out var equalityExplanation); sourceIterator = equalityExplanation.target.id)
             {
+                if (alreadyVisited.Contains(sourceIterator)) throw new Exception($"Found cyclic equality explanation for term {model.GetTerm(sourceIterator).PrettyName}[{sourceIterator}]");
+                alreadyVisited.Add(sourceIterator);
+
                 if (sourceIterator == targetId)
                 {
                     var targetTerm = model.GetTerm(targetId);
@@ -802,8 +820,11 @@ namespace AxiomProfiler
             {
 
                 // Follow steps from the target.
+                alreadyVisited.Clear();
                 for (int targetIterator = targetId; model.equalityExplanations.TryGetValue(targetIterator, out var equalityExplanation); targetIterator = equalityExplanation.target.id)
                 {
+                    if (alreadyVisited.Contains(targetIterator)) throw new Exception($"Found cyclic equality explanation for term {model.GetTerm(targetIterator).PrettyName}[{targetIterator}]");
+                    alreadyVisited.Add(targetIterator);
                     if (targetIterator == sourceId)
                     {
                         var sourceTerm = model.GetTerm(sourceId);
@@ -953,15 +974,14 @@ namespace AxiomProfiler
 
                 case "[mk-proof]":
                     {
-                        Term[] args = GetArgs(words, 3);
-
-                        var t = args.Last();
+                        var t = model.GetTerm(ParseIdentifierRootNamespace(words.Last()));
 
 #if !DEBUG
                         try
                         {
 #endif
-                            model.SetTerm("", ParseIdentifierRootNamespace(words[1]), t);
+                            var proofId = ParseIdentifierRootNamespace(words[1]);
+                            model.SetTerm("", proofId, t);
 
                             if (words[2] == "monotonicity")
                             {
@@ -969,15 +989,33 @@ namespace AxiomProfiler
                                 var to = t.Args.Last();
                                 if (from != to)
                                 {
-                                    var agumentEqualities = from.Args.Zip(to.Args, (first, second) => new TransitiveEqualityExplanation(first, second, emptyEqualityExplanation)).ToArray();
-                                    model.equalityExplanations[from.id] = new CongruenceExplanation(from, to, agumentEqualities);
-                                    reverseMonotonicitySteps[to] = from;
+                                    var agumentEqualities = words.Skip(3).Select(id => model.GetProofStep(ParseIdentifierRootNamespace(id))).ToArray();
+                                    var explanation = new CongruenceExplanation(from, to, agumentEqualities);
+                                    model.proofSteps[proofId] = explanation;
+                                    if (!reverseMonotonicitySteps.TryGetValue(to, out var existing))
+                                    {
+                                        existing = new List<EqualityExplanation>();
+                                        reverseMonotonicitySteps[to] = existing;
+                                    }
+                                    existing.Add(explanation);
                                 }
                             }
-                            else if (words[2] == "rewrite")
+                            else if (t.Name == "=" || t.Name == "~")
                             {
-                                model.equalityExplanations[t.Args.First().id] = new DirectEqualityExplanation(t.Args.First(), t.Args.Last(), t);
-                                reverseMonotonicitySteps[t.Args.Last()] = t.Args.First();
+                                var from = t.Args.First();
+                                var to = t.Args.Last();
+
+                                if (from != to)
+                                {
+                                    var explanation = new DirectEqualityExplanation(from, to, t);
+                                    model.proofSteps[proofId] = explanation;
+                                    if (!reverseMonotonicitySteps.TryGetValue(to, out var existing))
+                                    {
+                                        existing = new List<EqualityExplanation>();
+                                        reverseMonotonicitySteps[to] = existing;
+                                    }
+                                    existing.Add(explanation);
+                                }
                             }
 #if !DEBUG
                         }
@@ -1051,7 +1089,7 @@ namespace AxiomProfiler
                     }
                     break;
 
-                case "[attach-enode]":
+                    case "[attach-enode]":
                     {
                         var t = GetTerm(words[1]);
                         AttachEnode(t);
@@ -1061,14 +1099,8 @@ namespace AxiomProfiler
                             var bodyTerm = lastInstStack.Peek().concreteBody;
                             if (!bodyTerm.isSubterm(t))
                             {
-                                do
-                                {
-                                    if (!reverseMonotonicitySteps.TryGetValue(t, out t))
-                                    {
-                                        break;
-                                    }
-                                } while (!bodyTerm.isSubterm(t));
-                                if (t != null) AttachEnode(t);
+                                t = UndoRewrite(t, bodyTerm).Item1;
+                                AttachEnode(t);
                             }
                         }
                     }
@@ -1097,6 +1129,7 @@ namespace AxiomProfiler
                         }
                         var fromTerm = model.GetTerm(fromId);
                         var toTerm = GetTerm(words.Last());
+                        if (fromId == toTerm.id) throw new Exception($"Found self referencing equality explanation step on line {curlineNo}.");
                         switch (words[2])
                         {
                             case "lit":

@@ -31,6 +31,9 @@ namespace AxiomProfiler.QuantifierModel
         // dict with equality explanations to a term's equivalence class' root (in z3)
         public readonly Dictionary<int, EqualityExplanation> equalityExplanations = new Dictionary<int, EqualityExplanation>();
 
+        // dict containing equality explanations for proof steps logged by z3
+        public readonly Dictionary<int, EqualityExplanation> proofSteps = new Dictionary<int, EqualityExplanation>();
+
         // Fingerprint (pointer) of specific instance to instantiation dict.
         public readonly Dictionary<string, Instantiation> fingerprints = new Dictionary<string, Instantiation>();
 
@@ -51,9 +54,6 @@ namespace AxiomProfiler.QuantifierModel
 
         // Representation of the internal prover model.
         public List<Common> models = new List<Common>();
-
-        // TODO: some structure for proof mode(?)
-        public Dictionary<long, Common> proofSteps = new Dictionary<long, Common>();
 
         // List of (push / pop) scope descriptors.
         public List<ScopeDesc> scopes = new List<ScopeDesc>();
@@ -125,6 +125,14 @@ namespace AxiomProfiler.QuantifierModel
             namespaces[ns].quantifiers[id] = q;
         }
 
+        public EqualityExplanation GetProofStep(int id)
+        {
+            if (proofSteps.TryGetValue(id, out var ps)) return ps;
+            var equalityTerm = GetTerm(id);
+            if ((equalityTerm.Name != "=" && equalityTerm.Name != "~") || equalityTerm.Args.Length != 2) throw new Exception("Encountered unexpected term while looking up rewrite.");
+            return new DirectEqualityExplanation(equalityTerm.Args[0], equalityTerm.Args[1], equalityTerm);
+        }
+
         public Dictionary<int, Quantifier> GetRootNamespaceQuantifiers()
         {
             return namespaces[""].quantifiers;
@@ -151,21 +159,13 @@ namespace AxiomProfiler.QuantifierModel
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
-                if (current.flag)
-                {
-#if DEBUG
-                    throw new Exception("Found cycle in causality graph!");
-#else
-                    continue;
-#endif
-                }
                 current.flag = true;
 
                 foreach (Instantiation inst in current.ResponsibleInstantiations
                     .Where(inst => current.DeepestSubpathDepth >= inst.DeepestSubpathDepth))
                 {
                     inst.DeepestSubpathDepth = current.DeepestSubpathDepth + 1;
-                    todo.Enqueue(inst);
+                    if (!inst.flag) todo.Enqueue(inst);
                 }
             }
 
@@ -274,61 +274,6 @@ namespace AxiomProfiler.QuantifierModel
             }
             scopes[end].Scope.AddChildScope(cur);
             scopes[end].Implied.Add(MarkerLiteral);
-        }
-
-        public Common SetupImportantInstantiations()
-        {
-            List<Common> res = new List<Common>();
-
-            if (!proofSteps.ContainsKey(0))
-            {
-                return Common.Callback("PROOF-INST", () => res);
-            }
-
-            List<ImportantInstantiation> roots = new List<ImportantInstantiation>();
-            List<ImportantInstantiation> allUsed = new List<ImportantInstantiation>();
-            List<Common> quantLabels = new List<Common>();
-
-            res.Add(Common.Callback("QUANTS BY MAX USEFUL DEPTH", () => quantLabels));
-            res.Add(Common.Callback("ALL PROOF INSTS", () => allUsed));
-
-            CollectInsts((ProofRule)proofSteps[0]);
-            foreach (var imp in importants.Values)
-            {
-                if (imp.DepCount == 0)
-                {
-                    roots.Add(imp);
-                }
-
-                imp.Quant.UsefulInstances++;
-
-                if (imp.UseCount > 0)
-                {
-                    allUsed.Add(imp);
-                }
-            }
-
-            roots.Sort((i1, i2) => i2.WDepth.CompareTo(i1.WDepth));
-            foreach (var r in roots)
-            {
-                ComputeMaxDepth(r);
-            }
-
-            List<Quantifier> quantsByMaxDepth = GetRootNamespaceQuantifiers().Values
-                .Where(q => q.MaxDepth > 0).ToList();
-
-            quantsByMaxDepth.Sort((q1, q2) =>
-                q1.MaxDepth == q2.MaxDepth
-                    ? q2.UsefulInstances.CompareTo(q1.UsefulInstances)
-                    : q2.MaxDepth.CompareTo(q1.MaxDepth));
-
-            quantLabels.AddRange(quantsByMaxDepth
-                .Select(q => new ForwardingNode(q.MaxDepth + "   " + q.UsefulInstances + "    " + q.ToString(), q)));
-
-            importants.Clear();
-            visitedRules.Clear();
-            res.AddRange(roots);
-            return Common.Callback("PROOF-INST", () => res);
         }
 
         private void ComputeMaxDepth(ImportantInstantiation imp)

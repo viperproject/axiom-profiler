@@ -207,6 +207,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\LambdaEqualityComparer.cs" />
     <Compile Include="Utilities\RepeatIndefinietly.cs" />
+    <Compile Include="Utilities\TupleEqualityComparers.cs" />
     <EmbeddedResource Include="AboutBox.resx">
       <DependentUpon>AboutBox.cs</DependentUpon>
       <SubType>Designer</SubType>

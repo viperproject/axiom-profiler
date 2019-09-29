@@ -301,12 +301,6 @@ namespace AxiomProfiler
                 AddTopNode(Common.Callback("100 CONFLICTS", () => RandomConflicts(100)));
             }
 
-            if (model.proofSteps.ContainsKey(0))
-            {
-                AddTopNode(model.proofSteps[0]);
-                AddTopNode(model.SetupImportantInstantiations());
-            }
-
             model.NewModel();
             AddTopNodes(model.models);
 
