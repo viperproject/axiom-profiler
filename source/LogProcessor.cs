@@ -501,7 +501,13 @@ namespace AxiomProfiler
                 }
             }
 
-            //TODO: This point is reached even though it shouldn't be. It seems that z3 does not log all the necessary rewritings (I've seen this only for additions so far).
+            //TODO: a breadth first approach would probably perform better
+            foreach (var dt in term.dependentTerms)
+            {
+                var res = UndoRewrite(dt, originalSuperterm);
+                if (res.Item2.Any()) return res;
+            }
+
             return start;
         }
 
@@ -529,7 +535,6 @@ namespace AxiomProfiler
                     if (topLevelTerm.Responsible != null && !topLevelTerm.Responsible.concreteBody.isSubterm(topLevelTerm))
                     {
                         var responsibleBody = topLevelTerm.Responsible.concreteBody;
-                        var to = topLevelTerm;
                         var undone = UndoRewrite(topLevelTerm, responsibleBody);
                         topLevelTerm = undone.Item1;
                         var explanation = undone.Item2;
@@ -537,7 +542,7 @@ namespace AxiomProfiler
                         {
                             if (explanation.Take(2).Count() == 2)
                             {
-                                explanations.Add(new TransitiveEqualityExplanation(topLevelTerm, to, explanation.ToArray()));
+                                explanations.Add(new TransitiveEqualityExplanation(topLevelTerm, explanation.Last().target, explanation.ToArray()));
                             }
                             else
                             {
