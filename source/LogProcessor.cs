@@ -512,12 +512,13 @@ namespace AxiomProfiler
         /// <param name="off"> Index at which relvant information starts (after semicolon). </param>
         /// <param name="pattern"> The pattern term that was matched. </param>
         /// <param name="bindings"> The terms bound to the quantified variables. </param>
-        private BindingInfo GetBindingInfoFromMatch(string[] logInfo, int off, Term pattern, Term[] bindings)
+        /// <param name="rootBindings"> Indicates whether the root of each binding's equivalence class is used instead of the indicated term when instantiating. </param>
+        private BindingInfo GetBindingInfoFromMatch(string[] logInfo, int off, Term pattern, Term[] bindings, bool rootBindings)
         {
             int endIndex = logInfo.Length;
             int i = off;
             var topLevelTerms = new List<Term>();
-            var explanations = bindings.Select(b => GetExplanationToRoot(b.id)).ToList();
+            var explanations = rootBindings ? bindings.Select(b => GetExplanationToRoot(b.id)).ToList() : new List<EqualityExplanation>();
             var bindingsRoots = explanations.Select(e => e.target).ToArray();
             while (i < endIndex)
             {
@@ -1182,7 +1183,7 @@ namespace AxiomProfiler
                         var id = ParseIdentifier(words[3]);
                         var pattern = quant.BodyTerm.Args.First(pat => pat.id == id.Item2);
                         if (pattern.Name != "pattern") throw new InvalidOperationException($"Expected pattern but found {pattern}.");
-                        var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args);
+                        var bindingInfo = GetBindingInfoFromMatch(words, separationIndex + 1, pattern, args, qid.Item1 == "");
                         Instantiation inst = new Instantiation(bindingInfo, "trigger based instantiation")
                         {
                             Quant = quant

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace AxiomProfiler.Utilities.TupleEqulityComparers
 {
+    /// <summary>
+    /// Compares a 2-tuple based on the first element only using its default comparer.
+    /// </summary>
     class FirstComparer<T1, T2> : IEqualityComparer<Tuple<T1, T2>>
     {
         private IEqualityComparer<T1> deleg = EqualityComparer<T1>.Default;
