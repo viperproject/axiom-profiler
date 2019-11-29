@@ -193,7 +193,7 @@ namespace AxiomProfiler.QuantifierModel
         public BindingInfo(Term pattern, ICollection<Term> bindings, ICollection<Term> topLevelTerms, IEnumerable<EqualityExplanation> equalityExplanations)
         {
             fullPattern = pattern;
-            BoundTerms = bindings.Distinct().ToArray();
+            BoundTerms = bindings.ToArray();
             TopLevelTerms = topLevelTerms.ToArray();
             EqualityExplanations = equalityExplanations.Distinct().ToArray();
             numEq = EqualityExplanations.Length;
