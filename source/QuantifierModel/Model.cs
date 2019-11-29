@@ -159,19 +159,13 @@ namespace AxiomProfiler.QuantifierModel
             while (todo.Count > 0)
             {
                 Instantiation current = todo.Dequeue();
-                current.flag = true;
 
                 foreach (Instantiation inst in current.ResponsibleInstantiations
                     .Where(inst => current.DeepestSubpathDepth >= inst.DeepestSubpathDepth))
                 {
                     inst.DeepestSubpathDepth = current.DeepestSubpathDepth + 1;
-                    if (!inst.flag) todo.Enqueue(inst);
+                    todo.Enqueue(inst);
                 }
-            }
-
-            foreach (var inst in instances)
-            {
-                inst.flag = false;
             }
         }
 
