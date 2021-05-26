@@ -561,10 +561,6 @@ namespace AxiomProfiler.QuantifierModel
             if (!hasCycle()) return;
             var cycle = cycleDetector.getCycleQuantifiers();
             var generalizationState = cycleDetector.getGeneralization();
-            if (generalizationState.NeedsIds)
-            {
-                format.showTermId = true;
-            }
 
             if (generalizationState.TrueLoop)
             {
