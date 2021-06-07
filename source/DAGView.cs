@@ -665,6 +665,11 @@ namespace AxiomProfiler
             return curPath;
         }
 
+        // TODO: Need to change this function to accomdate the new algorithm
+        // Arguments: Node (the selected node), nodesToGO (the bound)
+        // Perform BFS search bounded by nodesToGo,
+        // Keeping track the path used to reach the current node from the selected node
+        // return paths that reaches a node of the same type as the selected node
         private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node, int nodesToGo)
         {
             if (nodesToGo <= 0 || !node.OutEdges.Any()) return Enumerable.Repeat(basePath, 1);
