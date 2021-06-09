@@ -641,11 +641,11 @@ namespace AxiomProfiler
             var curNode = node;
             var curPath = new InstantiationPath();
             curPath.append((Instantiation)node.UserData);
-            while (curNode.OutEdges.Any())
-            {
-                curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
-                curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
-            }
+            //while (curNode.OutEdges.Any())
+            //{
+            //    curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
+            //    curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
+            //}
             return curPath;
         }
 
