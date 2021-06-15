@@ -1,13 +1,17 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace TestProject1
+namespace AxiomProfiler
 {
     [TestClass]
-    public class UnitTest1
+    public class DAGViewTest
     {
+        static SmallGraphs graphs = new SmallGraphs();
+        static AxiomProfiler axiomprofiler = new AxiomProfiler();
+
         [TestMethod]
         public void TestMethod1()
         {
+            Assert.AreEqual("a", graphs.graph1.Id);
         }
     }
 }
