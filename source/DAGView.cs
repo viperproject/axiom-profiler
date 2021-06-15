@@ -468,6 +468,9 @@ namespace AxiomProfiler
             redrawGraph();
         }
 
+        // This functions and it's helper functions are properlly explain in
+        //https://docs.google.com/document/d/1SJspfBecgkVT9U8xC-MvQ_NPDTGVfg0yqq7YjJ3ma2s/edit?usp=sharing
+        // helper functions were originally private, but changing to public was needed to unit testing
         private void pathExplanationButton_Click(object sender, EventArgs e)
         {
             if (previouslySelectedNode == null)
@@ -540,152 +543,55 @@ namespace AxiomProfiler
         private static readonly double outlierThreshold = 0.3;
         private static readonly double incomingEdgePenalizationFactor = 0.5;
 
-        /// <summary>
-        /// Assigns a score to instantiation paths based on the predicted likelyhood that it conatins a matching loop.
-        /// </summary>
-        /// <returns>Higher values indicate a higher likelyhood of the path containing a matching loop.</returns>
-        /// <remarks>All constants were determined experimentally.</remarks>
+        // Return a score where
+        // - having longer length recieves a higher score
+        // - having less covered children recieves a higher score
+        // - having shorter pattern recieved a higher score
         private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
-            //There may be some "outiers" before or after a matching loop.
-            //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
-            var statistics = instantiationPath.Statistics();
-            var eliminationTreshhold = (statistics == null || !statistics.Any()) ? 1 :
-		Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
-            var nonEliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term, Term>>(statistics
-                .Where(dp => dp.Item2 > eliminationTreshhold)
-                .Select(dp => dp.Item1));
-
-            //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
-            var pathInstantiations = instantiationPath.getInstantiations();
-            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) => !next.bindingInfo.IsPatternMatch() ?
-                Enumerable.Repeat(Tuple.Create<Quantifier, Term, Term>(next.Quant, null, null), 1) :
-                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
-                .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
-
-            var maxStartIndex = 0;
-            var maxLength = 0;
-            var lastMaxStartIndex = 0;
-
-            var firstKept = nonEliminatableQuantifiers.Any(q => q.Item1 == pathInstantiations.First().Quant && q.Item2 == pathInstantiations.First().bindingInfo.fullPattern);
-            var curStartIndex = firstKept ? 0 : 1;
-            var curLength = firstKept ? 1 : 0;
-            for (var i = 0; i < instantiations.Count(); ++i)
-            {
-                if (instantiations[i].Any(q => nonEliminatableQuantifiers.Contains(q)))
-                {
-                    ++curLength;
-                }
-                else
-                {
-                    if (curLength > maxLength)
-                    {
-                        maxStartIndex = curStartIndex;
-                        lastMaxStartIndex = curStartIndex;
-                        maxLength = curLength;
-                    }
-                    else if (curLength == maxLength)
-                    {
-                        lastMaxStartIndex = curStartIndex;
-                    }
-                    curStartIndex = i + 2;
-                    curLength = 0;
-                }
-            }
-            if (curLength > maxLength)
-            {
-                maxStartIndex = curStartIndex;
-                lastMaxStartIndex = curStartIndex;
-                maxLength = curLength;
-            }
-            else if (curLength == maxLength)
-            {
-                lastMaxStartIndex = curStartIndex;
-            }
-
-            //...and eliminate the prefix/postfix of that subsequence
-            var remainingStart = eliminatePrefix ? maxStartIndex : 0;
-            var remainingLength = (eliminatePostfix ? lastMaxStartIndex + maxLength : instantiations.Count()) - remainingStart;
-            var remainingInstantiations = instantiationPath.getInstantiations().ToList().GetRange(remainingStart, remainingLength);
-
-            if (remainingInstantiations.Count() == 0) return -1;
-
-            var remainingPath = new InstantiationPath();
-            foreach (var inst in remainingInstantiations)
-            {
-                remainingPath.append(inst);
-            }
-
-            /* We count the number of incoming edges (responsible instantiations that are not part of the path) and penalize them.
-             * This ensures that we choose the best path. E.g. in the triangular case (A -> B, A -> C, B -> C) we want to choose A -> B -> C
-             * and not A -> B which would have an incoming edge (B -> C).
-             */
-            var numberIncomingEdges = 0;
-            foreach (var inst in remainingInstantiations)
-            {
-                numberIncomingEdges += inst.ResponsibleInstantiations.Where(i => !instantiationPath.getInstantiations().Contains(i)).Count();
-            }
-
-            /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
-             * which is an approximation for the number of repetitions of a matching loop occuring in that path.
-             */
-            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.NumberOfDistinctQuantifierFingerprints();
+            // TODO
+            return 0.0;
         }
 
         // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
         // build a path from the best segments.
         private static readonly int pathSegmentSize = 8;
 
-        private InstantiationPath BestDownPath(Node node)
+
+        // Described in https://docs.google.com/document/d/1SJspfBecgkVT9U8xC-MvQ_NPDTGVfg0yqq7YjJ3ma2s/edit?usp=sharing
+        // Get all down patterns,
+        // extent them to max(3, lcm(length of patterns)),
+        // score them and sort by score
+        // extend to top 5 path fully
+        // score and sort the fully extended path
+        // return the best one
+        public InstantiationPath BestDownPath(Node node)
         {
-            var curNode = node;
-            var curPath = new InstantiationPath();
-            curPath.append((Instantiation)node.UserData);
-            while (curNode.OutEdges.Any())
-            {
-                curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
-                curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
-            }
-            return curPath;
+            // TODO
+            return null;
         }
 
-        private InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
+        // Similar to BestDownPath but up
+        public InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
         {
-            var curNode = node;
-            var curPath = downPath;
-            while (curNode.InEdges.Any())
-            {
-                curPath = AllUpPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path =>
-                {
-                    path.appendWithOverlap(downPath);
-                    return InstantiationPathScoreFunction(path, true, true);
-                }).First();
-                curNode = graph.FindNode(curPath.getInstantiations().First().uniqueID);
-            }
-            return curPath;
+            // TODO
+            return null;
         }
 
-        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node, int nodesToGo)
+        // Return all down patterns found with the bound
+        public static List<List<Quantifier>> AllDownPattern(Node node, int bound)
         {
-            if (nodesToGo <= 0 || !node.OutEdges.Any()) return Enumerable.Repeat(basePath, 1);
-            return node.OutEdges.SelectMany(e => {
-                var copy = new InstantiationPath(basePath);
-                copy.append((Instantiation)e.TargetNode.UserData);
-                return AllDownPaths(copy, e.TargetNode, nodesToGo - 1);
-            });
+            // TODO
+            return null;
         }
 
-        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node, int nodesToGo)
+        public static List<List<Quantifier>> AllUpPattern(Node node, int bound)
         {
-            if (nodesToGo <= 0 || !node.InEdges.Any()) return Enumerable.Repeat(basePath, 1);
-            return node.InEdges.SelectMany(e => {
-                var copy = new InstantiationPath(basePath);
-                copy.prepend((Instantiation)e.SourceNode.UserData);
-                return AllUpPaths(copy, e.SourceNode, nodesToGo - 1);
-            });
+            // TODO
+            return null;
         }
 
-        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
+        public static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
         {
             var nodeInst = (Instantiation)node.UserData;
             if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
@@ -694,6 +600,12 @@ namespace AxiomProfiler
             var res = ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
             res.appendWithOverlap(downPath);
             return res;
+        }
+
+        public static InstantiationPath ExtendPathDownwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
+        {
+            //TODO
+            return null;
         }
 
         private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
