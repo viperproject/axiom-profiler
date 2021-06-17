@@ -580,9 +580,55 @@ namespace AxiomProfiler
 
         // Return all down patterns found with the bound
         public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
+        {   
+            List<List<Quantifier>> Patterns = new List<List<Quantifier>>();
+            Quantifier Target = ((Instantiation) node.UserData).Quant;
+            List<Quantifier> CurPattern = new List<Quantifier>();
+            CurPattern.Add(Target);
+            Tuple<Node, List<Quantifier>> CurPair = new Tuple<Node, List<Quantifier>>(node, CurPattern);
+            List<Tuple<Node, List<Quantifier>>> PathStack= new List<Tuple<Node, List<Quantifier>>>();
+            PathStack.Add(CurPair);
+            Node CurNode, Child;
+            Quantifier ChildQuant;
+            Dictionary<string, bool> seen = new Dictionary<string, bool>();
+
+            while(PathStack.Count > 0)
+            {
+                CurPair = PathStack[PathStack.Count - 1];
+                PathStack.RemoveAt(PathStack.Count - 1);
+                CurNode = CurPair.Item1;
+                CurPattern = CurPair.Item2;
+                if (CurPattern.Count > bound) break;
+                foreach (Edge edge in CurNode.Edges)
+                {
+                    Child = edge.TargetNode;
+                    ChildQuant = ((Instantiation) Child.UserData).Quant;
+                    if (ChildQuant.Equals(Target))
+                    {
+                        if (!Patterns.Contains(CurPattern))
+                        {
+                            Patterns.Add(CurPattern);
+                        }
+                    } else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
+                    }
+                }
+            }
+            return Patterns;
+        }
+
+        // Helper function for AllDownPatterns and AllUpPatterns
+        private string PatternToString(List<Quantifier> Pattern)
         {
-            // TODO
-            return null;
+            string s = "";
+            foreach (Quantifier Quant in Pattern)
+            {
+                s += Quant.PrintName;
+            }
+            return s;
         }
 
         public static List<List<Quantifier>> AllUpPatterns(Node node, int bound)
