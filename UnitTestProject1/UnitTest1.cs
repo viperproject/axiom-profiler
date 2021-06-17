@@ -30,7 +30,7 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestAllDownPatterns1()
         {
-            List<List<Quantifier>> result = DAGView.AllDownPattern(Graphs.graph1.FindNode("a"), 8);
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph1.FindNode("a"), 8);
             Assert.AreEqual(0, result.Count);
             //Assert.AreEqual("a", Graphs.node1.Id);
         }

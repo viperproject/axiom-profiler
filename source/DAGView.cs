@@ -579,13 +579,13 @@ namespace AxiomProfiler
         }
 
         // Return all down patterns found with the bound
-        public static List<List<Quantifier>> AllDownPattern(Node node, int bound)
+        public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
         {
             // TODO
             return null;
         }
 
-        public static List<List<Quantifier>> AllUpPattern(Node node, int bound)
+        public static List<List<Quantifier>> AllUpPatterns(Node node, int bound)
         {
             // TODO
             return null;
