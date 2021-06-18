@@ -599,7 +599,7 @@ namespace AxiomProfiler
                 CurNode = CurPair.Item1;
                 CurPattern = CurPair.Item2;
                 if (CurPattern.Count > bound) break;
-                foreach (Edge edge in CurNode.Edges)
+                foreach (Edge edge in CurNode.OutEdges)
                 {
                     Child = edge.TargetNode;
                     ChildQuant = ((Instantiation) Child.UserData).Quant;
