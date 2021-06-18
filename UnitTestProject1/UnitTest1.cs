@@ -27,12 +27,32 @@ namespace UnitTestProject1
 
         // The following are tests for AllDownPatterns
 
+        // TestAllDownPatterns1
+        // Travial Case where the node has no dependent nodes
         [TestMethod]
         public void TestAllDownPatterns1()
         {
             List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph1.FindNode("A"), 8);
             Assert.AreEqual(0, result.Count);
-            //Assert.AreEqual("a", Graphs.node1.Id);
+        }
+
+        // Test on bigger graph with minimum bound
+        [TestMethod]
+        public void TestAllDownPattern2()
+        {
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph2.FindNode("A"), 1);
+            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual(Graphs.Quants[0], result[0][0]);
+        }
+
+        // Test on bigger graph with default bound
+        [TestMethod]
+        public void TestAllDownPattern3()
+        {
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph2.FindNode("A"), 8);
+            List<Quantifier> expected = new List<Quantifier>() { Graphs.Quants[0] };
+            Console.WriteLine(result.Count.ToString());
+            Assert.AreEqual(2, result.Count);
         }
     }
 }
