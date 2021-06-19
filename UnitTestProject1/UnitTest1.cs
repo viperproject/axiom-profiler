@@ -1,20 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
-using System.Windows.Forms;
 using AxiomProfiler;
 using AxiomProfiler.QuantifierModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows.Forms;
-using System.Threading.Tasks;
-using Microsoft.Msagl.Core.Routing;
-using Microsoft.Msagl.GraphViewerGdi;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.Layout.Layered;
-using AxiomProfiler.QuantifierModel;
-
 
 namespace UnitTestProject1
 {
@@ -53,8 +41,8 @@ namespace UnitTestProject1
             List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0] };
             List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(2, result.Count);
-            Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected1));
-            Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected2));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
         }
 
         // Test that AllDownPatterns return unique patterns
@@ -64,7 +52,7 @@ namespace UnitTestProject1
             List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph3.FindNode("A"), 8);
             List<Quantifier> expected = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(1, result.Count);
-            Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected));
         }
     }
 }

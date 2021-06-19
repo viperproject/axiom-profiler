@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Msagl.Drawing;
-using AxiomProfiler;
 using AxiomProfiler.QuantifierModel;
 
 namespace UnitTestProject1
