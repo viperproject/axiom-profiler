@@ -51,10 +51,20 @@ namespace UnitTestProject1
         {
             List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph2.FindNode("A"), 8);
             List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0] };
-            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1]};
+            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(2, result.Count);
             Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected1));
             Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected2));
+        }
+
+        // Test that AllDownPatterns return unique patterns
+        [TestMethod]
+        public void TestAllDownPattern4()
+        {
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph3.FindNode("A"), 8);
+            List<Quantifier> expected = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            Assert.AreEqual(1, result.Count);
+            Assert.IsTrue(TestGraphs.ContainPattern(ref result, ref expected));
         }
     }
 }

@@ -14,8 +14,7 @@ namespace UnitTestProject1
     {
         public List<Quantifier> Quants = new List<Quantifier>(); // Quantifiers used in unit tests
         public BindingInfo Info; // BindingInfo used to make nodes
-        public Graph graph1;
-        public Graph graph2;
+        public Graph graph1, graph2, graph3;
 
         // Constructor
         // Mkae the graphs needsed for testing
@@ -24,6 +23,7 @@ namespace UnitTestProject1
             InitQuantsAndInfo();
             MakeGraph1();
             MakeGraph2();
+            MakeGraph3();
         }
 
         // initialize 9 quantifiers
@@ -96,6 +96,24 @@ namespace UnitTestProject1
             graph2.AddEdge("B", "L");
             graph2.AddEdge("L", "N");
             graph2.AddEdge("A", "M");
+        }
+
+        private void MakeGraph3()
+        {
+            graph3 = new Graph();
+            graph3.AddNode(MakeNode("A", 0));
+            graph3.AddNode(MakeNode("B", 1));
+            graph3.AddNode(MakeNode("C", 1));
+            graph3.AddNode(MakeNode("D", 0));
+            graph3.AddNode(MakeNode("E", 0));
+            graph3.AddNode(MakeNode("F", 0));
+            graph3.AddNode(MakeNode("G", 0));
+            graph3.AddEdge("A", "B");
+            graph3.AddEdge("A", "C");
+            graph3.AddEdge("B", "D");
+            graph3.AddEdge("B", "E");
+            graph3.AddEdge("C", "F");
+            graph3.AddEdge("C", "G");
         }
     }
 }
