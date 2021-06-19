@@ -648,10 +648,11 @@ namespace AxiomProfiler
             return res;
         }
 
-        public static InstantiationPath ExtendPathDownwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
+        public static List<Node> ExtendDownwards(Node node, ref List<Quantifier> Pattern, int bound)
         {
+            List<Node> path = new List<Node>();
             //TODO
-            return null;
+            return path;
         }
 
         private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
