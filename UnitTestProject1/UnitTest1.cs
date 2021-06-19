@@ -123,7 +123,7 @@ namespace UnitTestProject1
             }
         }
 
-        // Pattern of size 2, bound of 10
+        // Pattern of size 2, bound of -1 (unlimited, goes as further as it can)
         // on grpah 3 with the patter [Quantifier 0, Quantifier 1]
         // For ever node, if possible, always choose a child that can be extended one more time.
         [TestMethod]
@@ -131,7 +131,7 @@ namespace UnitTestProject1
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
-                DAGView.ExtendDownwards(Graphs.graph2.FindNode("A"), ref pattern, 10);
+                DAGView.ExtendDownwards(Graphs.graph2.FindNode("A"), ref pattern, -1);
             List<string> expected =
                 new List<string>() { "A", "C", "E", "G" };
             Assert.AreEqual(5, result.Count);
