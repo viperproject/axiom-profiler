@@ -52,15 +52,6 @@ namespace UnitTestProject1
             return node;
         }
 
-        public static bool ContainPattern(ref List<List<Quantifier>> patterns, ref List<Quantifier> pattern)
-        {
-            for (int i = 0; i < patterns.Count; i++)
-            {
-                if (patterns[i].SequenceEqual(pattern)) return true;
-            }
-            return false;
-        }
-
         // Graph1 is graph containing only one node
         private void MakeGraph1()
         {

@@ -605,7 +605,7 @@ namespace AxiomProfiler
                     ChildQuant = ((Instantiation) Child.UserData).Quant;
                     if (ChildQuant.Equals(Target))
                     {
-                        if (!Patterns.Contains(CurPattern))
+                        if (!ContainPattern(ref Patterns, ref CurPattern))
                         {
                             Patterns.Add(CurPattern);
                         }
@@ -673,6 +673,15 @@ namespace AxiomProfiler
                 }
             }
             return bestPath;
+        }
+
+        public static bool ContainPattern(ref List<List<Quantifier>> patterns, ref List<Quantifier> pattern)
+        {
+            for (int i = 0; i < patterns.Count; i++)
+            {
+                if (patterns[i].SequenceEqual(pattern)) return true;
+            }
+            return false;
         }
 
         private void highlightPath(InstantiationPath path)
