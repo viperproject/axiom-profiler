@@ -12,7 +12,7 @@ namespace UnitTestProject1
     {
         public List<Quantifier> Quants = new List<Quantifier>(); // Quantifiers used in unit tests
         public BindingInfo Info; // BindingInfo used to make nodes
-        public Graph graph1, graph2, graph3, graph4;
+        public Graph graph1, graph2, graph3, graph4, graph5;
 
         // Constructor
         // Mkae the graphs needsed for testing
@@ -22,6 +22,8 @@ namespace UnitTestProject1
             MakeGraph1();
             MakeGraph2();
             MakeGraph3();
+            MakeGraph4();
+            MakeGraph5();
         }
 
         // initialize 9 quantifiers
@@ -108,5 +110,57 @@ namespace UnitTestProject1
             graph3.AddEdge("G", "H");
             graph3.AddEdge("G", "I");
         }
-     }
+
+        private void MakeGraph4()
+        {
+            graph4 = new Graph();
+            graph4.AddNode(MakeNode("A", 0));
+            graph4.AddNode(MakeNode("B", 1));
+            graph4.AddNode(MakeNode("C", 2));
+            graph4.AddNode(MakeNode("D", 3));
+            graph4.AddNode(MakeNode("E", 4));
+            graph4.AddNode(MakeNode("F", 5));
+            graph4.AddNode(MakeNode("G", 6));
+            graph4.AddNode(MakeNode("H", 7));
+            graph4.AddNode(MakeNode("I", 8));
+            graph4.AddNode(MakeNode("J", 9));
+            graph4.AddNode(MakeNode("K", 0));
+            graph4.AddNode(MakeNode("L", 0));
+            graph4.AddNode(MakeNode("M", 0));
+            graph2.AddNode(MakeNode("N", 1));
+            char prev = 'K';
+            for (char c = 'J'; c >= 'C'; c--)
+            {
+                graph4.AddEdge(prev.ToString(), c.ToString());
+                prev = c;
+            }
+            graph4.AddEdge("C", "A");
+            graph4.AddEdge("B", "A");
+            graph4.AddEdge("L", "B");
+            graph4.AddEdge("N", "L");
+            graph4.AddEdge("M", "A");
+        }
+
+        private void MakeGraph5()
+        {
+            graph5 = new Graph();
+            graph5.AddNode(MakeNode("A", 0));
+            graph5.AddNode(MakeNode("B", 1));
+            graph5.AddNode(MakeNode("C", 1));
+            graph5.AddNode(MakeNode("D", 0));
+            graph5.AddNode(MakeNode("E", 0));
+            graph5.AddNode(MakeNode("F", 1));
+            graph5.AddNode(MakeNode("G", 1));
+            graph5.AddNode(MakeNode("H", 0));
+            graph5.AddNode(MakeNode("I", 0));
+            graph5.AddEdge("B", "A");
+            graph5.AddEdge("C", "A");
+            graph5.AddEdge("D", "C");
+            graph5.AddEdge("E", "C");
+            graph5.AddEdge("F", "E");
+            graph5.AddEdge("G", "E");
+            graph5.AddEdge("H", "G");
+            graph5.AddEdge("I", "G");
+        }
+    }
 }

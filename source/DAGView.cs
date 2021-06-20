@@ -620,21 +620,11 @@ namespace AxiomProfiler
             return Patterns;
         }
 
-        // Helper function for AllDownPatterns and AllUpPatterns
-        private string PatternToString(List<Quantifier> Pattern)
-        {
-            string s = "";
-            foreach (Quantifier Quant in Pattern)
-            {
-                s += Quant.PrintName;
-            }
-            return s;
-        }
-
         public static List<List<Quantifier>> AllUpPatterns(Node node, int bound)
         {
+            List<List<Quantifier>> patterns = new List<List<Quantifier>>();
             // TODO
-            return null;
+            return patterns;
         }
 
         public static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
