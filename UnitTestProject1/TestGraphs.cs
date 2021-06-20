@@ -127,7 +127,7 @@ namespace UnitTestProject1
             graph4.AddNode(MakeNode("K", 0));
             graph4.AddNode(MakeNode("L", 0));
             graph4.AddNode(MakeNode("M", 0));
-            graph2.AddNode(MakeNode("N", 1));
+            graph4.AddNode(MakeNode("N", 1));
             char prev = 'K';
             for (char c = 'J'; c >= 'C'; c--)
             {

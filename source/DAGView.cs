@@ -1,17 +1,16 @@
-﻿using System;
+﻿using AxiomProfiler.QuantifierModel;
+using Microsoft.Msagl.Core.Routing;
+using Microsoft.Msagl.Drawing;
+using Microsoft.Msagl.GraphViewerGdi;
+using Microsoft.Msagl.Layout.Layered;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 using System.Threading.Tasks;
-using Microsoft.Msagl.Core.Routing;
-using Microsoft.Msagl.GraphViewerGdi;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.Layout.Layered;
-using AxiomProfiler.QuantifierModel;
+using System.Windows.Forms;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
 using Size = System.Drawing.Size;
-using AxiomProfiler.Utilities;
 
 namespace AxiomProfiler
 {
@@ -169,13 +168,13 @@ namespace AxiomProfiler
                 case "injectivity":
                     return Color.Purple;
                 default:*/
-                if (!colorMap.TryGetValue(quant, out var color))
-                {
-                    color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
-                    colorMap[quant] = color;
-                }
+            if (!colorMap.TryGetValue(quant, out var color))
+            {
+                color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
+                colorMap[quant] = color;
+            }
 
-                return color;
+            return color;
             //}
         }
 
@@ -492,7 +491,7 @@ namespace AxiomProfiler
                 catch (Exception exception)
                 {
                     _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug to viper@inf.ethz.ch.\nDescription of the exception: {exception.Message}");
-		    Console.WriteLine(exception);
+                    Console.WriteLine(exception);
                 }
 #endif
             });
@@ -539,18 +538,18 @@ namespace AxiomProfiler
 
         // Return all down patterns found with the bound
         public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
-        {   
+        {
             List<List<Quantifier>> Patterns = new List<List<Quantifier>>();
-            Quantifier Target = ((Instantiation) node.UserData).Quant;
+            Quantifier Target = ((Instantiation)node.UserData).Quant;
             List<Quantifier> CurPattern = new List<Quantifier>();
             CurPattern.Add(Target);
             Tuple<Node, List<Quantifier>> CurPair = new Tuple<Node, List<Quantifier>>(node, CurPattern);
-            List<Tuple<Node, List<Quantifier>>> PathStack= new List<Tuple<Node, List<Quantifier>>>();
+            List<Tuple<Node, List<Quantifier>>> PathStack = new List<Tuple<Node, List<Quantifier>>>();
             PathStack.Add(CurPair);
             Node CurNode, Child;
             Quantifier ChildQuant;
 
-            while(PathStack.Count > 0)
+            while (PathStack.Count > 0)
             {
                 CurPair = PathStack[PathStack.Count - 1];
                 PathStack.RemoveAt(PathStack.Count - 1);
@@ -560,14 +559,15 @@ namespace AxiomProfiler
                 foreach (Edge edge in CurNode.OutEdges)
                 {
                     Child = edge.TargetNode;
-                    ChildQuant = ((Instantiation) Child.UserData).Quant;
+                    ChildQuant = ((Instantiation)Child.UserData).Quant;
                     if (ChildQuant.Equals(Target))
                     {
                         if (!ContainPattern(ref Patterns, ref CurPattern))
                         {
                             Patterns.Add(CurPattern);
                         }
-                    } else
+                    }
+                    else
                     {
                         List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
                         NewPattern.Add(ChildQuant);
@@ -625,17 +625,17 @@ namespace AxiomProfiler
             Node LastNode = node, CurNode, Child, Grandchild;
             int PatternIndex = 0, NextQuant;
             bool HaveGoodChild = false;
-            while(true)
+            while (true)
             {
-                LoopBegin:
+            LoopBegin:
                 PatternIndex = (PatternIndex + 1) % Pattern.Count;
                 CurNode = path[path.Count - 1];
                 HaveGoodChild = false;
                 if ((bound > 0) & (path.Count == bound)) break;
                 foreach (Edge edge in CurNode.OutEdges)
-                {   
+                {
                     Child = edge.TargetNode;
-                    if (((Instantiation) Child.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
+                    if (((Instantiation)Child.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
                     {
                         HaveGoodChild = true;
                         LastNode = Child;
@@ -643,7 +643,7 @@ namespace AxiomProfiler
                         foreach (Edge edge2 in Child.OutEdges)
                         {
                             Grandchild = edge2.TargetNode;
-                            if (((Instantiation) Grandchild.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
+                            if (((Instantiation)Grandchild.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
                             {
                                 path.Add(Child);
                                 goto LoopBegin;
@@ -660,7 +660,43 @@ namespace AxiomProfiler
         public static List<Node> ExtendUpwards(Node node, ref List<Quantifier> Pattern, int bound)
         {
             List<Node> path = new List<Node>() { node };
-            // TODO
+            Node LastNode = node, CurNode, Child, Grandchild;
+            int PatternIndex = 0, NextQuant;
+            bool HaveGoodChild = false;
+            while (true)
+            {
+            LoopBegin:
+                PatternIndex = (PatternIndex + 1) % Pattern.Count;
+                CurNode = path[path.Count - 1];
+                Console.WriteLine("d " + CurNode.Id);
+                HaveGoodChild = false;
+                if ((bound > 0) & (path.Count == bound)) break;
+                foreach (Edge edge in CurNode.InEdges)
+                {
+                    Child = edge.SourceNode;
+                    Console.WriteLine("dd " + Child.Id);
+                    if (((Instantiation)Child.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
+                    {
+                        HaveGoodChild = true;
+                        LastNode = Child;
+                        NextQuant = (PatternIndex + 1) % Pattern.Count;
+                        foreach (Edge edge2 in Child.InEdges)
+                        {
+                            Grandchild = edge2.SourceNode;
+                            Console.WriteLine(((Instantiation)Grandchild.UserData).Quant.PrintName);
+                            Console.WriteLine("ddd " + Grandchild.Id);
+                            if (((Instantiation)Grandchild.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
+                            {
+                                Console.WriteLine("dddd ");
+                                path.Add(Child);
+                                goto LoopBegin;
+                            }
+                        }
+                    }
+                }
+                if (HaveGoodChild) path.Add(LastNode);
+                break;
+            }
             return path;
         }
 
