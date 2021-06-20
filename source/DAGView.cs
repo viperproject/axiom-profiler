@@ -590,7 +590,6 @@ namespace AxiomProfiler
             PathStack.Add(CurPair);
             Node CurNode, Child;
             Quantifier ChildQuant;
-            Dictionary<string, bool> seen = new Dictionary<string, bool>();
 
             while(PathStack.Count > 0)
             {
@@ -622,9 +621,43 @@ namespace AxiomProfiler
 
         public static List<List<Quantifier>> AllUpPatterns(Node node, int bound)
         {
-            List<List<Quantifier>> patterns = new List<List<Quantifier>>();
-            // TODO
-            return patterns;
+            List<List<Quantifier>> Patterns = new List<List<Quantifier>>();
+            Quantifier Target = ((Instantiation)node.UserData).Quant;
+            List<Quantifier> CurPattern = new List<Quantifier>();
+            CurPattern.Add(Target);
+            Tuple<Node, List<Quantifier>> CurPair = new Tuple<Node, List<Quantifier>>(node, CurPattern);
+            List<Tuple<Node, List<Quantifier>>> PathStack = new List<Tuple<Node, List<Quantifier>>>();
+            PathStack.Add(CurPair);
+            Node CurNode, Child;
+            Quantifier ChildQuant;
+
+            while (PathStack.Count > 0)
+            {
+                CurPair = PathStack[PathStack.Count - 1];
+                PathStack.RemoveAt(PathStack.Count - 1);
+                CurNode = CurPair.Item1;
+                CurPattern = CurPair.Item2;
+                if (CurPattern.Count > bound) break;
+                foreach (Edge edge in CurNode.InEdges)
+                {
+                    Child = edge.SourceNode;
+                    ChildQuant = ((Instantiation)Child.UserData).Quant;
+                    if (ChildQuant.Equals(Target))
+                    {
+                        if (!ContainPattern(ref Patterns, ref CurPattern))
+                        {
+                            Patterns.Add(CurPattern);
+                        }
+                    }
+                    else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
+                    }
+                }
+            }
+            return Patterns;
         }
 
         public static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
