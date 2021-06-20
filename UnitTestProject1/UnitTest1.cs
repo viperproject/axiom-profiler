@@ -57,13 +57,13 @@ namespace UnitTestProject1
     }
 
     [TestClass]
-    public class ExtendDownardsWithPattern
+    public class ExtendDownards
     {
         static TestGraphs Graphs = new TestGraphs();
 
         // trivial case graph with one node a a pattern
         [TestMethod]
-        public void TestExtenDownwardsWithPattern1()
+        public void TestExtenDownwards1()
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result = 
@@ -74,7 +74,7 @@ namespace UnitTestProject1
         // small pattern with bound larger then the path
         // on graph 2, with pattern [Quantifier 0]
         [TestMethod]
-        public void TestExtendDownwardsWithPattern2()
+        public void TestExtendDownwards2()
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0]};
             List<Node> result = 
@@ -90,7 +90,7 @@ namespace UnitTestProject1
         // Pattern of size 2 and bound of size 4 (the entire path)
         // on graph2, with the pattern [Quantifier 0, Quantifier 1]
         [TestMethod]
-        public void TestExtendDownwardsWithPattern3()
+        public void TestExtendDownwards3()
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
@@ -107,7 +107,7 @@ namespace UnitTestProject1
         // on graph2, with the pattern
         // [Quantifier 0, Quantifier 2, Quantifier3, ... , Quantifier 9]
         [TestMethod]
-        public void TestExtendDownWardsWithPattern3()
+        public void TestExtendDownWards4()
         {
             List<Quantifier> pattern =
                 new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[3],
@@ -127,7 +127,7 @@ namespace UnitTestProject1
         // on grpah 3 with the patter [Quantifier 0, Quantifier 1]
         // For every node, if possible, always choose a child that can be extended one more time.
         [TestMethod]
-        public void TestExtendDownWardsWithPattern4()
+        public void TestExtendDownWards5()
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
