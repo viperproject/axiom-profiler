@@ -125,7 +125,7 @@ namespace UnitTestProject1
 
         // Pattern of size 2, bound of -1 (unlimited, goes as further as it can)
         // on grpah 3 with the patter [Quantifier 0, Quantifier 1]
-        // For ever node, if possible, always choose a child that can be extended one more time.
+        // For every node, if possible, always choose a child that can be extended one more time.
         [TestMethod]
         public void TestExtendDownWardsWithPattern4()
         {
