@@ -189,4 +189,93 @@ namespace UnitTestProject1
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected));
         }
     }
+
+    // Similar to ExtendDownwards, but up
+    [TestClass]
+    public class ExtendUpwards
+    {
+        static TestGraphs Graphs = new TestGraphs();
+
+        // trivial case graph with one node a a pattern
+        [TestMethod]
+        public void TestExtenUpwards1()
+        {
+            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Node> result =
+                DAGView.ExtendUpwards(Graphs.graph1.FindNode("A"), ref pattern, 10);
+            Assert.AreEqual(1, result.Count);
+        }
+
+        // small pattern with bound larger then the path
+        // on graph 2, with pattern [Quantifier 0]
+        [TestMethod]
+        public void TestExtendUpards2()
+        {
+            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0] };
+            List<Node> result =
+                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 3);
+            List<String> expected = new List<String>() { "A", "M" };
+            Assert.AreEqual(expected.Count, result.Count);
+            for (int i = 0; i < expected.Count; i++)
+            {
+                Assert.AreEqual(expected[i], result[i].Id);
+            }
+        }
+
+        // Pattern of size 2 and bound of size 4 (the entire path)
+        // on graph2, with the pattern [Quantifier 0, Quantifier 1]
+        [TestMethod]
+        public void TestExtendUpwards3()
+        {
+            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Node> result =
+                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 4);
+            List<String> expected = new List<String>() { "A", "B", "L", "N" };
+            Assert.AreEqual(expected.Count, result.Count);
+            for (int i = 0; i < expected.Count; i++)
+            {
+                Assert.AreEqual(expected[i], result[i].Id);
+            }
+        }
+
+        // Pattern of size 9, but bound to 6 (won't complete a cycle)
+        // on graph2, with the pattern
+        // [Quantifier 0, Quantifier 2, Quantifier3, ... , Quantifier 9]
+        [TestMethod]
+        public void TestExtendUpWards4()
+        {
+            List<Quantifier> pattern =
+                new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[3],
+                Graphs.Quants[4], Graphs.Quants[5], Graphs.Quants[6], Graphs.Quants[7],
+                Graphs.Quants[8], Graphs.Quants[9]};
+            List<Node> result =
+                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 6);
+            List<String> expected = new List<String>() { "A", "C", "D", "E", "F", "G" };
+            Assert.AreEqual(expected.Count, result.Count);
+            for (int i = 0; i < expected.Count; i++)
+            {
+                Assert.AreEqual(expected[i], result[i].Id);
+            }
+        }
+
+        // Pattern of size 2, bound of -1 (unlimited, goes as further as it can)
+        // on grpah 3 with the patter [Quantifier 0, Quantifier 1]
+        // For every node, if possible, always choose a child that can be extended one more time.
+        [TestMethod]
+        public void TestExtendUpWards5()
+        {
+            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Node> result =
+                DAGView.ExtendUpwards(Graphs.graph3.FindNode("A"), ref pattern, -1);
+            List<string> expected =
+                new List<string>() { "A", "C", "E", "G" };
+            Assert.AreEqual(5, result.Count);
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(expected[i], result[i].Id);
+            }
+            Assert.IsTrue((result[4].Id == "H") | (result[4].Id == "I"));
+        }
+    }
+
 }

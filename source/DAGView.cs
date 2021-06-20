@@ -486,48 +486,7 @@ namespace AxiomProfiler
                 try
                 {
 #endif
-                    _z3AxiomProfiler.DisplayMessage("Finding best path for generalization...");
-
-                    // building path downwards:
-                    var bestDownPath = BestDownPath(previouslySelectedNode);
-                    InstantiationPath bestUpPath;
-                    if (bestDownPath.TryGetLoop(out var loop))
-                    {
-                        bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
-                        if (bestUpPath == null)
-                        {
-                            bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
-                        }
-                    }
-                    else
-                    {
-                        bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
-                    }
-
-                    List<Instantiation> toRemove;
-                    if (bestUpPath.TryGetCyclePath(out var cyclePath))
-                    {
-                        highlightPath(cyclePath);
-                        _z3AxiomProfiler.UpdateSync(cyclePath);
-                        toRemove = cyclePath.GetInstnationsUnusedInGeneralization();
-                    }
-                    else
-                    {
-                        highlightPath(bestUpPath);
-                        _z3AxiomProfiler.UpdateSync(bestUpPath);
-                        toRemove = bestUpPath.GetInstnationsUnusedInGeneralization();
-                    }
-
-                    // Stop highlighting nodes that weren't used in the generalization.
-                    foreach (var inst in toRemove)
-                    {
-                        var node = graph.FindNode(inst.uniqueID);
-                        if (node != null)
-                        {
-                            formatNode(node);
-                        }
-                    }
-                    _viewer.Invalidate();
+                    // TODO
 #if !DEBUG
                 }
                 catch (Exception exception)
@@ -660,17 +619,6 @@ namespace AxiomProfiler
             return Patterns;
         }
 
-        public static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
-        {
-            var nodeInst = (Instantiation)node.UserData;
-            if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
-            loop = loop.Reverse().RepeatIndefinietly();
-            loop = loop.SkipWhile(inst => inst.Item1 != nodeInst.Quant || inst.Item2 != nodeInst.bindingInfo.fullPattern);
-            var res = ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
-            res.appendWithOverlap(downPath);
-            return res;
-        }
-
         public static List<Node> ExtendDownwards(Node node, ref List<Quantifier> Pattern, int bound)
         {
             List<Node> path = new List<Node>() { node };
@@ -709,25 +657,11 @@ namespace AxiomProfiler
             return path;
         }
 
-        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
+        public static List<Node> ExtendUpwards(Node node, ref List<Quantifier> Pattern, int bound)
         {
-            if (!instantiations.Any()) return path;
-            var instantiation = instantiations.First();
-            var nodeInst = (Instantiation)node.UserData;
-            if (instantiation.Item1 != nodeInst.Quant || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
-            var extendedPath = new InstantiationPath(path);
-            extendedPath.prepend(nodeInst);
-            var bestPath = extendedPath;
-            var remainingInstantiations = instantiations.Skip(1);
-            foreach (var predecessor in node.InEdges)
-            {
-                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, predecessor.SourceNode);
-                if (candidatePath.Length() > bestPath.Length())
-                {
-                    bestPath = candidatePath;
-                }
-            }
-            return bestPath;
+            List<Node> path = new List<Node>() { node };
+            // TODO
+            return path;
         }
 
         public static bool ContainPattern(ref List<List<Quantifier>> patterns, ref List<Quantifier> pattern)
