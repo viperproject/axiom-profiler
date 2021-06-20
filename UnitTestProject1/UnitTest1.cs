@@ -131,7 +131,7 @@ namespace UnitTestProject1
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
-                DAGView.ExtendDownwards(Graphs.graph2.FindNode("A"), ref pattern, -1);
+                DAGView.ExtendDownwards(Graphs.graph3.FindNode("A"), ref pattern, -1);
             List<string> expected =
                 new List<string>() { "A", "C", "E", "G" };
             Assert.AreEqual(5, result.Count);

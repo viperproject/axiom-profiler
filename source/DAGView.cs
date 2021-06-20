@@ -650,8 +650,39 @@ namespace AxiomProfiler
 
         public static List<Node> ExtendDownwards(Node node, ref List<Quantifier> Pattern, int bound)
         {
-            List<Node> path = new List<Node>();
-            //TODO
+            List<Node> path = new List<Node>() { node };
+            Node LastNode = node, CurNode, Child, Grandchild;
+            int PatternIndex = 0, NextQuant;
+            bool HaveGoodChild = false;
+            while(true)
+            {
+                LoopBegin:
+                PatternIndex = (PatternIndex + 1) % Pattern.Count;
+                CurNode = path[path.Count - 1];
+                HaveGoodChild = false;
+                if ((bound > 0) & (path.Count == bound)) break;
+                foreach (Edge edge in CurNode.OutEdges)
+                {   
+                    Child = edge.TargetNode;
+                    if (((Instantiation) Child.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
+                    {
+                        HaveGoodChild = true;
+                        LastNode = Child;
+                        NextQuant = (PatternIndex + 1) % Pattern.Count;
+                        foreach (Edge edge2 in Child.OutEdges)
+                        {
+                            Grandchild = edge2.TargetNode;
+                            if (((Instantiation) Grandchild.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
+                            {
+                                path.Add(Child);
+                                goto LoopBegin;
+                            }
+                        }
+                    }
+                }
+                if (HaveGoodChild) path.Add(LastNode);
+                break;
+            }
             return path;
         }
 
