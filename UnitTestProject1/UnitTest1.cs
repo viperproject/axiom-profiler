@@ -213,7 +213,7 @@ namespace UnitTestProject1
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0] };
             List<Node> result =
-                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 3);
+                DAGView.ExtendUpwards(Graphs.graph4.FindNode("A"), ref pattern, 3);
             List<String> expected = new List<String>() { "A", "M" };
             Assert.AreEqual(expected.Count, result.Count);
             for (int i = 0; i < expected.Count; i++)
@@ -229,7 +229,7 @@ namespace UnitTestProject1
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
-                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 4);
+                DAGView.ExtendUpwards(Graphs.graph4.FindNode("A"), ref pattern, 4);
             List<String> expected = new List<String>() { "A", "B", "L", "N" };
             Assert.AreEqual(expected.Count, result.Count);
             for (int i = 0; i < expected.Count; i++)
@@ -249,7 +249,7 @@ namespace UnitTestProject1
                 Graphs.Quants[4], Graphs.Quants[5], Graphs.Quants[6], Graphs.Quants[7],
                 Graphs.Quants[8], Graphs.Quants[9]};
             List<Node> result =
-                DAGView.ExtendUpwards(Graphs.graph2.FindNode("A"), ref pattern, 6);
+                DAGView.ExtendUpwards(Graphs.graph4.FindNode("A"), ref pattern, 6);
             List<String> expected = new List<String>() { "A", "C", "D", "E", "F", "G" };
             Assert.AreEqual(expected.Count, result.Count);
             for (int i = 0; i < expected.Count; i++)
@@ -266,7 +266,7 @@ namespace UnitTestProject1
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             List<Node> result =
-                DAGView.ExtendUpwards(Graphs.graph3.FindNode("A"), ref pattern, -1);
+                DAGView.ExtendUpwards(Graphs.graph5.FindNode("A"), ref pattern, -1);
             List<string> expected =
                 new List<string>() { "A", "C", "E", "G" };
             Assert.AreEqual(5, result.Count);
