@@ -501,11 +501,12 @@ namespace AxiomProfiler
         private static readonly double outlierThreshold = 0.3;
         private static readonly double incomingEdgePenalizationFactor = 0.5;
 
-        // Return a score where
-        // - having longer length recieves a higher score
-        // - having less covered children recieves a higher score
-        // - having shorter pattern recieved a higher score
-        private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
+        // Custom comparer used to sort a list of tuple {
+        // the tuple will be consist of (length of path, number of uncovered children, length of pattern)
+        // - having longer length is preferred
+        // - having less covered children is preferred
+        // - having shorter pattern is preferred
+        private static double CustomPathComparer(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
         {
             // TODO
             return 0.0;
@@ -514,27 +515,6 @@ namespace AxiomProfiler
         // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
         // build a path from the best segments.
         private static readonly int pathSegmentSize = 8;
-
-
-        // Described in https://docs.google.com/document/d/1SJspfBecgkVT9U8xC-MvQ_NPDTGVfg0yqq7YjJ3ma2s/edit?usp=sharing
-        // Get all down patterns,
-        // extent them to max(3, lcm(length of patterns)),
-        // score them and sort by score
-        // extend to top 5 path fully
-        // score and sort the fully extended path
-        // return the best one
-        public InstantiationPath BestDownPath(Node node)
-        {
-            // TODO
-            return null;
-        }
-
-        // Similar to BestDownPath but up
-        public InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
-        {
-            // TODO
-            return null;
-        }
 
         // Return all down patterns found with the bound
         public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
