@@ -507,10 +507,6 @@ namespace AxiomProfiler
                         highlightPath(cyclePath);
                         _z3AxiomProfiler.UpdateSync(cyclePath);
                         toRemove = cyclePath.GetInstnationsUnusedInGeneralization();
-                        if (cyclePath.NeedsIds())
-                        {
-                            _z3AxiomProfiler.EnableTermIds();
-                        }
                     }
                     else
                     {
