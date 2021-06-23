@@ -334,7 +334,7 @@ namespace UnitTestProject1
             List<Tuple<int, int, int, int>> testList = 
                 new List<Tuple<int, int, int, int>>() { t3, t5 };
             testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-            for (int i = 0; i < testList.Count; i++)
+            for (int i = 1; i < testList.Count; i++)
             {
                 Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
             }
@@ -348,7 +348,7 @@ namespace UnitTestProject1
             List<Tuple<int, int, int, int>> testList =
                 new List<Tuple<int, int, int, int>>() { t3, t4 };
             testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-            for (int i = 0; i < testList.Count; i++)
+            for (int i = 1; i < testList.Count; i++)
             {
                 Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
             }
@@ -362,7 +362,7 @@ namespace UnitTestProject1
             List<Tuple<int, int, int, int>> testList =
                 new List<Tuple<int, int, int, int>>() { t0, t1 };
             testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-            for (int i = 0; i < testList.Count; i++)
+            for (int i = 1; i < testList.Count; i++)
             {
                 Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
             }
@@ -375,7 +375,7 @@ namespace UnitTestProject1
             List<Tuple<int, int, int, int>> testList =
                 new List<Tuple<int, int, int, int>>() { t0, t1, t2, t3, t4, t5, t6, t7 };
             testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-            for (int i = 0; i < testList.Count; i++)
+            for (int i = 1; i < testList.Count; i++)
             {
                 Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
             }
