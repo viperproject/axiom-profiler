@@ -489,7 +489,83 @@ namespace AxiomProfiler
                 try
                 {
 #endif
-                    // TODO
+                    List<List<Quantifier>> downPatterns = AllDownPatterns(previouslySelectedNode, pathSegmentSize);
+                    List<List<Node>> extendedPaths = new List<List<Node>>();
+                    List<int> pathPatternSize = new List<int>();
+                    List<Node> downPath, upPath;
+                    List<Quantifier> pattern;
+                    // if there are down patterns we only look at down patterns
+                    // other wise we look at up patterns
+                    if (downPatterns.Count > 0)
+                    {
+                        int size = FindSize(ref downPatterns);
+                        List<Tuple<int, int, int, int>> pathStats = new List<Tuple<int, int, int, int>>();
+                        for (int i = 0; i < downPatterns.Count; i++)
+                        {   
+                            // had to assign a new list for pattern and new path
+                            // because apperently c# can't use ref on elements of a list
+                            pattern = downPatterns[i];
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, size);
+                            pathStats.Add(GetPathInfo(ref downPath, downPatterns[i].Count, i));
+                        }
+                        // ussing our custom comparer
+                        pathStats.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+                        // only take the top 30;
+                        for (int i = 0; (i < pathStats.Count) && (i < 30); i++) 
+                        {
+                            pattern = downPatterns[pathStats[i].Item4];
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, -1);
+                            pattern.Reverse(1, pattern.Count-1);
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.Reverse();
+                            upPath.RemoveAt(upPath.Count - 1);
+                            upPath.AddRange(downPath);
+                            pathPatternSize.Add(pattern.Count);
+                            extendedPaths.Add(upPath);
+                        }
+                    } else
+                    {
+                        List<List<Quantifier>> upPatterns = AllUpPatterns(previouslySelectedNode, pathSegmentSize);
+                        int size = FindSize(ref upPatterns);
+                        List<Tuple<int, int, int, int>> pathStats = new List<Tuple<int, int, int, int>>();
+                        for (int i = 0; i < upPatterns.Count; i++)
+                        {
+                            pattern = upPatterns[i];
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, size);
+                            upPath.Reverse();
+                            pathStats.Add(GetPathInfo(ref upPath, pattern.Count, i));
+                        }
+                        // ussing our custom comparer
+                        pathStats.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+                        // only take the top 30;
+                        for (int i = 0; (i < pathStats.Count) && (i < 30); i++) 
+                        {
+                            pattern = upPatterns[pathStats[i].Item4];
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.Reverse();
+                            pattern.Reverse(1, pattern.Count-1);
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.RemoveAt(upPath.Count-1);
+                            upPath.AddRange(downPath);
+                            extendedPaths.Add(upPath);
+                            pathPatternSize.Add(pattern.Count);
+                        }
+                    }
+                    List<Tuple<int, int, int, int>> extendedPathStat = new List<Tuple<int, int, int, int>>();
+                    for (int i = 0; i < extendedPaths.Count; i++)
+                    {
+                        upPath = extendedPaths[i];
+                        extendedPathStat.Add(GetPathInfo(ref upPath, pathPatternSize[i], i));
+                    }
+                    extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+                    InstantiationPath InstPath = new InstantiationPath();
+                    foreach (Node node in extendedPaths[extendedPathStat[0].Item4])
+                    {
+                        InstPath.append((Instantiation) node.UserData);
+                    }
+                    highlightPath(InstPath);
+                    _z3AxiomProfiler.UpdateSync(InstPath);
+                    _viewer.Invalidate();
 #if !DEBUG
                 }
                 catch (Exception exception)
@@ -501,9 +577,55 @@ namespace AxiomProfiler
             });
         }
 
-        // These factors were determined experimentally
-        private static readonly double outlierThreshold = 0.3;
-        private static readonly double incomingEdgePenalizationFactor = 0.5;
+        // helper function to return the size we want
+        // max of (3 * longest pattern, LCM(of length of patterns))
+        public static int FindSize(ref List<List<Quantifier>> pattern)
+        {
+            int ThreeTimesLongest = 0;
+            int LCM = 1;
+            for (int i = 0; i < pattern.Count; i++)
+            {
+                ThreeTimesLongest = Math.Max(ThreeTimesLongest, 2 * pattern[i].Count);
+                LCM = (LCM * pattern[i].Count) / CalcGCD(LCM, pattern[i].Count);
+            }
+            return Math.Max(ThreeTimesLongest, LCM);
+        }
+
+        // helper function to calculat GCD
+        public static int CalcGCD(int a, int b)
+        {
+            if (b == 0) return a;
+            if (b > a) return CalcGCD(b, a);
+            return CalcGCD(b, a % b);
+        }
+
+        // helper function to return info about a path
+        // tuple of
+        // path legnth,
+        // number of uncovered childre,
+        // pattern length,
+        // reference to the pattern / or reference to a path)
+        public static Tuple<int, int, int, int> GetPathInfo(ref List<Node> path, int patternLength, int reference)
+        {
+            int pathLength = path.Count;
+            int patterLegnth = patternLength;
+            int uncoveredChildren = 0;
+            Node child;
+            List<Node> seen = new List<Node>();
+            foreach (Node node in path)
+            {
+                foreach (Edge edge in node.OutEdges)
+                {
+                    child = edge.TargetNode;
+                    if (!seen.Contains(child) && !path.Contains(child))
+                    {
+                        uncoveredChildren++;
+                        seen.Add(child);
+                    }
+                }
+            }
+            return new Tuple<int, int, int, int>(pathLength, uncoveredChildren, patternLength, reference);
+        }
 
         // Custom comparer used to sort a list of tuple {
         // the tuple will be consist of (length of path, number of uncovered children, length of pattern)

@@ -299,16 +299,19 @@ namespace UnitTestProject1
         public bool HelperFunction(Tuple<int, int, int, int> path1, Tuple<int, int, int, int> path2) 
         {   
             // check path 2 does not have size lager than path1
+            // path1 should have longer path
             if (path2.Item1 > path1.Item1) return false;
             if (path2.Item1 < path1.Item1) return true;
 
             // If path1 and 2 have the same size,
             // check path2 has more uncovered children than path1
+            // path one should have less uncovered children
             if (path2.Item2 < path1.Item2) return false;
             if (path2.Item2 > path1.Item2) return true;
 
             // if path2 and path1 have the number of uncovered childre
             // check path2 has longer or equal pattern size than path1
+            // path1 should have shorter pattern size
             if (path2.Item3 >= path1.Item3) return true;
             return false;
         }
