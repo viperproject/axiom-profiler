@@ -192,7 +192,7 @@ namespace UnitTestProject1
 
     // Similar to ExtendDownwards, but up
     [TestClass]
-    public class ExtendUpwards
+    public class ExtendUpwardsTest
     {
         static TestGraphs Graphs = new TestGraphs();
 
@@ -275,6 +275,110 @@ namespace UnitTestProject1
                 Assert.AreEqual(expected[i], result[i].Id);
             }
             Assert.IsTrue((result[4].Id == "H") | (result[4].Id == "I"));
+        }
+    }
+
+    // Tests for the CustomPathComparer
+    [TestClass]
+    public class CustompathComparerTestClass
+    {
+        // tuple where
+        // item1 is the length of a pth
+        // item2 is the nubmer of uncovered children
+        // item3 is the length of pattern
+        // item 4 is reference to the pattern
+        static Tuple<int, int, int, int> t0 = new Tuple<int, int, int, int>(1, 0, 1, 0);
+        static Tuple<int, int, int, int> t1 = new Tuple<int, int, int, int>(1, 0, 5, 1);
+        static Tuple<int, int, int, int> t2 = new Tuple<int, int, int, int>(10, 15, 3, 2);
+        static Tuple<int, int, int, int> t3 = new Tuple<int, int, int, int>(8, 8, 3, 3);
+        static Tuple<int, int, int, int> t4 = new Tuple<int, int, int, int>(8, 0, 3, 4);
+        static Tuple<int, int, int, int> t5 = new Tuple<int, int, int, int>(6, 8, 3, 5);
+        static Tuple<int, int, int, int> t6 = new Tuple<int, int, int, int>(7, 3, 3, 6);
+        static Tuple<int, int, int, int> t7 = new Tuple<int, int, int, int>(7, 3, 3, 7);
+
+        public bool HelperFunction(Tuple<int, int, int, int> path1, Tuple<int, int, int, int> path2) 
+        {   
+            // check path 2 does not have size lager than path1
+            if (path2.Item1 > path1.Item1) return false;
+            if (path2.Item1 < path1.Item1) return true;
+
+            // If path1 and 2 have the same size,
+            // check path2 has more uncovered children than path1
+            if (path2.Item2 < path1.Item2) return false;
+            if (path2.Item2 > path1.Item2) return true;
+
+            // if path2 and path1 have the number of uncovered childre
+            // check path2 has longer or equal pattern size than path1
+            if (path2.Item3 >= path1.Item3) return true;
+            return false;
+        }
+
+        // travial case
+        // list of length 1
+        [TestMethod]
+        public void TestCustomPathComparer1()
+        {
+            List<Tuple<int, int, int, int>> testList = new List<Tuple<int, int, int, int>>() { t0 };
+            testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+            for (int i = 1; i < testList.Count; i++)
+            {
+                Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
+            }
+        }
+
+        // test case where there are only 2 elements, t3 and t5
+        // where the only difference in t3 and t5 is the length (and reference)
+        [TestMethod]
+        public void TestCustomComparer2()
+        {
+            List<Tuple<int, int, int, int>> testList = 
+                new List<Tuple<int, int, int, int>>() { t3, t5 };
+            testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+            for (int i = 0; i < testList.Count; i++)
+            {
+                Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
+            }
+        }
+
+        // testcase where there are only 2 elements, t3, t4
+        // where the only difference is the number of children uncovered
+        [TestMethod]
+        public void TestCustomComparer3()
+        {
+            List<Tuple<int, int, int, int>> testList =
+                new List<Tuple<int, int, int, int>>() { t3, t4 };
+            testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+            for (int i = 0; i < testList.Count; i++)
+            {
+                Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
+            }
+        }
+
+        // testcase where there are only 2 elements t0, t1
+        // where the only difference is the length of pattern
+        [TestMethod]
+        public void TestCustomComparer4()
+        {
+            List<Tuple<int, int, int, int>> testList =
+                new List<Tuple<int, int, int, int>>() { t0, t1 };
+            testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+            for (int i = 0; i < testList.Count; i++)
+            {
+                Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
+            }
+        }
+
+        // testcase where there are many elements
+        [TestMethod]
+        public void TestCustomComparer5()
+        {
+            List<Tuple<int, int, int, int>> testList =
+                new List<Tuple<int, int, int, int>>() { t0, t1, t2, t3, t4, t5, t6, t7 };
+            testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+            for (int i = 0; i < testList.Count; i++)
+            {
+                Assert.IsTrue(HelperFunction(testList[i - 1], testList[i]));
+            }
         }
     }
 

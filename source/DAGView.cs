@@ -467,6 +467,10 @@ namespace AxiomProfiler
             redrawGraph();
         }
 
+        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
+        // build a path from the best segments.
+        private static readonly int pathSegmentSize = 8;
+
         // This functions and it's helper functions are properlly explain in
         //https://docs.google.com/document/d/1SJspfBecgkVT9U8xC-MvQ_NPDTGVfg0yqq7YjJ3ma2s/edit?usp=sharing
         // helper functions were originally private, but changing to public was needed to unit testing
@@ -506,15 +510,12 @@ namespace AxiomProfiler
         // - having longer length is preferred
         // - having less covered children is preferred
         // - having shorter pattern is preferred
-        private static double CustomPathComparer(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
+        public static int CustomPathComparer(ref Tuple<int, int, int, int> elem1, ref Tuple<int, int, int, int> elem2)
         {
             // TODO
-            return 0.0;
+            return 0;
         }
 
-        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
-        // build a path from the best segments.
-        private static readonly int pathSegmentSize = 8;
 
         // Return all down patterns found with the bound
         public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
