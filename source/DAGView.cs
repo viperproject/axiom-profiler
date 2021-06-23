@@ -511,8 +511,21 @@ namespace AxiomProfiler
         // - having less covered children is preferred
         // - having shorter pattern is preferred
         public static int CustomPathComparer(ref Tuple<int, int, int, int> elem1, ref Tuple<int, int, int, int> elem2)
-        {
-            // TODO
+        {   
+            // If elem1 has longer path length return -1
+            // which mean elem1 is smaller than elem2, since list sort are in ascending order by default
+            if (elem1.Item1 > elem2.Item1) return -1;
+            if (elem1.Item1 < elem2.Item1) return 1;
+
+            // if elem1 has less covered children than elem2 return -1
+            if (elem1.Item2 < elem2.Item2) return -1;
+            if (elem1.Item2 > elem2.Item2) return 1;
+
+            // if  elem1 has shorter pattern length return -1
+            if (elem1.Item3 < elem2.Item3) return -1;
+            if (elem1.Item3 > elem2.Item3) return 1;
+
+
             return 0;
         }
 
