@@ -494,6 +494,7 @@ namespace AxiomProfiler
                     List<int> pathPatternSize = new List<int>();
                     List<Node> downPath, upPath;
                     List<Quantifier> pattern;
+                    InstantiationPath InstPath = new InstantiationPath();
                     // if there are down patterns we only look at down patterns
                     // other wise we look at up patterns
                     if (downPatterns.Count > 0)
@@ -526,6 +527,7 @@ namespace AxiomProfiler
                     } else
                     {
                         List<List<Quantifier>> upPatterns = AllUpPatterns(previouslySelectedNode, pathSegmentSize);
+                        if (upPatterns.Count == 0) goto NoPattern;
                         int size = FindSize(ref upPatterns);
                         List<Tuple<int, int, int, int>> pathStats = new List<Tuple<int, int, int, int>>();
                         for (int i = 0; i < upPatterns.Count; i++)
@@ -558,12 +560,15 @@ namespace AxiomProfiler
                         extendedPathStat.Add(GetPathInfo(ref upPath, pathPatternSize[i], i));
                     }
                     extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-                    InstantiationPath InstPath = new InstantiationPath();
                     foreach (Node node in extendedPaths[extendedPathStat[0].Item4])
                     {
-                        InstPath.append((Instantiation) node.UserData);
+                        InstPath.append((Instantiation)node.UserData);
                     }
                     highlightPath(InstPath);
+                    goto FoundPattern;
+                    NoPattern:
+                    InstPath.append((Instantiation) previouslySelectedNode.UserData);
+                    FoundPattern:
                     _z3AxiomProfiler.UpdateSync(InstPath);
                     _viewer.Invalidate();
 #if !DEBUG
