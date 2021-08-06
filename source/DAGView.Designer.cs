@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.panel1 = new System.Windows.Forms.Panel();
-            this.pathExplanationButton = new System.Windows.Forms.Button();
+            this.subgraphExplanationButton = new System.Windows.Forms.Button();
             this.sourceTreeButton = new System.Windows.Forms.Button();
             this.redrawCompleteGraphButton = new System.Windows.Forms.Button();
             this.showChainButton = new System.Windows.Forms.Button();
@@ -46,7 +46,7 @@
             // 
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.panel1.Controls.Add(this.pathExplanationButton);
+            this.panel1.Controls.Add(this.subgraphExplanationButton);
             this.panel1.Controls.Add(this.sourceTreeButton);
             this.panel1.Controls.Add(this.redrawCompleteGraphButton);
             this.panel1.Controls.Add(this.showChainButton);
@@ -62,13 +62,13 @@
             // 
             // pathExplanationButton
             // 
-            this.pathExplanationButton.Location = new System.Drawing.Point(295, 32);
-            this.pathExplanationButton.Name = "pathExplanationButton";
-            this.pathExplanationButton.Size = new System.Drawing.Size(75, 23);
-            this.pathExplanationButton.TabIndex = 7;
-            this.pathExplanationButton.Text = "Explain Path";
-            this.pathExplanationButton.UseVisualStyleBackColor = true;
-            this.pathExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
+            this.subgraphExplanationButton.Location = new System.Drawing.Point(295, 32);
+            this.subgraphExplanationButton.Name = "pathExplanationButton";
+            this.subgraphExplanationButton.Size = new System.Drawing.Size(104, 23);
+            this.subgraphExplanationButton.TabIndex = 7;
+            this.subgraphExplanationButton.Text = "Explain Subgraph";
+            this.subgraphExplanationButton.UseVisualStyleBackColor = true;
+            this.subgraphExplanationButton.Click += new System.EventHandler(this.pathExplanationButton_Click);
             // 
             // sourceTreeButton
             // 
@@ -183,6 +183,6 @@
         private System.Windows.Forms.Button showChainButton;
         private System.Windows.Forms.Button redrawCompleteGraphButton;
         private System.Windows.Forms.Button sourceTreeButton;
-        private System.Windows.Forms.Button pathExplanationButton;
+        private System.Windows.Forms.Button subgraphExplanationButton;
     }
 }
