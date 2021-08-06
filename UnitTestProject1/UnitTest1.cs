@@ -54,6 +54,17 @@ namespace UnitTestProject1
             Assert.AreEqual(1, result.Count);
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected));
         }
+
+        // To test graph 6
+        public void TestAllDownPattern5()
+        {
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph6.FindNode("B"), 8);
+            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0] };
+            Assert.AreEqual(2, result.Count);
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
+        }
     }
 
     [TestClass]
@@ -385,4 +396,41 @@ namespace UnitTestProject1
         }
     }
 
+    // additional test on graph6
+    [TestClass]
+    public class AdditionalGraph6Test
+    {
+        static TestGraphs Graphs = new TestGraphs();
+
+        // when node B is selected
+        [TestMethod]
+        public void AdditionalTest1()
+        {
+            List<Quantifier> pattern1 = new List<Quantifier>() { Graphs.Quants[0] };
+            List<Quantifier> pattern2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<List<Quantifier>> patterns = new List<List<Quantifier>>() { pattern1, pattern2 };
+
+            List<Node> downPath1 = DAGView.ExtendDownwards(Graphs.graph6.FindNode("B"), ref pattern1, -1);
+            pattern1.Reverse(1, pattern1.Count - 1);
+            List<Node> path1 = DAGView.ExtendUpwards(Graphs.graph6.FindNode("B"), ref pattern1, -1);
+            path1.Reverse();
+            path1.RemoveAt(path1.Count - 1);
+            path1.AddRange(downPath1);
+
+            List<Node> downPath2 = DAGView.ExtendDownwards(Graphs.graph6.FindNode("B"), ref pattern2, -1);
+            pattern2.Reverse(1, pattern2.Count - 1);
+            List<Node> path2 = DAGView.ExtendUpwards(Graphs.graph6.FindNode("B"), ref pattern2, -1);
+            path2.Reverse();
+            path2.RemoveAt(path2.Count - 1);
+            path2.AddRange(downPath2);
+
+            Tuple<int, int, int, int> info1 = DAGView.GetPathInfo(ref path1, 1, 1);
+            Tuple<int, int, int, int> info2 = DAGView.GetPathInfo(ref path2, 2, 2);
+
+            List<Tuple<int, int, int, int>> infos = new List<Tuple<int, int, int, int>>() { info1, info2 };
+            infos.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+
+            Assert.AreEqual(2, infos[0].Item4);
+        }
+    }
 }

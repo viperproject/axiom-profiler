@@ -676,7 +676,7 @@ namespace AxiomProfiler
                 PathStack.RemoveAt(PathStack.Count - 1);
                 CurNode = CurPair.Item1;
                 CurPattern = CurPair.Item2;
-                if (CurPattern.Count > bound) break;
+                if (CurPattern.Count > bound) continue;
                 foreach (Edge edge in CurNode.OutEdges)
                 {
                     Child = edge.TargetNode;
