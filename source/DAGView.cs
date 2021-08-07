@@ -494,7 +494,9 @@ namespace AxiomProfiler
                     List<int> pathPatternSize = new List<int>();
                     List<Node> downPath, upPath;
                     List<Quantifier> pattern;
-                    InstantiationPath InstPath = new InstantiationPath();
+                    List<List<Node>> subgraph;
+                    int cycleSize = 1;
+                    int positionOfSelectedNode = 0;
                     // if there are down patterns we only look at down patterns
                     // other wise we look at up patterns
                     if (downPatterns.Count > 0)
@@ -520,6 +522,7 @@ namespace AxiomProfiler
                             upPath = ExtendUpwards(previouslySelectedNode, ref pattern, -1);
                             upPath.Reverse();
                             upPath.RemoveAt(upPath.Count - 1);
+                            positionOfSelectedNode = upPath.Count;
                             upPath.AddRange(downPath);
                             pathPatternSize.Add(pattern.Count);
                             extendedPaths.Add(upPath);
@@ -548,6 +551,7 @@ namespace AxiomProfiler
                             pattern.Reverse(1, pattern.Count-1);
                             downPath = ExtendDownwards(previouslySelectedNode, ref pattern, -1);
                             upPath.RemoveAt(upPath.Count-1);
+                            positionOfSelectedNode = upPath.Count;
                             upPath.AddRange(downPath);
                             extendedPaths.Add(upPath);
                             pathPatternSize.Add(pattern.Count);
@@ -560,16 +564,17 @@ namespace AxiomProfiler
                         extendedPathStat.Add(GetPathInfo(ref upPath, pathPatternSize[i], i));
                     }
                     extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-                    foreach (Node node in extendedPaths[extendedPathStat[0].Item4])
-                    {
-                        InstPath.append((Instantiation)node.UserData);
-                    }
-                    highlightPath(InstPath);
+                    // send to FindSubgrpah() to construct subgraph from the path
+                    subgraph = FindSubgraph(extendedPaths[extendedPathStat[0].Item4], extendedPathStat[0].Item3, positionOfSelectedNode);
+                    cycleSize = extendedPathStat[0].Item3;
                     goto FoundPattern;
-                    NoPattern:
-                    InstPath.append((Instantiation) previouslySelectedNode.UserData);
-                    FoundPattern:
-                    // _z3AxiomProfiler.UpdateSync(InstPath);
+                NoPattern:
+                    // subgrpah consisit of only the selcted node
+                    List<Node> path = new List<Node>() { previouslySelectedNode };
+                    subgraph = new List<List<Node>>() { path };
+                FoundPattern:
+                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, cycleSize);
+                    _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
 #if !DEBUG
                 }
@@ -837,6 +842,54 @@ namespace AxiomProfiler
                 highlightNode(graph.FindNode(instantiation.uniqueID));
             }
             _viewer.Invalidate();
+        }
+
+        public static List<List<Node>> FindSubgraph(List<Node> path, int cycleSize, int pos)
+        {
+            int repetition = path.Count / cycleSize;
+            List<List<Node>> subgraph = new List<List<Node>>();
+            if (repetition < 3)
+            {
+                // less than means it doesn't count as matching loop, 
+                // so we'll only look at the first cycle
+                List<Node> newPath = new List<Node>();
+                for (int i = 0; i < cycleSize; i++)
+                {
+                    newPath.Add(path[i]);
+                }
+                subgraph.Add(newPath);
+            } else if ((repetition < 4) || (pos < cycleSize))
+            {
+                // Condition 1:
+                // since we also want the substrucutre to repeat atleast 3 times,
+                // and we start checking from the second one, there needs to be atleast 4 repetitions.
+                // Condition 2:
+                // if the user selected some node in the first cycle, it is unclear how we can bound it
+                // so we won't bother find the repeating strucutre
+                // Consi
+                int counter = 0;
+                List<Node> cycle = new List<Node>();
+                for (int i = 0; i < path.Count; i++)
+                {
+                    if (counter >= cycleSize)
+                    {
+                        subgraph.Add(cycle);
+                        cycle = new List<Node>() { path[i] };
+                    }
+                    else
+                    {
+                        cycle.Add(path[i]);
+                    }
+                    counter++;
+                }
+                subgraph.Add(cycle);
+            } else
+            {
+                // TODO
+            }
+            
+
+            return subgraph;
         }
     }
 }
