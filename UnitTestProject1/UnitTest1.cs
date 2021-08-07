@@ -50,20 +50,31 @@ namespace UnitTestProject1
         public void TestAllDownPattern4()
         {
             List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph3.FindNode("A"), 8);
-            List<Quantifier> expected = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(1, result.Count);
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
         }
 
-        // To test graph 6
+        // Test if AllDownPatterns recogizes pattern that contain
+        // multiple occurences of the same quantifier in the same cycle
+        [TestMethod]
         public void TestAllDownPattern5()
         {
-            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph6.FindNode("B"), 8);
+            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph6.FindNode("A"), 8);
             List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0] };
-            Assert.AreEqual(2, result.Count);
+            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0], Graphs.Quants[2] };
+            List<Quantifier> expected3 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1],
+                Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected4 = new List<Quantifier>() { Graphs.Quants[0] };
+            List<Quantifier> expected5 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected6 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0] };
+            Assert.AreEqual(6, result.Count);
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected3));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected4));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected5));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected6));
         }
     }
 
@@ -77,7 +88,7 @@ namespace UnitTestProject1
         public void TestExtenDownwards1()
         {
             List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
-            List<Node> result = 
+            List<Node> result =
                 DAGView.ExtendDownwards(Graphs.graph1.FindNode("A"), ref pattern, 10);
             Assert.AreEqual(1, result.Count);
         }
@@ -87,8 +98,8 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestExtendDownwards2()
         {
-            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0]};
-            List<Node> result = 
+            List<Quantifier> pattern = new List<Quantifier>() { Graphs.Quants[0] };
+            List<Node> result =
                 DAGView.ExtendDownwards(Graphs.graph2.FindNode("A"), ref pattern, 3);
             List<String> expected = new List<String>() { "A", "M" };
             Assert.AreEqual(expected.Count, result.Count);
@@ -128,7 +139,7 @@ namespace UnitTestProject1
                 DAGView.ExtendDownwards(Graphs.graph2.FindNode("A"), ref pattern, 6);
             List<String> expected = new List<String>() { "A", "C", "D", "E", "F", "G" };
             Assert.AreEqual(expected.Count, result.Count);
-            for (int i= 0; i < expected.Count; i++)
+            for (int i = 0; i < expected.Count; i++)
             {
                 Assert.AreEqual(expected[i], result[i].Id);
             }
@@ -195,9 +206,31 @@ namespace UnitTestProject1
         public void TestAllUpPattern4()
         {
             List<List<Quantifier>> result = DAGView.AllUpPatterns(Graphs.graph5.FindNode("A"), 8);
-            List<Quantifier> expected = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(1, result.Count);
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
+        }
+
+        // Test if AllDownPatterns recogizes pattern that contain
+        // multiple occurences of the same quantifier in the same cycle
+        [TestMethod]
+        public void TestAllUpPatterns5()
+        {
+            List<List<Quantifier>> result = DAGView.AllUpPatterns(Graphs.graph7.FindNode("A"), 8);
+            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0], Graphs.Quants[2] };
+            List<Quantifier> expected3 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1],
+                Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected4 = new List<Quantifier>() { Graphs.Quants[0] };
+            List<Quantifier> expected5 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1] };
+            List<Quantifier> expected6 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0] };
+            Assert.AreEqual(6, result.Count);
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected3));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected4));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected5));
+            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected6));
         }
     }
 
@@ -307,8 +340,8 @@ namespace UnitTestProject1
         static Tuple<int, int, int, int> t6 = new Tuple<int, int, int, int>(7, 3, 3, 6);
         static Tuple<int, int, int, int> t7 = new Tuple<int, int, int, int>(7, 3, 3, 7);
 
-        public bool HelperFunction(Tuple<int, int, int, int> path1, Tuple<int, int, int, int> path2) 
-        {   
+        public bool HelperFunction(Tuple<int, int, int, int> path1, Tuple<int, int, int, int> path2)
+        {
             // check path 2 does not have size lager than path1
             // path1 should have longer path
             if (path2.Item1 > path1.Item1) return false;
@@ -345,7 +378,7 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestCustomComparer2()
         {
-            List<Tuple<int, int, int, int>> testList = 
+            List<Tuple<int, int, int, int>> testList =
                 new List<Tuple<int, int, int, int>>() { t3, t5 };
             testList.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
             for (int i = 1; i < testList.Count; i++)
@@ -396,41 +429,4 @@ namespace UnitTestProject1
         }
     }
 
-    // additional test on graph6
-    [TestClass]
-    public class AdditionalGraph6Test
-    {
-        static TestGraphs Graphs = new TestGraphs();
-
-        // when node B is selected
-        [TestMethod]
-        public void AdditionalTest1()
-        {
-            List<Quantifier> pattern1 = new List<Quantifier>() { Graphs.Quants[0] };
-            List<Quantifier> pattern2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
-            List<List<Quantifier>> patterns = new List<List<Quantifier>>() { pattern1, pattern2 };
-
-            List<Node> downPath1 = DAGView.ExtendDownwards(Graphs.graph6.FindNode("B"), ref pattern1, -1);
-            pattern1.Reverse(1, pattern1.Count - 1);
-            List<Node> path1 = DAGView.ExtendUpwards(Graphs.graph6.FindNode("B"), ref pattern1, -1);
-            path1.Reverse();
-            path1.RemoveAt(path1.Count - 1);
-            path1.AddRange(downPath1);
-
-            List<Node> downPath2 = DAGView.ExtendDownwards(Graphs.graph6.FindNode("B"), ref pattern2, -1);
-            pattern2.Reverse(1, pattern2.Count - 1);
-            List<Node> path2 = DAGView.ExtendUpwards(Graphs.graph6.FindNode("B"), ref pattern2, -1);
-            path2.Reverse();
-            path2.RemoveAt(path2.Count - 1);
-            path2.AddRange(downPath2);
-
-            Tuple<int, int, int, int> info1 = DAGView.GetPathInfo(ref path1, 1, 1);
-            Tuple<int, int, int, int> info2 = DAGView.GetPathInfo(ref path2, 2, 2);
-
-            List<Tuple<int, int, int, int>> infos = new List<Tuple<int, int, int, int>>() { info1, info2 };
-            infos.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
-
-            Assert.AreEqual(2, infos[0].Item4);
-        }
-    }
 }

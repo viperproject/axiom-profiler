@@ -693,12 +693,9 @@ namespace AxiomProfiler
                             Patterns.Add(CurPattern);
                         }
                     }
-                    else
-                    {
-                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
-                        NewPattern.Add(ChildQuant);
-                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
-                    }
+                    List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                    NewPattern.Add(ChildQuant);
+                    PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
                 }
             }
             return Patterns;
@@ -722,7 +719,7 @@ namespace AxiomProfiler
                 PathStack.RemoveAt(PathStack.Count - 1);
                 CurNode = CurPair.Item1;
                 CurPattern = CurPair.Item2;
-                if (CurPattern.Count > bound) break;
+                if (CurPattern.Count > bound) continue;
                 foreach (Edge edge in CurNode.InEdges)
                 {
                     Parent = edge.SourceNode;
@@ -734,12 +731,9 @@ namespace AxiomProfiler
                             Patterns.Add(CurPattern);
                         }
                     }
-                    else
-                    {
-                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
-                        NewPattern.Add(ChildQuant);
-                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Parent, NewPattern));
-                    }
+                    List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                    NewPattern.Add(ChildQuant);
+                    PathStack.Add(new Tuple<Node, List<Quantifier>>(Parent, NewPattern));
                 }
             }
             return Patterns;
@@ -821,11 +815,26 @@ namespace AxiomProfiler
             return path;
         }
 
+        // contain pattern check if patterns contain the pattern
+        // also check that pattern is a a repetition of a smaller pattern that already exists in patterns
         public static bool ContainPattern(ref List<List<Quantifier>> patterns, ref List<Quantifier> pattern)
         {
+            bool Contain;
             for (int i = 0; i < patterns.Count; i++)
             {
-                if (patterns[i].SequenceEqual(pattern)) return true;
+                //if (patterns[i].SequenceEqual(pattern)) return true;
+                if (pattern.Count() % patterns[i].Count() == 0) {
+                    Contain = true;
+                    for (int j = 0; j < pattern.Count(); j++)
+                    {
+                        if (pattern[j] != patterns[i][j % patterns[i].Count()])
+                        {
+                            Contain = false;
+                            break;
+                        }
+                    }
+                    if (Contain) return true;
+                }
             }
             return false;
         }
