@@ -569,7 +569,7 @@ namespace AxiomProfiler
                     NoPattern:
                     InstPath.append((Instantiation) previouslySelectedNode.UserData);
                     FoundPattern:
-                    _z3AxiomProfiler.UpdateSync(InstPath);
+                    // _z3AxiomProfiler.UpdateSync(InstPath);
                     _viewer.Invalidate();
 #if !DEBUG
                 }
