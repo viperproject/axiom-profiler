@@ -573,6 +573,7 @@ namespace AxiomProfiler
                     List<Node> path = new List<Node>() { previouslySelectedNode };
                     subgraph = new List<List<Node>>() { path };
                 FoundPattern:
+                    highlightSubgraph(ref subgraph);
                     InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, cycleSize);
                     _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
@@ -839,16 +840,19 @@ namespace AxiomProfiler
             return false;
         }
 
-        private void highlightPath(InstantiationPath path)
+        private void highlightSubgraph(ref List<List<Node>> subgraph)
         {
             if (previouslySelectedNode != null || highlightedNodes.Count != 0)
             {
                 unselectNode();
             }
 
-            foreach (var instantiation in path.getInstantiations())
+            foreach (List<Node> cycle in subgraph)
             {
-                highlightNode(graph.FindNode(instantiation.uniqueID));
+                foreach (Node node in cycle)
+                {
+                    highlightNode(node);
+                }
             }
             _viewer.Invalidate();
         }
