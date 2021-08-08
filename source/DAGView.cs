@@ -916,6 +916,7 @@ namespace AxiomProfiler
             int subgraphsize = subgraph.Count;
             for (int i = 0; i < subgraphsize; i++)
             {
+                //Console.WriteLine("D " + i);
                 counter = 0;
                 Queue<Node> queue = new Queue<Node>();
                 foreach (Node node in subgraph[i])
@@ -924,14 +925,17 @@ namespace AxiomProfiler
                 }
                 while(queue.Count > 0) {
                     curNode = queue.Dequeue();
+                    //Console.WriteLine(GetQuant(curNode).Qid);
                     List<Node> parents = new List<Node>();
                     foreach (Edge inedge in curNode.InEdges)
                     {
                         parents.Add(inedge.SourceNode);
                     }
                     parents.Sort(DAGView.ParentComparer);
-                    for (int k = 0; k < parents.Count && k < generalStruct.Count; k++)
+                    for (int k = 0; k < parents.Count && k < generalStruct[counter].Count; k++)
                     {
+                        //Console.WriteLine("K " + k);
+                        //Console.WriteLine("sz " + generalStruct[counter].Count);
                         if (!subgraph[i].Contains(parents[k]) &&
                         (GetDepth(parents[k]) >= bound) &&
                         (GetQuant(parents[k]) == generalStruct[counter][k]))
