@@ -574,7 +574,7 @@ namespace AxiomProfiler
                     subgraph = new List<List<Node>>() { path };
                 FoundPattern:
                     highlightSubgraph(ref subgraph);
-                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, cycleSize);
+                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count);
                     _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
 #if !DEBUG
@@ -882,7 +882,6 @@ namespace AxiomProfiler
                 if (counter >= cycleSize)
                 {
                     counter = 0;
-                    //Console.WriteLine("D " + GetDepth(cycle[0]));
                     subgraph.Add(cycle);
                     cycle = new List<Node>() { path[i] };
                 }
@@ -905,31 +904,46 @@ namespace AxiomProfiler
 
             int bound = GetDepth(path[path.Count % cycleSize]);
             List<List<Quantifier>> generalStruct = new List<List<Quantifier>>();
-            FindGeneralStructure(subgraph[0], ref generalStruct, bound);
-;
-            for (int i = 0; i < path.Count; i++)
+            List<Node> generalCycle = new List<Node>();
+            for (int i = path.Count % cycleSize; i < cycleSize + (path.Count % cycleSize); i++)
             {
-                for (int j = 0; j < subgraph[i].Count; j++)
+                generalCycle.Add(path[i]);
+            }
+            generalCycle.AddRange(subgraph[0]);
+            FindGeneralStructure(generalCycle, ref generalStruct, bound);
+
+            Node curNode;
+            int subgraphsize = subgraph.Count;
+            for (int i = 0; i < subgraphsize; i++)
+            {
+                counter = 0;
+                Queue<Node> queue = new Queue<Node>();
+                foreach (Node node in subgraph[i])
                 {
+                    queue.Enqueue(node);
+                }
+                while(queue.Count > 0) {
+                    curNode = queue.Dequeue();
                     List<Node> parents = new List<Node>();
-                    foreach (Edge inedge in subgraph[i][j].InEdges)
+                    foreach (Edge inedge in curNode.InEdges)
                     {
                         parents.Add(inedge.SourceNode);
                     }
                     parents.Sort(DAGView.ParentComparer);
-                    for (int k = 0; k < parents.Count; k++)
+                    for (int k = 0; k < parents.Count && k < generalStruct.Count; k++)
                     {
                         if (!subgraph[i].Contains(parents[k]) &&
                         (GetDepth(parents[k]) >= bound) &&
-                        (GetQuant(parents[k]) == generalStruct[j][k]))
+                        (GetQuant(parents[k]) == generalStruct[counter][k]))
                         {
                             subgraph[i].Add(parents[k]);
-                        } else
+                        }
+                        else
                         {
-                            Console.WriteLine("? " + i + " " + j  + " " + k);
                             return cloneOfSubgraph;
                         }
                     }
+                    counter++;
                 }
             }
 
@@ -939,11 +953,19 @@ namespace AxiomProfiler
 
         public static void FindGeneralStructure(List<Node> cycle, ref List<List<Quantifier>> result, int bound)
         {
-            for (int i = 0; i < cycle.Count; i++)
+            Queue<Node> queue = new Queue<Node>();
+            for (int i = cycle.Count / 2; i < cycle.Count; i++)
             {
+                queue.Enqueue(cycle[i]);
+            }
+            Node curNode;
+            while(queue.Count > 0)
+            {
+                curNode = queue.Dequeue();
+                if (GetDepth(curNode) <= bound) continue;
                 List<Quantifier> parents = new List<Quantifier>();
                 List<Node> orderedParent = new List<Node>();
-                foreach (Edge inedge in cycle[0].InEdges)
+                foreach (Edge inedge in curNode.InEdges)
                 {
                     orderedParent.Add(inedge.SourceNode);
                 }
@@ -952,7 +974,7 @@ namespace AxiomProfiler
                 {
                     if ((!cycle.Contains(node)) && (GetDepth(node) >= bound))
                     {
-                        cycle.Add(node);
+                        queue.Enqueue(node);
                         parents.Add(GetQuant(node));
                     }
                 }
