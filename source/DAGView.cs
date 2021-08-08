@@ -873,14 +873,16 @@ namespace AxiomProfiler
                 subgraph.Add(newPath);
                 return subgraph;
             }
-            int start = 0;
-            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) start = cycleSize + (path.Count % cycleSize);
+            int start = cycleSize + (path.Count % cycleSize);
+            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) start = 0;
             int counter = 0;
             List<Node> cycle = new List<Node>();
             for (int i = start; i < path.Count; i++)
             {
                 if (counter >= cycleSize)
                 {
+                    counter = 0;
+                    //Console.WriteLine("D " + GetDepth(cycle[0]));
                     subgraph.Add(cycle);
                     cycle = new List<Node>() { path[i] };
                 }
@@ -924,6 +926,7 @@ namespace AxiomProfiler
                             subgraph[i].Add(parents[k]);
                         } else
                         {
+                            Console.WriteLine("? " + i + " " + j  + " " + k);
                             return cloneOfSubgraph;
                         }
                     }
