@@ -867,38 +867,109 @@ namespace AxiomProfiler
                     newPath.Add(path[i]);
                 }
                 subgraph.Add(newPath);
-            } else if ((repetition < 4) || (pos < cycleSize))
-            {
-                // Condition 1:
-                // since we also want the substrucutre to repeat atleast 3 times,
-                // and we start checking from the second one, there needs to be atleast 4 repetitions.
-                // Condition 2:
-                // if the user selected some node in the first cycle, it is unclear how we can bound it
-                // so we won't bother find the repeating strucutre
-                // Consi
-                int counter = 0;
-                List<Node> cycle = new List<Node>();
-                for (int i = 0; i < path.Count; i++)
-                {
-                    if (counter >= cycleSize)
-                    {
-                        subgraph.Add(cycle);
-                        cycle = new List<Node>() { path[i] };
-                    }
-                    else
-                    {
-                        cycle.Add(path[i]);
-                    }
-                    counter++;
-                }
-                subgraph.Add(cycle);
-            } else
-            {
-                // TODO
+                return subgraph;
             }
-            
+            int start = 0;
+            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) start = cycleSize + (path.Count % cycleSize);
+            int counter = 0;
+            List<Node> cycle = new List<Node>();
+            for (int i = start; i < path.Count; i++)
+            {
+                if (counter >= cycleSize)
+                {
+                    subgraph.Add(cycle);
+                    cycle = new List<Node>() { path[i] };
+                }
+                else
+                {
+                    cycle.Add(path[i]);
+                }
+                counter++;
+            }
+            subgraph.Add(cycle);
+            // Condition 1:
+            // since we also want the substrucutre to repeat atleast 3 times,
+            // and we start checking from the second one, there needs to be atleast 4 repetitions.
+            // Condition 2:
+            // if the user selected some node in the first full cycle, it is unclear how we can bound it
+            // so we won't bother find the repeating strucutre
+            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) return subgraph;
+
+            List<List<Node>> cloneOfSubgraph = new List<List<Node>>(subgraph);
+
+            int bound = GetDepth(path[path.Count % cycleSize]);
+            List<List<Quantifier>> generalStruct = new List<List<Quantifier>>();
+            FindGeneralStructure(subgraph[0], ref generalStruct, bound);
+;
+            for (int i = 0; i < path.Count; i++)
+            {
+                for (int j = 0; j < subgraph[i].Count; j++)
+                {
+                    List<Node> parents = new List<Node>();
+                    foreach (Edge inedge in subgraph[i][j].InEdges)
+                    {
+                        parents.Add(inedge.SourceNode);
+                    }
+                    parents.Sort(DAGView.ParentComparer);
+                    for (int k = 0; k < parents.Count; k++)
+                    {
+                        if (!subgraph[i].Contains(parents[k]) &&
+                        (GetDepth(parents[k]) >= bound) &&
+                        (GetQuant(parents[k]) == generalStruct[j][k]))
+                        {
+                            subgraph[i].Add(parents[k]);
+                        } else
+                        {
+                            return cloneOfSubgraph;
+                        }
+                    }
+                }
+            }
+
 
             return subgraph;
+        }
+
+        public static void FindGeneralStructure(List<Node> cycle, ref List<List<Quantifier>> result, int bound)
+        {
+            for (int i = 0; i < cycle.Count; i++)
+            {
+                List<Quantifier> parents = new List<Quantifier>();
+                List<Node> orderedParent = new List<Node>();
+                foreach (Edge inedge in cycle[0].InEdges)
+                {
+                    orderedParent.Add(inedge.SourceNode);
+                }
+                orderedParent.Sort(DAGView.ParentComparer);
+                foreach (Node node in orderedParent)
+                {
+                    if ((!cycle.Contains(node)) && (GetDepth(node) >= bound))
+                    {
+                        cycle.Add(node);
+                        parents.Add(GetQuant(node));
+                    }
+                }
+                result.Add(parents);
+            }
+        }
+
+
+        public static int GetDepth(Node node)
+        {
+            return ((Instantiation) node.UserData).Depth;
+        }
+
+        public static Quantifier GetQuant(Node node)
+        {
+            return ((Instantiation)node.UserData).Quant;
+        }
+
+        public static int ParentComparer(Node a, Node b)
+        {
+            int deptha = GetDepth(a), depthb = GetDepth(b);
+            if (deptha < depthb) return 1;
+            if (deptha > depthb) return -1;
+            return string.Compare(GetQuant(a).Qid, GetQuant(b).Qid);
         }
     }
 }
