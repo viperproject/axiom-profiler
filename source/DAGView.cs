@@ -574,7 +574,7 @@ namespace AxiomProfiler
                     subgraph = new List<List<Node>>() { path };
                 FoundPattern:
                     highlightSubgraph(ref subgraph);
-                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count);
+                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count, cycleSize);
                     _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
 #if !DEBUG

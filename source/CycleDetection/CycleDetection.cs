@@ -251,6 +251,8 @@ namespace AxiomProfiler.CycleDetection
 
         private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
 
+        public bool isPath = false;
+
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
         {
             loopInstantiations = new List<Instantiation>[cycleLength];
@@ -319,7 +321,7 @@ namespace AxiomProfiler.CycleDetection
             var interestingBoundTos = new List<Term>();
             var interestingExplicitBoundTermIdxs = new List<int>();
             var theoryConstraintExplanationGeneralizer = new TheoryConstraintExplanationGeneralizer(this);
-
+            
             for (var it = 0; it < loopInstantiationsWorkSpace.Length+1; it++)
             {
                 var i = (loopInstantiationsWorkSpace.Length + it - 1) % loopInstantiationsWorkSpace.Length;
@@ -356,7 +358,7 @@ namespace AxiomProfiler.CycleDetection
                     }
                 }
 
-                if (it == 0)
+                if (it == 0 && isPath)
                 {
                     /* The first term in the matching loop explanation is not produced by a loop instantiation (and may not necessarily
                      * have been produced by a quantifier that occurs in the loop). We therefore need to extract the terms to run the generalization
@@ -375,9 +377,9 @@ namespace AxiomProfiler.CycleDetection
                             c.bindingInfo.bindings.Where(kv => p.dependentTerms.Contains(kv.Value.Item2, Term.semanticTermComparer)).Select(kv => kv.Key));
                         var boundTo = boundToCandidates.Skip(1).Aggregate(new HashSet<Term>(boundToCandidates.First()), (set, iterationResult) =>
                         {
-                            set.IntersectWith(iterationResult);
                             return set;
                         }).FirstOrDefault();
+
                         if (boundTo == null) throw new Exception("Couldn't generalize!");
                         interestingBoundTos.Add(boundTo);
 
@@ -418,7 +420,7 @@ namespace AxiomProfiler.CycleDetection
                     parentConcreteTerm = parent.concreteBody;
                     generalizedYield = generalizeYieldTermPointWise(loopInstantiationsWorkSpace[i], loopInstantiationsWorkSpace[j], nextBindingInfo, j <= i, isWrapInstantiation);
                 }
-
+                
                 //This will later be used to find out which quantifier was used to generate this term.
                 generalizedYield.Responsible = loopInstantiationsWorkSpace[i].First();
                 generalizedYield.dependentInstantiationsBlame.Add(loopInstantiationsWorkSpace[j].First());

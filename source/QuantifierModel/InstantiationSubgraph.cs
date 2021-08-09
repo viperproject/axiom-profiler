@@ -13,10 +13,13 @@ namespace AxiomProfiler.QuantifierModel
         private readonly List<Instantiation> subgraphInstantiations;
         // number of elements in cycle (the repeating strucutre)
         private int cycleSize;
+         // number of elements in cycle (when it was just a path)
+        private int simpleSize;
 
-        public InstantiationSubgraph(ref List<List<Node>> subgraph, int size)
+        public InstantiationSubgraph(ref List<List<Node>> subgraph, int size, int simpleSZ)
         {
             cycleSize = size;
+            simpleSize = simpleSZ;
             subgraphInstantiations = new List<Instantiation>();
             foreach (List<Node> cycle in subgraph)
             {
@@ -33,20 +36,28 @@ namespace AxiomProfiler.QuantifierModel
         // To generate the info panel content
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            if ((subgraphInstantiations.Count / cycleSize) < 3)
+            if (simpleSize == cycleSize)
             {
-                PrintPathInfo(content, format);;
+                if ((subgraphInstantiations.Count / cycleSize) < 3)
+                {
+                    PrintPathWithNoLoopInfo(content, format); ;
+                }
+                else
+                {
+                    PrintCycleInfo(content, format);
+                }
             } else
             {
                 PrintCycleInfo(content, format);
             }
+            
         }
 
 
         // When there is no repeating cycle
         // only take the first cycle even when there are two
         // Requires the subgraph to be a path
-        public void PrintPathInfo(InfoPanelContent content, PrettyPrintFormat format)
+        public void PrintPathWithNoLoopInfo(InfoPanelContent content, PrettyPrintFormat format)
         {
             content.switchFormat(PrintConstants.TitleFont, PrintConstants.defaultTextColor);
             content.Append("Path explanation:");
@@ -328,6 +339,7 @@ namespace AxiomProfiler.QuantifierModel
                 cycle.Add(subgraphInstantiations[i].Quant);
             }
             GeneralizationState generalizationState = new GeneralizationState(cycleSize, subgraphInstantiations);
+            if (simpleSize != cycleSize) generalizationState.isPath = false;
             generalizationState.generalize();
 
             if (generalizationState.TrueLoop)
@@ -355,7 +367,14 @@ namespace AxiomProfiler.QuantifierModel
             {
                 content.Append("Pattern: ");
             }
-            content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
+            if (simpleSize == cycleSize)
+            {
+                content.Append(string.Join(" -> ", cycle.Select(quant => quant.PrintName)));
+            } else
+            {
+                content.Append(string.Join(" , ", cycle.Select(quant => quant.PrintName)));
+            }
+            
             content.Append("\n");
 
             printPreamble(content, true);
