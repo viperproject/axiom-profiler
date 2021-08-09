@@ -328,6 +328,7 @@ namespace AxiomProfiler.QuantifierModel
                 cycle.Add(subgraphInstantiations[i].Quant);
             }
             GeneralizationState generalizationState = new GeneralizationState(cycleSize, subgraphInstantiations);
+            generalizationState.generalize();
 
             if (generalizationState.TrueLoop)
             {
@@ -462,6 +463,7 @@ namespace AxiomProfiler.QuantifierModel
             insts.MoveNext();
             var recursiveEqualityExplanations = new List<Tuple<int, EqualityExplanation>>();
             var firstStep = generalizationState.generalizedTerms.First();
+            
             printGeneralizedTermWithPrerequisites(content, format, generalizationState, alreadyIntroducedGeneralizations, firstStep.Item1, firstStep.Item2, firstStep.Item3, false, recursiveEqualityExplanations);
 
             var count = 1;
