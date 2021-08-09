@@ -574,7 +574,7 @@ namespace AxiomProfiler
                     subgraph = new List<List<Node>>() { path };
                 FoundPattern:
                     highlightSubgraph(ref subgraph);
-                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count, cycleSize);
+                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count);
                     _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
 #if !DEBUG
@@ -866,7 +866,7 @@ namespace AxiomProfiler
                 // less than means it doesn't count as matching loop, 
                 // so we'll only look at the first cycle
                 List<Node> newPath = new List<Node>();
-                for (int i = 0; i < cycleSize; i++)
+                for (int i = pos; i < (pos + cycleSize) && i < path.Count; i++)
                 {
                     newPath.Add(path[i]);
                 }
