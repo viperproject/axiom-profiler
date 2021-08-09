@@ -564,6 +564,9 @@ namespace AxiomProfiler
                         extendedPathStat.Add(GetPathInfo(ref upPath, pathPatternSize[i], i));
                     }
                     extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+
+                    Console.WriteLine("pathlength " + extendedPaths[extendedPathStat[0].Item4].Count);
+
                     // send to FindSubgrpah() to construct subgraph from the path
                     subgraph = FindSubgraph(extendedPaths[extendedPathStat[0].Item4], extendedPathStat[0].Item3, positionOfSelectedNode);
                     cycleSize = extendedPathStat[0].Item3;
@@ -693,10 +696,13 @@ namespace AxiomProfiler
                         {
                             Patterns.Add(CurPattern);
                         }
+                    } else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
                     }
-                    List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
-                    NewPattern.Add(ChildQuant);
-                    PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
+                    
                 }
             }
             return Patterns;
@@ -731,10 +737,12 @@ namespace AxiomProfiler
                         {
                             Patterns.Add(CurPattern);
                         }
+                    } else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Parent, NewPattern));
                     }
-                    List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
-                    NewPattern.Add(ChildQuant);
-                    PathStack.Add(new Tuple<Node, List<Quantifier>>(Parent, NewPattern));
                 }
             }
             return Patterns;
@@ -898,6 +906,7 @@ namespace AxiomProfiler
             // Condition 2:
             // if the user selected some node in the first full cycle, it is unclear how we can bound it
             // so we won't bother find the repeating strucutre
+            Console.WriteLine("pos " + pos + " dd " + (cycleSize + (path.Count % cycleSize)));
             if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) return subgraph;
 
             List<List<Node>> cloneOfSubgraph = new List<List<Node>>(subgraph);
