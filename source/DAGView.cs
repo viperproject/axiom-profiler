@@ -565,8 +565,6 @@ namespace AxiomProfiler
                     }
                     extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
 
-                    Console.WriteLine("pathlength " + extendedPaths[extendedPathStat[0].Item4].Count);
-
                     // send to FindSubgrpah() to construct subgraph from the path
                     subgraph = FindSubgraph(extendedPaths[extendedPathStat[0].Item4], extendedPathStat[0].Item3, positionOfSelectedNode);
                     cycleSize = extendedPathStat[0].Item3;
@@ -881,7 +879,7 @@ namespace AxiomProfiler
                 subgraph.Add(newPath);
                 return subgraph;
             }
-            int start = cycleSize + (path.Count % cycleSize);
+            int start = path.Count % cycleSize;
             if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) start = 0;
             int counter = 0;
             List<Node> cycle = new List<Node>();
@@ -906,24 +904,20 @@ namespace AxiomProfiler
             // Condition 2:
             // if the user selected some node in the first full cycle, it is unclear how we can bound it
             // so we won't bother find the repeating strucutre
-            Console.WriteLine("pos " + pos + " dd " + (cycleSize + (path.Count % cycleSize)));
             if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) return subgraph;
 
             List<List<Node>> cloneOfSubgraph = new List<List<Node>>(subgraph);
 
             int bound = GetDepth(path[path.Count % cycleSize]);
             List<List<Quantifier>> generalStruct = new List<List<Quantifier>>();
-            List<Node> generalCycle = new List<Node>();
-            for (int i = path.Count % cycleSize; i < cycleSize + (path.Count % cycleSize); i++)
-            {
-                generalCycle.Add(path[i]);
-            }
-            generalCycle.AddRange(subgraph[0]);
+            List<Node> generalCycle = new List<Node>(subgraph[0]);
+            generalCycle.AddRange(subgraph[1]);
             FindGeneralStructure(generalCycle, ref generalStruct, bound);
+            if (generalStruct.Count == subgraph[0].Count) return subgraph;
 
             Node curNode;
             int subgraphsize = subgraph.Count;
-            for (int i = 0; i < subgraphsize; i++)
+            for (int i = 1; i < subgraphsize; i++)
             {
                 counter = 0;
                 Queue<Node> queue = new Queue<Node>();

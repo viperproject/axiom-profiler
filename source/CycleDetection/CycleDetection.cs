@@ -251,10 +251,11 @@ namespace AxiomProfiler.CycleDetection
 
         private static readonly EqualityExplanation[] emptyEqualityExplanations = new EqualityExplanation[0];
 
-        public bool isPath = false;
+        public bool isPath;
 
         public GeneralizationState(int cycleLength, IEnumerable<Instantiation> instantiations)
         {
+            isPath = true;
             loopInstantiations = new List<Instantiation>[cycleLength];
             for (var i = 0; i < loopInstantiations.Length; i++)
             {
