@@ -916,8 +916,9 @@ namespace AxiomProfiler
             if (generalStruct.Count == subgraph[0].Count) return subgraph;
 
             Node curNode;
+            subgraph.RemoveAt(0);
             int subgraphsize = subgraph.Count;
-            for (int i = 1; i < subgraphsize; i++)
+            for (int i = 0; i < subgraphsize; i++)
             {
                 counter = 0;
                 Queue<Node> queue = new Queue<Node>();
