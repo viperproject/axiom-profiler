@@ -913,7 +913,6 @@ namespace AxiomProfiler
             List<Node> generalCycle = new List<Node>(subgraph[0]);
             generalCycle.AddRange(subgraph[1]);
             FindGeneralStructure(generalCycle, ref generalStruct, bound);
-            //if (generalStruct.Count == subgraph[0].Count) return subgraph;
 
             Node curNode;
             subgraph.RemoveAt(0);
