@@ -54,28 +54,6 @@ namespace UnitTestProject1
             Assert.AreEqual(1, result.Count);
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
         }
-
-        // Test if AllDownPatterns recogizes pattern that contain
-        // multiple occurences of the same quantifier in the same cycle
-        [TestMethod]
-        public void TestAllDownPattern5()
-        {
-            List<List<Quantifier>> result = DAGView.AllDownPatterns(Graphs.graph6.FindNode("A"), 8);
-            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0], Graphs.Quants[2] };
-            List<Quantifier> expected3 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1],
-                Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected4 = new List<Quantifier>() { Graphs.Quants[0] };
-            List<Quantifier> expected5 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected6 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0] };
-            Assert.AreEqual(6, result.Count);
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected3));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected4));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected5));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected6));
-        }
     }
 
     [TestClass]
@@ -209,28 +187,6 @@ namespace UnitTestProject1
             List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
             Assert.AreEqual(1, result.Count);
             Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
-        }
-
-        // Test if AllDownPatterns recogizes pattern that contain
-        // multiple occurences of the same quantifier in the same cycle
-        [TestMethod]
-        public void TestAllUpPatterns5()
-        {
-            List<List<Quantifier>> result = DAGView.AllUpPatterns(Graphs.graph7.FindNode("A"), 8);
-            List<Quantifier> expected1 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected2 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0], Graphs.Quants[2] };
-            List<Quantifier> expected3 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[1],
-                Graphs.Quants[0], Graphs.Quants[2], Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected4 = new List<Quantifier>() { Graphs.Quants[0] };
-            List<Quantifier> expected5 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1] };
-            List<Quantifier> expected6 = new List<Quantifier>() { Graphs.Quants[0], Graphs.Quants[0], Graphs.Quants[1], Graphs.Quants[0] };
-            Assert.AreEqual(6, result.Count);
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected1));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected2));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected3));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected4));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected5));
-            Assert.IsTrue(DAGView.ContainPattern(ref result, ref expected6));
         }
     }
 
