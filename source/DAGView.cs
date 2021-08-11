@@ -1000,8 +1000,8 @@ namespace AxiomProfiler
         public static int ParentComparer(Node a, Node b)
         {
             int deptha = GetDepth(a), depthb = GetDepth(b);
-            if (deptha < depthb) return 1;
-            if (deptha > depthb) return -1;
+            if (deptha < depthb) return -1;
+            if (deptha > depthb) return 1;
             return string.Compare(GetQuant(a).Qid, GetQuant(b).Qid);
         }
     }
