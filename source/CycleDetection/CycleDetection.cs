@@ -717,11 +717,7 @@ namespace AxiomProfiler.CycleDetection
                 return eeCollector;
             }).ToList();
 
-#if DEBUG
-            if (equalityExplanations.Any(l => l.Count == 0)) throw new Exception("Found no concrete explanations.");
-#else
             equalityExplanations = equalityExplanations.Where(l => l.Count != 0).ToList();
-#endif
 
             var recursionPointFinder = new RecursionPointFinder();
             generalizedBindingInfo.EqualityExplanations = equalityExplanations.Select(list => {
