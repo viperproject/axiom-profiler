@@ -332,8 +332,7 @@ namespace AxiomProfiler.QuantifierModel
             {
                 cycle.Add(subgraphInstantiations[i].Quant);
             }
-            Console.WriteLine("cycle length " + cycleSize);
-            Console.WriteLine("cycle instantiatons size " + subgraphInstantiations.Count);
+
             GeneralizationState generalizationState = new GeneralizationState(cycleSize, subgraphInstantiations);
             if (simpleSize != cycleSize) generalizationState.isPath = false;
             generalizationState.generalize();
