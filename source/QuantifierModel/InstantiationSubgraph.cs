@@ -36,17 +36,11 @@ namespace AxiomProfiler.QuantifierModel
         // To generate the info panel content
         public void InfoPanelText(InfoPanelContent content, PrettyPrintFormat format)
         {
-            if (simpleSize == cycleSize)
+            if ((subgraphInstantiations.Count / cycleSize) < 3)
             {
-                if ((subgraphInstantiations.Count / cycleSize) < 3)
-                {
-                    PrintPathWithNoLoopInfo(content, format); ;
-                }
-                else
-                {
-                    PrintCycleInfo(content, format);
-                }
-            } else
+                PrintPathWithNoLoopInfo(content, format); ;
+            }
+            else
             {
                 PrintCycleInfo(content, format);
             }
@@ -338,6 +332,8 @@ namespace AxiomProfiler.QuantifierModel
             {
                 cycle.Add(subgraphInstantiations[i].Quant);
             }
+            Console.WriteLine("cycle length " + cycleSize);
+            Console.WriteLine("cycle instantiatons size " + subgraphInstantiations.Count);
             GeneralizationState generalizationState = new GeneralizationState(cycleSize, subgraphInstantiations);
             if (simpleSize != cycleSize) generalizationState.isPath = false;
             generalizationState.generalize();
