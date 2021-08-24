@@ -45,21 +45,21 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 1. Install Docker.
 2. Clone this repository:
 
-    git clone https://github.com/viperproject/axiom-profiler.git
-    cd axiom-profiler
+        git clone https://github.com/viperproject/axiom-profiler.git
+        cd axiom-profiler
 
 3. Build the Docker image:
 
-    docker build . --tag=axiom-profiler`
+        docker build . --tag=axiom-profiler`
 
 4. Start the Docker image, replacing `<path>` with the absolute path of the folder containing the Z3 logs:
 
-    docker run -t -p 6080:6080 -v<path>:/home/ubuntu/data axiom-profiler
+        docker run -t -p 6080:6080 -v<path>:/home/ubuntu/data axiom-profiler
 
 5. Follow the instructions printed in the terminal to open a remote desktop of the Docker image.
 6. In the remote desktop, open a terminal and start the axiom profiler:
 
-    mono /home/ubuntu/axiom-profiler/bin/Release/AxiomProfiler.exe
+        mono /home/ubuntu/axiom-profiler/bin/Release/AxiomProfiler.exe
 
 7. In the axiom profiler, the logs can be loaded from the "Personal > data" location.
 
