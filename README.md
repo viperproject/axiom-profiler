@@ -40,6 +40,29 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
         mono bin/Release/AxiomProfiler.exe
 
+## Using on Mac/Ubuntu (via Docker)
+
+1. Install Docker.
+2. Clone this repository:
+
+    git clone https://github.com/viperproject/axiom-profiler.git
+    cd axiom-profiler
+
+3. Build the Docker image:
+
+    docker build . --tag=axiom-profiler`
+
+4. Start the Docker image, replacing `<path>` with the absolute path of the folder containing the Z3 logs:
+
+    docker run -t -p 6080:6080 -v<path>:/home/ubuntu/data axiom-profiler
+
+5. Follow the instructions printed in the terminal to open a remote desktop of the Docker image.
+6. In the remote desktop, open a terminal and start the axiom profiler:
+
+    mono /home/ubuntu/axiom-profiler/bin/Release/AxiomProfiler.exe
+
+7. In the axiom profiler, the logs can be loaded from the "Personal > data" location.
+
 ## Obtaining logs from Z3
 
 NOTE: The Axiom Profiler requires at least version 4.8.5 of z3. To build the latest version of z3 from source follow the instructions at https://github.com/Z3Prover/z3.
