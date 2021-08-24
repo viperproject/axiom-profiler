@@ -50,7 +50,7 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
 3. Build the Docker image:
 
-        docker build . --tag=axiom-profiler`
+        docker build . --tag=axiom-profiler
 
 4. Start the Docker image, replacing `<path>` with the absolute path of the folder containing the Z3 logs:
 
