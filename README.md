@@ -82,11 +82,15 @@ Similarly, if you have a log file which takes too long to load into the Axiom Pr
 
 ## Obtaining Z3 logs from various verification tools that use Z3 (feel free to add more)
 
+### Boogie
+
 To obtain a Z3 log with Boogie, use e.g:
 
     boogie /vcsCores:1 /z3opt:trace=true /z3opt:PROOF=true ./file.bpl
 
 Note that you may also want to pass the /vcsCores:1 option to disable concurrency (since otherwise many Z3 instances may write to the same file)
+
+### Silicon
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
 
@@ -106,9 +110,19 @@ in Windows command prompt or:
 
 in Windows PowerShell.
 
+### Carbon
+
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
     carbon --print ./file.bpl ./file.sil
     boogie /vcsCores:1 /z3opt:trace=true /z3opt:proof=true ./file.bpl
 
 In all cases, the Z3 log should be stored in `./z3.log` (this can also be altered by correspondingly passing z3 the trace-file-name option described above)
+
+### Dafny
+
+See these instructions in Dafny's wiki: [Investigating slow verification performance](https://github.com/dafny-lang/dafny/wiki/Investigating-slow-verification-performance).
+
+### FStar
+
+See these instructions in FStar's wiki: [Profiling Z3 queries](https://github.com/FStarLang/FStar/wiki/Profiling-Z3-queries).
