@@ -6,23 +6,24 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
 ## Using on Windows
 
-1.  Clone repository:
+1.  Clone this repository:
 
-        hg clone https://bitbucket.org/viperproject/axiom-profiler
+        git clone https://github.com/viperproject/axiom-profiler.git
         
 2.  Build from Visual Studio (also possible on the command-line): open source/AxiomProfiler.sln solution, and run the release build. Requires C# 6.0 features, .Net >= 4.5 (and a version of Visual Studio which supports this, e.g. >= 2017).
         
 3.  Run the tool (either via Visual Studio, or by executing bin/Release/AxiomProfiler.exe)
 
 ## Using on Ubuntu
-(note that the GUI of the tool currently suffers from some glitches when running under mono)
 
-1.  Clone repository:
+(Note that the GUI of the tool currently suffers from some glitches when running under mono.)
 
-        hg clone https://bitbucket.org/viperproject/axiom-profiler
+1.  Clone this repository:
+
+        git clone https://github.com/viperproject/axiom-profiler.git
         cd axiom-profiler
 
-2.  Install mono.
+2.  Install Mono from https://www.mono-project.com/download/stable/
 3.  Download NuGet:
 
         wget https://nuget.org/nuget.exe
@@ -39,6 +40,29 @@ Our tool was originally based on a tool called the [VCC Axiom Profiler](http://v
 
         mono bin/Release/AxiomProfiler.exe
 
+## Using on Mac/Ubuntu (via Docker)
+
+1. Install Docker.
+2. Clone this repository:
+
+        git clone https://github.com/viperproject/axiom-profiler.git
+        cd axiom-profiler
+
+3. Build the Docker image:
+
+        docker build . --tag=axiom-profiler
+
+4. Start the Docker image, replacing `<path>` with the absolute path of the folder containing the Z3 logs:
+
+        docker run -t -p 6080:6080 -v<path>:/home/ubuntu/data axiom-profiler
+
+5. Follow the instructions printed in the terminal to open a remote desktop of the Docker image.
+6. In the remote desktop, open a terminal and start the axiom profiler:
+
+        mono /home/ubuntu/axiom-profiler/bin/Release/AxiomProfiler.exe
+
+7. In the axiom profiler, the logs can be loaded from the "Personal > data" location.
+
 ## Obtaining logs from Z3
 
 NOTE: The Axiom Profiler requires at least version 4.8.5 of z3. To build the latest version of z3 from source follow the instructions at https://github.com/Z3Prover/z3.
@@ -46,7 +70,8 @@ NOTE: The Axiom Profiler requires at least version 4.8.5 of z3. To build the lat
 Run Z3 with two extra command-line options:
 
     z3 trace=true proof=true ./input.smt2
-(this will produce a log file called ./z3.log)
+
+This will produce a log file called `./z3.log`.
 If you want to specify the target filename, you can pass a third option:
 
     z3 trace=true proof=true trace-file-name=foo.log ./input.smt2
@@ -60,6 +85,7 @@ Similarly, if you have a log file which takes too long to load into the Axiom Pr
 To obtain a Z3 log with Boogie, use e.g:
 
     boogie /vcsCores:1 /z3opt:trace=true /z3opt:PROOF=true ./file.bpl
+
 Note that you may also want to pass the /vcsCores:1 option to disable concurrency (since otherwise many Z3 instances may write to the same file)
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
