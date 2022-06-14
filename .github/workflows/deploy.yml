@@ -1,0 +1,68 @@
+name: Deploy
+
+on:
+  push:
+    branches: '*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ windows-2019 ]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Setup MSBuild.exe
+        uses: microsoft/setup-msbuild@v1.1
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v1
+      - name: Build
+        run: msbuild source/AxiomProfiler.sln -property:Configuration=Release
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: axiom-profiler-release-${{ matrix.os }}
+          if-no-files-found: error
+          path: |
+            bin/Release/*
+
+  # Deploy to a new GitHub pre-release
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download all Axiom Profiler artifacts
+        uses: actions/download-artifact@v2
+      - name: Package Prusti artifacts
+        shell: bash
+        run: |
+          for os in windows-2019
+          do
+            echo "Package Prusti artifact for $os"
+            cd axiom-profiler-release-$os
+            zip -r axiom-profiler.zip *
+            cd ..
+          done
+      - name: Create release tag
+        shell: bash
+        run: echo "TAG_NAME=$(date +v-%Y-%m-%d-%H%M)" >> $GITHUB_ENV
+      - name: Create a nightly release
+        id: create_release
+        uses: viperproject/create-nightly-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: Nightly Release ${{ env.TAG_NAME }}
+          keep_num: 2
+      - name: Upload release asset for Windows
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./axiom-profiler-release-windows-2019/axiom-profiler.zip
+          asset_name: axiom-profiler-release-windows.zip
+          asset_content_type: application/zip
