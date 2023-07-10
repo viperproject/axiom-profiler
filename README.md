@@ -94,19 +94,19 @@ Note that you may also want to pass the /vcsCores:1 option to disable concurrenc
 
 To obtain a Z3 log with the Viper symbolic execution verifier (Silicon), use e.g:
 
-    silicon --numberOfParallelVerifiers 1 --z3Args "trace=true proof=true" ./file.sil
+    silicon --numberOfParallelVerifiers 1 --z3Args "trace=true proof=true" ./file.vpr
 
 If it complains about an unrecognized argument, try escaping the double-quotes. E.g.:
 
-    silicon --numberOfParallelVerifiers 1 --z3Args '"trace=true proof=true"' ./file.sil
+    silicon --numberOfParallelVerifiers 1 --z3Args '"trace=true proof=true"' ./file.vpr
     
 on Unix-like systems or:
 
-    silicon --numberOfParallelVerifiers 1 --z3Args """trace=true proof=true""" ./file.sil
+    silicon --numberOfParallelVerifiers 1 --z3Args """trace=true proof=true""" ./file.vpr
 
 in Windows command prompt or:
 
-    silicon --numberOfParallelVerifiers 1 --z3Args """""trace=true proof=true""""" ./file.sil
+    silicon --numberOfParallelVerifiers 1 --z3Args """""trace=true proof=true""""" ./file.vpr
 
 in Windows PowerShell.
 
@@ -114,7 +114,7 @@ in Windows PowerShell.
 
 To obtain a Z3 log with the Viper verification condition generation verifier (Carbon), use e.g:
 
-    carbon --print ./file.bpl ./file.sil
+    carbon --print ./file.bpl ./file.vpr
     boogie /vcsCores:1 /z3opt:trace=true /z3opt:proof=true ./file.bpl
 
 In all cases, the Z3 log should be stored in `./z3.log` (this can also be altered by correspondingly passing z3 the trace-file-name option described above)
