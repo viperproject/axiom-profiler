@@ -104,11 +104,7 @@ on Unix-like systems or:
 
     silicon --numberOfParallelVerifiers 1 --z3Args """trace=true proof=true""" ./file.vpr
 
-in Windows command prompt or:
-
-    silicon --numberOfParallelVerifiers 1 --z3Args """""trace=true proof=true""""" ./file.vpr
-
-in Windows PowerShell.
+in Windows command prompt.
 
 ### Carbon
 
