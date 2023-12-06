@@ -907,8 +907,9 @@ namespace AxiomProfiler
                         }
                         else
                         {
-                            var versionComponents = words[2].Split(new char[] { '.' }).Select(sv => int.TryParse(sv, out var parsed) ? parsed : -1).ToArray();
-                            if (versionComponents[0] < 4 || versionComponents[1] < 8 || versionComponents[2] < 5)
+                            var currentVersion = new Version(words[2]);
+                            var minimumVersion = new Version("4.8.5");
+                            if (currentVersion < minimumVersion)
                             {
                                 throw new Z3VersionException();
                             }
