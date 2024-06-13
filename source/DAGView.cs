@@ -1,17 +1,16 @@
-﻿using System;
+﻿using AxiomProfiler.QuantifierModel;
+using Microsoft.Msagl.Core.Routing;
+using Microsoft.Msagl.Drawing;
+using Microsoft.Msagl.GraphViewerGdi;
+using Microsoft.Msagl.Layout.Layered;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows.Forms;
 using System.Threading.Tasks;
-using Microsoft.Msagl.Core.Routing;
-using Microsoft.Msagl.GraphViewerGdi;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.Layout.Layered;
-using AxiomProfiler.QuantifierModel;
+using System.Windows.Forms;
 using Color = Microsoft.Msagl.Drawing.Color;
 using MouseButtons = System.Windows.Forms.MouseButtons;
 using Size = System.Drawing.Size;
-using AxiomProfiler.Utilities;
 
 namespace AxiomProfiler
 {
@@ -169,13 +168,13 @@ namespace AxiomProfiler
                 case "injectivity":
                     return Color.Purple;
                 default:*/
-                if (!colorMap.TryGetValue(quant, out var color))
-                {
-                    color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
-                    colorMap[quant] = color;
-                }
+            if (!colorMap.TryGetValue(quant, out var color))
+            {
+                color = colors.OrderBy(c => colorMap.Values.Count(used => used == c)).First();
+                colorMap[quant] = color;
+            }
 
-                return color;
+            return color;
             //}
         }
 
@@ -468,6 +467,13 @@ namespace AxiomProfiler
             redrawGraph();
         }
 
+        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
+        // build a path from the best segments.
+        private static readonly int pathSegmentSize = 8;
+
+        // This functions and it's helper functions are properlly explain in
+        //https://docs.google.com/document/d/1SJspfBecgkVT9U8xC-MvQ_NPDTGVfg0yqq7YjJ3ma2s/edit?usp=sharing
+        // helper functions were originally private, but changing to public was needed to unit testing
         private void pathExplanationButton_Click(object sender, EventArgs e)
         {
             if (previouslySelectedNode == null)
@@ -483,252 +489,520 @@ namespace AxiomProfiler
                 try
                 {
 #endif
-                    _z3AxiomProfiler.DisplayMessage("Finding best path for generalization...");
-
-                    // building path downwards:
-                    var bestDownPath = BestDownPath(previouslySelectedNode);
-                    InstantiationPath bestUpPath;
-                    if (bestDownPath.TryGetLoop(out var loop))
+                    List<List<Quantifier>> downPatterns = AllDownPatterns(previouslySelectedNode, pathSegmentSize);
+                    List<List<Node>> extendedPaths = new List<List<Node>>();
+                    List<int> pathPatternSize = new List<int>();
+                    List<Node> downPath, upPath;
+                    List<Quantifier> pattern;
+                    List<List<Node>> subgraph;
+                    int cycleSize = 1;
+                    int positionOfSelectedNode = 0;
+                    // if there are down patterns we only look at down patterns
+                    // other wise we look at up patterns
+                    if (downPatterns.Count > 0)
                     {
-                        bestUpPath = ExtendPathUpwardsWithLoop(loop, previouslySelectedNode, bestDownPath);
-                        if (bestUpPath == null)
+                        int size = FindSize(ref downPatterns);
+                        List<Tuple<int, int, int, int>> pathStats = new List<Tuple<int, int, int, int>>();
+                        for (int i = 0; i < downPatterns.Count; i++)
+                        {   
+                            // had to assign a new list for pattern and new path
+                            // because apperently c# can't use ref on elements of a list
+                            pattern = downPatterns[i];
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, size);
+                            pathStats.Add(GetPathInfo(ref downPath, downPatterns[i].Count, i));
+                        }
+                        // ussing our custom comparer
+                        pathStats.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+                        // only take the top 30;
+                        for (int i = 0; (i < pathStats.Count) && (i < 30); i++) 
                         {
-                            bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                            pattern = downPatterns[pathStats[i].Item4];
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, -1);
+                            pattern.Reverse(1, pattern.Count-1);
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.Reverse();
+                            upPath.RemoveAt(upPath.Count - 1);
+                            positionOfSelectedNode = upPath.Count;
+                            upPath.AddRange(downPath);
+                            pathPatternSize.Add(pattern.Count);
+                            extendedPaths.Add(upPath);
+                        }
+                    } else
+                    {
+                        List<List<Quantifier>> upPatterns = AllUpPatterns(previouslySelectedNode, pathSegmentSize);
+                        if (upPatterns.Count == 0) goto NoPattern;
+                        int size = FindSize(ref upPatterns);
+                        List<Tuple<int, int, int, int>> pathStats = new List<Tuple<int, int, int, int>>();
+                        for (int i = 0; i < upPatterns.Count; i++)
+                        {
+                            pattern = upPatterns[i];
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, size);
+                            upPath.Reverse();
+                            pathStats.Add(GetPathInfo(ref upPath, pattern.Count, i));
+                        }
+                        // ussing our custom comparer
+                        pathStats.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
+                        // only take the top 30;
+                        for (int i = 0; (i < pathStats.Count) && (i < 30); i++) 
+                        {
+                            pattern = upPatterns[pathStats[i].Item4];
+                            upPath = ExtendUpwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.Reverse();
+                            pattern.Reverse(1, pattern.Count-1);
+                            downPath = ExtendDownwards(previouslySelectedNode, ref pattern, -1);
+                            upPath.RemoveAt(upPath.Count-1);
+                            positionOfSelectedNode = upPath.Count;
+                            upPath.AddRange(downPath);
+                            extendedPaths.Add(upPath);
+                            pathPatternSize.Add(pattern.Count);
                         }
                     }
-                    else
+                    List<Tuple<int, int, int, int>> extendedPathStat = new List<Tuple<int, int, int, int>>();
+                    for (int i = 0; i < extendedPaths.Count; i++)
                     {
-                        bestUpPath = BestUpPath(previouslySelectedNode, bestDownPath);
+                        upPath = extendedPaths[i];
+                        extendedPathStat.Add(GetPathInfo(ref upPath, pathPatternSize[i], i));
                     }
+                    extendedPathStat.Sort((elem1, elem2) => DAGView.CustomPathComparer(ref elem1, ref elem2));
 
-                    List<Instantiation> toRemove;
-                    if (bestUpPath.TryGetCyclePath(out var cyclePath))
-                    {
-                        highlightPath(cyclePath);
-                        _z3AxiomProfiler.UpdateSync(cyclePath);
-                        toRemove = cyclePath.GetInstnationsUnusedInGeneralization();
-                    }
-                    else
-                    {
-                        highlightPath(bestUpPath);
-                        _z3AxiomProfiler.UpdateSync(bestUpPath);
-                        toRemove = bestUpPath.GetInstnationsUnusedInGeneralization();
-                    }
-
-                    // Stop highlighting nodes that weren't used in the generalization.
-                    foreach (var inst in toRemove)
-                    {
-                        var node = graph.FindNode(inst.uniqueID);
-                        if (node != null)
-                        {
-                            formatNode(node);
-                        }
-                    }
+                    // send to FindSubgrpah() to construct subgraph from the path
+                    subgraph = FindSubgraph(extendedPaths[extendedPathStat[0].Item4], extendedPathStat[0].Item3, positionOfSelectedNode);
+                    cycleSize = extendedPathStat[0].Item3;
+                    goto FoundPattern;
+                NoPattern:
+                    // subgrpah consisit of only the selcted node
+                    List<Node> path = new List<Node>() { previouslySelectedNode };
+                    subgraph = new List<List<Node>>() { path };
+                FoundPattern:
+                    highlightSubgraph(ref subgraph);
+                    InstantiationSubgraph instSubgraph = new InstantiationSubgraph(ref subgraph, subgraph[0].Count, cycleSize);
+                    _z3AxiomProfiler.UpdateSync(instSubgraph);
                     _viewer.Invalidate();
 #if !DEBUG
                 }
                 catch (Exception exception)
                 {
                     _z3AxiomProfiler.DisplayMessage($"An exception was thrown. Please report this bug to viper@inf.ethz.ch.\nDescription of the exception: {exception.Message}");
-		    Console.WriteLine(exception);
+                    Console.WriteLine(exception);
                 }
 #endif
             });
         }
 
-        // These factors were determined experimentally
-        private static readonly double outlierThreshold = 0.3;
-        private static readonly double incomingEdgePenalizationFactor = 0.5;
-
-        /// <summary>
-        /// Assigns a score to instantiation paths based on the predicted likelyhood that it conatins a matching loop.
-        /// </summary>
-        /// <returns>Higher values indicate a higher likelyhood of the path containing a matching loop.</returns>
-        /// <remarks>All constants were determined experimentally.</remarks>
-        private static double InstantiationPathScoreFunction(InstantiationPath instantiationPath, bool eliminatePrefix, bool eliminatePostfix)
+        // helper function to return the size we want
+        // max of (3 * longest pattern, LCM(of length of patterns))
+        public static int FindSize(ref List<List<Quantifier>> pattern)
         {
-            //There may be some "outiers" before or after a matching loop.
-            //We first identify quantifiers that occur at most outlierThreshold times as often as the most common quantifier in the path...
-            var statistics = instantiationPath.Statistics();
-            var eliminationTreshhold = (statistics == null || !statistics.Any()) ? 1 :
-		Math.Max(statistics.Max(dp => dp.Item2) * outlierThreshold, 1);
-            var nonEliminatableQuantifiers = new HashSet<Tuple<Quantifier, Term, Term>>(statistics
-                .Where(dp => dp.Item2 > eliminationTreshhold)
-                .Select(dp => dp.Item1));
-
-            //...find the longest contigous subsequence that does not contain eliminatable quantifiers...
-            var pathInstantiations = instantiationPath.getInstantiations();
-            var instantiations = pathInstantiations.Zip(pathInstantiations.Skip(1), (prev, next) => !next.bindingInfo.IsPatternMatch() ?
-                Enumerable.Repeat(Tuple.Create<Quantifier, Term, Term>(next.Quant, null, null), 1) :
-                next.bindingInfo.bindings.Where(kv => prev.concreteBody.isSubterm(kv.Value.Item2.id))
-                .Select(kv => Tuple.Create(next.Quant, next.bindingInfo.fullPattern, kv.Key))).ToArray();
-
-            var maxStartIndex = 0;
-            var maxLength = 0;
-            var lastMaxStartIndex = 0;
-
-            var firstKept = nonEliminatableQuantifiers.Any(q => q.Item1 == pathInstantiations.First().Quant && q.Item2 == pathInstantiations.First().bindingInfo.fullPattern);
-            var curStartIndex = firstKept ? 0 : 1;
-            var curLength = firstKept ? 1 : 0;
-            for (var i = 0; i < instantiations.Count(); ++i)
+            int ThreeTimesLongest = 0;
+            int LCM = 1;
+            for (int i = 0; i < pattern.Count; i++)
             {
-                if (instantiations[i].Any(q => nonEliminatableQuantifiers.Contains(q)))
+                ThreeTimesLongest = Math.Max(ThreeTimesLongest, 2 * pattern[i].Count);
+                LCM = (LCM * pattern[i].Count) / CalcGCD(LCM, pattern[i].Count);
+            }
+            return Math.Max(ThreeTimesLongest, LCM);
+        }
+
+        // helper function to calculat GCD
+        public static int CalcGCD(int a, int b)
+        {
+            if (b == 0) return a;
+            if (b > a) return CalcGCD(b, a);
+            return CalcGCD(b, a % b);
+        }
+
+        // helper function to return info about a path
+        // tuple of
+        // path legnth,
+        // number of uncovered childre,
+        // pattern length,
+        // reference to the pattern / or reference to a path)
+        public static Tuple<int, int, int, int> GetPathInfo(ref List<Node> path, int patternLength, int reference)
+        {
+            int pathLength = path.Count;
+            int patterLegnth = patternLength;
+            int uncoveredChildren = 0;
+            Node child;
+            List<Node> seen = new List<Node>();
+            foreach (Node node in path)
+            {
+                foreach (Edge edge in node.OutEdges)
                 {
-                    ++curLength;
-                }
-                else
-                {
-                    if (curLength > maxLength)
+                    child = edge.TargetNode;
+                    if (!seen.Contains(child) && !path.Contains(child))
                     {
-                        maxStartIndex = curStartIndex;
-                        lastMaxStartIndex = curStartIndex;
-                        maxLength = curLength;
+                        uncoveredChildren++;
+                        seen.Add(child);
                     }
-                    else if (curLength == maxLength)
+                }
+            }
+            return new Tuple<int, int, int, int>(pathLength, uncoveredChildren, patternLength, reference);
+        }
+
+        // Custom comparer used to sort a list of tuple {
+        // the tuple will be consist of (length of path, number of uncovered children, length of pattern)
+        // - having longer length is preferred
+        // - having less covered children is preferred
+        // - having shorter pattern is preferred
+        public static int CustomPathComparer(ref Tuple<int, int, int, int> elem1, ref Tuple<int, int, int, int> elem2)
+        {   
+            // If elem1 has longer path length return -1
+            // which mean elem1 is smaller than elem2, since list sort are in ascending order by default
+            if (elem1.Item1 > elem2.Item1) return -1;
+            if (elem1.Item1 < elem2.Item1) return 1;
+
+            // if elem1 has less covered children than elem2 return -1
+            if (elem1.Item2 < elem2.Item2) return -1;
+            if (elem1.Item2 > elem2.Item2) return 1;
+
+            // if  elem1 has shorter pattern length return -1
+            if (elem1.Item3 < elem2.Item3) return -1;
+            if (elem1.Item3 > elem2.Item3) return 1;
+
+
+            return 0;
+        }
+
+
+        // Return all down patterns found with the bound
+        public static List<List<Quantifier>> AllDownPatterns(Node node, int bound)
+        {
+            List<List<Quantifier>> Patterns = new List<List<Quantifier>>();
+            Quantifier Target = ((Instantiation)node.UserData).Quant;
+            List<Quantifier> CurPattern = new List<Quantifier>();
+            CurPattern.Add(Target);
+            Tuple<Node, List<Quantifier>> CurPair = new Tuple<Node, List<Quantifier>>(node, CurPattern);
+            List<Tuple<Node, List<Quantifier>>> PathStack = new List<Tuple<Node, List<Quantifier>>>();
+            PathStack.Add(CurPair);
+            Node CurNode, Child;
+            Quantifier ChildQuant;
+
+            while (PathStack.Count > 0)
+            {
+                CurPair = PathStack[PathStack.Count - 1];
+                PathStack.RemoveAt(PathStack.Count - 1);
+                CurNode = CurPair.Item1;
+                CurPattern = CurPair.Item2;
+                if (CurPattern.Count > bound) continue;
+                foreach (Edge edge in CurNode.OutEdges)
+                {
+                    Child = edge.TargetNode;
+                    ChildQuant = ((Instantiation)Child.UserData).Quant;
+                    if (ChildQuant.Equals(Target))
                     {
-                        lastMaxStartIndex = curStartIndex;
+                        if (!ContainPattern(ref Patterns, ref CurPattern))
+                        {
+                            Patterns.Add(CurPattern);
+                        }
+                    } else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Child, NewPattern));
                     }
-                    curStartIndex = i + 2;
-                    curLength = 0;
+                    
                 }
             }
-            if (curLength > maxLength)
-            {
-                maxStartIndex = curStartIndex;
-                lastMaxStartIndex = curStartIndex;
-                maxLength = curLength;
-            }
-            else if (curLength == maxLength)
-            {
-                lastMaxStartIndex = curStartIndex;
-            }
-
-            //...and eliminate the prefix/postfix of that subsequence
-            var remainingStart = eliminatePrefix ? maxStartIndex : 0;
-            var remainingLength = (eliminatePostfix ? lastMaxStartIndex + maxLength : instantiations.Count()) - remainingStart;
-            var remainingInstantiations = instantiationPath.getInstantiations().ToList().GetRange(remainingStart, remainingLength);
-
-            if (remainingInstantiations.Count() == 0) return -1;
-
-            var remainingPath = new InstantiationPath();
-            foreach (var inst in remainingInstantiations)
-            {
-                remainingPath.append(inst);
-            }
-
-            /* We count the number of incoming edges (responsible instantiations that are not part of the path) and penalize them.
-             * This ensures that we choose the best path. E.g. in the triangular case (A -> B, A -> C, B -> C) we want to choose A -> B -> C
-             * and not A -> B which would have an incoming edge (B -> C).
-             */
-            var numberIncomingEdges = 0;
-            foreach (var inst in remainingInstantiations)
-            {
-                numberIncomingEdges += inst.ResponsibleInstantiations.Where(i => !instantiationPath.getInstantiations().Contains(i)).Count();
-            }
-
-            /* the score is given by the number of remaining instantiations devided by the number of remaining quantifiers
-             * which is an approximation for the number of repetitions of a matching loop occuring in that path.
-             */
-            return (remainingPath.Length() - numberIncomingEdges * incomingEdgePenalizationFactor) / remainingPath.NumberOfDistinctQuantifierFingerprints();
+            return Patterns;
         }
 
-        // For performance reasons we cannot score all possible paths. Instead we score segments of length 8 and
-        // build a path from the best segments.
-        private static readonly int pathSegmentSize = 8;
-
-        private InstantiationPath BestDownPath(Node node)
+        public static List<List<Quantifier>> AllUpPatterns(Node node, int bound)
         {
-            var curNode = node;
-            var curPath = new InstantiationPath();
-            curPath.append((Instantiation)node.UserData);
-            while (curNode.OutEdges.Any())
-            {
-                curPath = AllDownPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path => InstantiationPathScoreFunction(path, false, true)).First();
-                curNode = graph.FindNode(curPath.getInstantiations().Last().uniqueID);
-            }
-            return curPath;
-        }
+            List<List<Quantifier>> Patterns = new List<List<Quantifier>>();
+            Quantifier Target = ((Instantiation)node.UserData).Quant;
+            List<Quantifier> CurPattern = new List<Quantifier>();
+            CurPattern.Add(Target);
+            Tuple<Node, List<Quantifier>> CurPair = new Tuple<Node, List<Quantifier>>(node, CurPattern);
+            List<Tuple<Node, List<Quantifier>>> PathStack = new List<Tuple<Node, List<Quantifier>>>();
+            PathStack.Add(CurPair);
+            Node CurNode, Parent;
+            Quantifier ChildQuant;
 
-        private InstantiationPath BestUpPath(Node node, InstantiationPath downPath)
-        {
-            var curNode = node;
-            var curPath = downPath;
-            while (curNode.InEdges.Any())
+            while (PathStack.Count > 0)
             {
-                curPath = AllUpPaths(curPath, curNode, pathSegmentSize).OrderByDescending(path =>
+                CurPair = PathStack[PathStack.Count - 1];
+                PathStack.RemoveAt(PathStack.Count - 1);
+                CurNode = CurPair.Item1;
+                CurPattern = CurPair.Item2;
+                if (CurPattern.Count > bound) continue;
+                foreach (Edge edge in CurNode.InEdges)
                 {
-                    path.appendWithOverlap(downPath);
-                    return InstantiationPathScoreFunction(path, true, true);
-                }).First();
-                curNode = graph.FindNode(curPath.getInstantiations().First().uniqueID);
-            }
-            return curPath;
-        }
-
-        private static IEnumerable<InstantiationPath> AllDownPaths(InstantiationPath basePath, Node node, int nodesToGo)
-        {
-            if (nodesToGo <= 0 || !node.OutEdges.Any()) return Enumerable.Repeat(basePath, 1);
-            return node.OutEdges.SelectMany(e => {
-                var copy = new InstantiationPath(basePath);
-                copy.append((Instantiation)e.TargetNode.UserData);
-                return AllDownPaths(copy, e.TargetNode, nodesToGo - 1);
-            });
-        }
-
-        private static IEnumerable<InstantiationPath> AllUpPaths(InstantiationPath basePath, Node node, int nodesToGo)
-        {
-            if (nodesToGo <= 0 || !node.InEdges.Any()) return Enumerable.Repeat(basePath, 1);
-            return node.InEdges.SelectMany(e => {
-                var copy = new InstantiationPath(basePath);
-                copy.prepend((Instantiation)e.SourceNode.UserData);
-                return AllUpPaths(copy, e.SourceNode, nodesToGo - 1);
-            });
-        }
-
-        private static InstantiationPath ExtendPathUpwardsWithLoop(IEnumerable<Tuple<Quantifier, Term>> loop, Node node, InstantiationPath downPath)
-        {
-            var nodeInst = (Instantiation)node.UserData;
-            if (!loop.Any(inst => inst.Item1 == nodeInst.Quant && inst.Item2 == nodeInst.bindingInfo.fullPattern)) return null;
-            loop = loop.Reverse().RepeatIndefinietly();
-            loop = loop.SkipWhile(inst => inst.Item1 != nodeInst.Quant || inst.Item2 != nodeInst.bindingInfo.fullPattern);
-            var res = ExtendPathUpwardsWithInstantiations(new InstantiationPath(), loop, node);
-            res.appendWithOverlap(downPath);
-            return res;
-        }
-
-        private static InstantiationPath ExtendPathUpwardsWithInstantiations(InstantiationPath path, IEnumerable<Tuple<Quantifier, Term>> instantiations, Node node)
-        {
-            if (!instantiations.Any()) return path;
-            var instantiation = instantiations.First();
-            var nodeInst = (Instantiation)node.UserData;
-            if (instantiation.Item1 != nodeInst.Quant || instantiation.Item2 != nodeInst.bindingInfo.fullPattern) return path;
-            var extendedPath = new InstantiationPath(path);
-            extendedPath.prepend(nodeInst);
-            var bestPath = extendedPath;
-            var remainingInstantiations = instantiations.Skip(1);
-            foreach (var predecessor in node.InEdges)
-            {
-                var candidatePath = ExtendPathUpwardsWithInstantiations(extendedPath, remainingInstantiations, predecessor.SourceNode);
-                if (candidatePath.Length() > bestPath.Length())
-                {
-                    bestPath = candidatePath;
+                    Parent = edge.SourceNode;
+                    ChildQuant = ((Instantiation)Parent.UserData).Quant;
+                    if (ChildQuant.Equals(Target))
+                    {
+                        if (!ContainPattern(ref Patterns, ref CurPattern))
+                        {
+                            Patterns.Add(CurPattern);
+                        }
+                    } else
+                    {
+                        List<Quantifier> NewPattern = new List<Quantifier>(CurPattern);
+                        NewPattern.Add(ChildQuant);
+                        PathStack.Add(new Tuple<Node, List<Quantifier>>(Parent, NewPattern));
+                    }
                 }
             }
-            return bestPath;
+            return Patterns;
         }
 
-        private void highlightPath(InstantiationPath path)
+        public static List<Node> ExtendDownwards(Node node, ref List<Quantifier> Pattern, int bound)
+        {
+            List<Node> path = new List<Node>() { node };
+            Node LastNode = node, CurNode, Child, Grandchild;
+            int PatternIndex = 0, NextQuant;
+            bool HaveGoodChild = false;
+            while (true)
+            {
+            LoopBegin:
+                PatternIndex = (PatternIndex + 1) % Pattern.Count;
+                CurNode = path[path.Count - 1];
+                HaveGoodChild = false;
+                if ((bound > 0) & (path.Count == bound)) break;
+                foreach (Edge edge in CurNode.OutEdges)
+                {
+                    Child = edge.TargetNode;
+                    if (((Instantiation)Child.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
+                    {
+                        HaveGoodChild = true;
+                        LastNode = Child;
+                        NextQuant = (PatternIndex + 1) % Pattern.Count;
+                        foreach (Edge edge2 in Child.OutEdges)
+                        {
+                            Grandchild = edge2.TargetNode;
+                            if (((Instantiation)Grandchild.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
+                            {
+                                path.Add(Child);
+                                goto LoopBegin;
+                            }
+                        }
+                    }
+                }
+                if (HaveGoodChild) path.Add(LastNode);
+                break;
+            }
+            return path;
+        }
+
+        public static List<Node> ExtendUpwards(Node node, ref List<Quantifier> Pattern, int bound)
+        {
+            List<Node> path = new List<Node>() { node };
+            Node LastNode = node, CurNode, Parent, Grandparent;
+            int PatternIndex = 0, NextQuant;
+            bool HaveGoodChild = false;
+            while (true)
+            {
+            LoopBegin:
+                PatternIndex = (PatternIndex + 1) % Pattern.Count;
+                CurNode = path[path.Count - 1];
+                HaveGoodChild = false;
+                if ((bound > 0) & (path.Count == bound)) break;
+                foreach (Edge edge in CurNode.InEdges)
+                {
+                    Parent = edge.SourceNode;
+                    if (((Instantiation)Parent.UserData).Quant.PrintName == Pattern[PatternIndex].PrintName)
+                    {
+                        HaveGoodChild = true;
+                        LastNode = Parent;
+                        NextQuant = (PatternIndex + 1) % Pattern.Count;
+                        foreach (Edge edge2 in Parent.InEdges)
+                        {
+                            Grandparent = edge2.SourceNode;
+                            if (((Instantiation)Grandparent.UserData).Quant.PrintName == Pattern[NextQuant].PrintName)
+                            {
+                                path.Add(Parent);
+                                goto LoopBegin;
+                            }
+                        }
+                    }
+                }
+                if (HaveGoodChild) path.Add(LastNode);
+                break;
+            }
+            return path;
+        }
+
+        // contain pattern check if patterns contain the pattern
+        // also check that pattern is a a repetition of a smaller pattern that already exists in patterns
+        public static bool ContainPattern(ref List<List<Quantifier>> patterns, ref List<Quantifier> pattern)
+        {
+            bool Contain;
+            for (int i = 0; i < patterns.Count; i++)
+            {
+                //if (patterns[i].SequenceEqual(pattern)) return true;
+                if (pattern.Count() % patterns[i].Count() == 0) {
+                    Contain = true;
+                    for (int j = 0; j < pattern.Count(); j++)
+                    {
+                        if (pattern[j] != patterns[i][j % patterns[i].Count()])
+                        {
+                            Contain = false;
+                            break;
+                        }
+                    }
+                    if (Contain) return true;
+                }
+            }
+            return false;
+        }
+
+        private void highlightSubgraph(ref List<List<Node>> subgraph)
         {
             if (previouslySelectedNode != null || highlightedNodes.Count != 0)
             {
                 unselectNode();
             }
 
-            foreach (var instantiation in path.getInstantiations())
+            foreach (List<Node> cycle in subgraph)
             {
-                highlightNode(graph.FindNode(instantiation.uniqueID));
+                foreach (Node node in cycle)
+                {
+                    highlightNode(node);
+                }
             }
             _viewer.Invalidate();
+        }
+
+        public static List<List<Node>> FindSubgraph(List<Node> path, int cycleSize, int pos)
+        {
+            int repetition = path.Count / cycleSize;
+            List<List<Node>> subgraph = new List<List<Node>>();
+            if (repetition < 3)
+            {
+                // less than means it doesn't count as matching loop, 
+                // so we'll only look at the first cycle
+                List<Node> newPath = new List<Node>();
+                for (int i = pos; i < (pos + cycleSize) && i < path.Count; i++)
+                {
+                    newPath.Add(path[i]);
+                }
+                subgraph.Add(newPath);
+                return subgraph;
+            }
+            int start = path.Count % cycleSize;
+            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) start = 0;
+            int counter = 0;
+            List<Node> cycle = new List<Node>();
+            for (int i = start; i < path.Count; i++)
+            {
+                if (counter >= cycleSize)
+                {
+                    counter = 0;
+                    subgraph.Add(cycle);
+                    cycle = new List<Node>() { path[i] };
+                }
+                else
+                {
+                    cycle.Add(path[i]);
+                }
+                counter++;
+            }
+            subgraph.Add(cycle);
+            // Condition 1:
+            // since we also want the substrucutre to repeat atleast 3 times,
+            // and we start checking from the second one, there needs to be atleast 4 repetitions.
+            // Condition 2:
+            // if the user selected some node in the first full cycle, it is unclear how we can bound it
+            // so we won't bother find the repeating strucutre
+            if ((repetition < 4) || (pos < (cycleSize + (path.Count % cycleSize)))) return subgraph;
+
+            List<List<Node>> cloneOfSubgraph = new List<List<Node>>(subgraph);
+
+            int bound = GetDepth(path[path.Count % cycleSize]);
+            List<List<Quantifier>> generalStruct = new List<List<Quantifier>>();
+            List<Node> generalCycle = new List<Node>(subgraph[0]);
+            generalCycle.AddRange(subgraph[1]);
+            FindGeneralStructure(generalCycle, ref generalStruct, bound);
+
+            Node curNode;
+            subgraph.RemoveAt(0);
+            int subgraphsize = subgraph.Count;
+            for (int i = 0; i < subgraphsize; i++)
+            {
+                counter = 0;
+                Queue<Node> queue = new Queue<Node>();
+                foreach (Node node in subgraph[i])
+                {
+                    queue.Enqueue(node);
+                }
+                while(queue.Count > 0) {
+                    curNode = queue.Dequeue();
+                    List<Node> parents = new List<Node>();
+                    foreach (Edge inedge in curNode.InEdges)
+                    {
+                        parents.Add(inedge.SourceNode);
+                    }
+                    parents.Sort(DAGView.ParentComparer);
+                    int l = 0;
+                    for (int k = 0; k < parents.Count; k++)
+                    {
+                        if (l >= generalStruct[counter].Count) break;
+                        if (!subgraph[i].Contains(parents[k]) &&
+                        (GetDepth(parents[k]) >= bound) &&
+                        (GetQuant(parents[k]) == generalStruct[counter][l]))
+                        {
+                            subgraph[i].Add(parents[k]);
+                            l++;
+                        }
+                    }
+                    if (l < (generalStruct[counter].Count - 1)) return cloneOfSubgraph;
+                    counter++;
+                }
+                if ((i == 0) && (subgraph[0].Count == cloneOfSubgraph[0].Count)) return cloneOfSubgraph;
+            }
+
+
+            return subgraph;
+        }
+
+        public static void FindGeneralStructure(List<Node> cycle, ref List<List<Quantifier>> result, int bound)
+        {
+            Queue<Node> queue = new Queue<Node>();
+            for (int i = cycle.Count / 2; i < cycle.Count; i++)
+            {
+                queue.Enqueue(cycle[i]);
+            }
+            Node curNode;
+            while(queue.Count > 0)
+            {
+                curNode = queue.Dequeue();
+                if (GetDepth(curNode) <= bound) continue;
+                List<Quantifier> parents = new List<Quantifier>();
+                List<Node> orderedParent = new List<Node>();
+                foreach (Edge inedge in curNode.InEdges)
+                {
+                    orderedParent.Add(inedge.SourceNode);
+                }
+                orderedParent.Sort(DAGView.ParentComparer);
+                foreach (Node node in orderedParent)
+                {
+                    if ((!cycle.Contains(node)) && (GetDepth(node) >= bound))
+                    {
+                        queue.Enqueue(node);
+                        parents.Add(GetQuant(node));
+                    }
+                }
+                result.Add(parents);
+            }
+        }
+
+
+        public static int GetDepth(Node node)
+        {
+            return ((Instantiation) node.UserData).Depth;
+        }
+
+        public static Quantifier GetQuant(Node node)
+        {
+            return ((Instantiation)node.UserData).Quant;
+        }
+
+        public static int ParentComparer(Node a, Node b)
+        {
+            int deptha = GetDepth(a), depthb = GetDepth(b);
+            if (deptha < depthb) return -1;
+            if (deptha > depthb) return 1;
+            return string.Compare(GetQuant(a).Qid, GetQuant(b).Qid);
         }
     }
 }
