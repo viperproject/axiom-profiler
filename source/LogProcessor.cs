@@ -44,6 +44,7 @@ namespace AxiomProfiler
         private static readonly char[] splitAtSpace = new char[] { ' ' };
         private static readonly Regex varNamesParser = new Regex(@"\(\s*((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)\s*;\s*((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)\)");
         private static readonly Regex idParser = new Regex(@"((?:\|[^\|\\]*\|)|[\w\d~!@$%^&*_\-+=<>.?/]*)#(\d*)");
+        public bool lastLineStartedWithAssign = false;
 
         public LogProcessor(List<FileInfo> bplFileInfos, bool skipDecisions, int cons)
         {
@@ -295,6 +296,12 @@ namespace AxiomProfiler
             string[] words = line.Split(sep, StringSplitOptions.RemoveEmptyEntries);
 
             if (ParseModelLine(words))
+            {
+                return;
+            }
+            // The following condition is added to the newly added line in z3 log does not
+            // output wongline in console
+            if (lastLineStartedWithAssign && (words[0][0] != '['))
             {
                 return;
             }
@@ -897,6 +904,7 @@ namespace AxiomProfiler
 
         private void ParseTraceLine(string line, string[] words)
         {
+            lastLineStartedWithAssign = false;
             switch (words[0])
             {
                 case "[tool-version]":
@@ -1249,6 +1257,7 @@ namespace AxiomProfiler
 
                 case "[assign]":
                     {
+                        lastLineStartedWithAssign = true;
                         if (!interestedInCurrentCheck) break;
                         if (skipDecisions || words.Length < 2) break;
                         ScopeDesc d = model.scopes[model.scopes.Count - 1];
