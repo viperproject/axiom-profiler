@@ -1,5 +1,6 @@
 ﻿using AxiomProfiler.QuantifierModel;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -8,6 +9,7 @@ namespace AxiomProfiler
     public class ScriptingTasks
     {
         public int NumPathsToExplore = 0;
+        public int SearchTimeoutMs = int.MaxValue;
         public bool ShowNumChecks = false;
         public bool ShowQuantStatistics = false;
         public int FindHighBranchingThreshold = int.MaxValue;
@@ -24,12 +26,16 @@ namespace AxiomProfiler
         /// <param name="model"> The model to analyize. </param>
         /// <param name="tasks"> The analysis tasks to perform. </param>
         /// <returns>True if the tool should quit, false otherwise.</returns>
-        public static bool RunScriptingTasks(Model model, ScriptingTasks tasks)
+        public static bool RunScriptingTasks(Model model, ScriptingTasks tasks, bool timing)
         {
             var basePath = Path.Combine(new string[] { Directory.GetCurrentDirectory(), tasks.OutputFilePrefix });
-
+            var tasksMs = long.MaxValue;
+            var trueLoops = new List<List<Quantifier>>();
+            var falseLoops = new List<List<Quantifier>>();
+            var error = "";
             try
             {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
                 // Output basic information
                 var basicFileExists = false;
                 if (tasks.ShowNumChecks)
@@ -66,9 +72,23 @@ namespace AxiomProfiler
                         foreach (var path in pathsToCheck)
                         {
                             var cycleDetection = new CycleDetection.CycleDetection(path.getInstantiations(), 3);
-                            if (cycleDetection.hasCycle())
+                            var gen = cycleDetection.getGeneralization();
+                            if (gen != null)
                             {
-                                writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", cycleDetection.getCycleQuantifiers().Select(quant => quant.PrintName)));
+                                var quantifiers = cycleDetection.getCycleQuantifiers();
+                                writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", quantifiers.Select(quant => quant.PrintName)) + "," + gen.TrueLoop);
+                                if (gen.TrueLoop) {
+                                    if (!trueLoops.Contains(quantifiers))
+                                        trueLoops.Add(quantifiers);
+                                }
+                                else {
+                                    if (!falseLoops.Contains(quantifiers))
+                                        falseLoops.Add(quantifiers);
+                                }
+                            }
+                            if (watch.ElapsedMilliseconds >= tasks.SearchTimeoutMs)
+                            {
+                                break;
                             }
                         }
                     }
@@ -87,9 +107,12 @@ namespace AxiomProfiler
                         }
                     }
                 }
+                watch.Stop();
+                tasksMs = watch.ElapsedMilliseconds;
             }
             catch (Exception e)
             {
+                error = e.Message;
                 const int ERROR_HANDLE_DISK_FULL = 0x27;
                 const int ERROR_DISK_FULL = 0x70;
                 int win32ErrorCode = e.HResult & 0xFFFF;
@@ -100,6 +123,13 @@ namespace AxiomProfiler
                         writer.WriteLine(e.Message);
                     }
                 }
+            }
+            if (timing) {
+                if (tasksMs == long.MaxValue)
+                    Console.WriteLine("[Analysis] Err " + error);
+                else
+                    Console.WriteLine("[Analysis] " + tasksMs + "ms");
+                Console.WriteLine("[Loops] " + trueLoops.Count + " true, " + falseLoops.Count + " false");
             }
 
             return tasks.QuitOnCompletion;
