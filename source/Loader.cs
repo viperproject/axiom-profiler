@@ -173,7 +173,7 @@ namespace AxiomProfiler
                     });
                     while (!stop) {
                         stop = true;
-                        if (task.Wait(TimeSpan.FromMilliseconds(1000))) {
+                        if (task.Wait(TimeSpan.FromMilliseconds(2000))) {
                             stop = false;
                             break;
                         }
@@ -201,8 +201,9 @@ namespace AxiomProfiler
             }
             statusUpdate(1000);
             if (!config.timing) return;
-            if (isCancelled) Console.WriteLine("[Parse] Err " + oldperc + "‰");
-            else Console.WriteLine("[Parse] " + parseMs + "ms");
+            Console.Write("[Parse] ");
+            if (isCancelled) Console.Write("Err " + oldperc + "‰ ");
+            Console.WriteLine(parseMs + "ms");
             Console.WriteLine("[Graph] " + analysisMs + "ms");
         }
 
