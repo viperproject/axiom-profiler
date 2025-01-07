@@ -33,9 +33,9 @@ namespace AxiomProfiler
             var trueLoops = new List<List<Quantifier>>();
             var falseLoops = new List<List<Quantifier>>();
             var error = "";
+            var watch = new System.Diagnostics.Stopwatch();
             try
             {
-                var watch = System.Diagnostics.Stopwatch.StartNew();
                 // Output basic information
                 var basicFileExists = false;
                 if (tasks.ShowNumChecks)
@@ -58,6 +58,7 @@ namespace AxiomProfiler
                         }
                     }
                 }
+                watch.Start();
 
                 // Check logest paths for potential loops
                 var pathsToCheck = model.instances.Where(inst => inst.Depth == 1)
@@ -66,9 +67,11 @@ namespace AxiomProfiler
                     .Select(inst => deepestPathStartingFrom(inst)).ToList();
                 if (pathsToCheck.Any())
                 {
+                    watch.Stop();
                     using (var writer = new StreamWriter(basePath + ".loops", false))
                     {
                         writer.WriteLine("# repetitions,repeating pattern");
+                        watch.Start();
                         foreach (var path in pathsToCheck)
                         {
                             var cycleDetection = new CycleDetection.CycleDetection(path.getInstantiations(), 3);
@@ -76,7 +79,9 @@ namespace AxiomProfiler
                             if (gen != null)
                             {
                                 var quantifiers = cycleDetection.getCycleQuantifiers();
+                                watch.Stop();
                                 writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", quantifiers.Select(quant => quant.PrintName)) + "," + gen.TrueLoop);
+                                watch.Start();
                                 if (gen.TrueLoop) {
                                     if (!trueLoops.Contains(quantifiers))
                                         trueLoops.Add(quantifiers);
@@ -91,13 +96,16 @@ namespace AxiomProfiler
                                 break;
                             }
                         }
+                        watch.Stop();
                     }
+                    watch.Start();
                 }
 
                 // High branching analysis
                 var highBranchingInsts = model.instances.Where(inst => inst.DependantInstantiations.Count() >= tasks.FindHighBranchingThreshold).ToList();
                 if (highBranchingInsts.Any())
                 {
+                    watch.Stop();
                     using (var writer = new StreamWriter(basePath + ".branching"))
                     {
                         writer.WriteLine($"Quantifier,# instances with ≥ {tasks.FindHighBranchingThreshold} direct children");
@@ -106,12 +114,14 @@ namespace AxiomProfiler
                             writer.WriteLine(quant.Key.PrintName + "," + quant.Count());
                         }
                     }
+                    watch.Start();
                 }
                 watch.Stop();
                 tasksMs = watch.ElapsedMilliseconds;
             }
             catch (Exception e)
             {
+                watch.Stop();
                 error = e.Message;
                 const int ERROR_HANDLE_DISK_FULL = 0x27;
                 const int ERROR_DISK_FULL = 0x70;
@@ -125,10 +135,11 @@ namespace AxiomProfiler
                 }
             }
             if (timing) {
+                Console.Write("[Analysis] ");
                 if (tasksMs == long.MaxValue)
-                    Console.WriteLine("[Analysis] Err " + error);
+                    Console.WriteLine("Err " + watch.ElapsedMilliseconds + "ms " + error);
                 else
-                    Console.WriteLine("[Analysis] " + tasksMs + "ms");
+                    Console.WriteLine(tasksMs + "ms");
                 Console.WriteLine("[Loops] " + trueLoops.Count + " true, " + falseLoops.Count + " false");
             }
 
