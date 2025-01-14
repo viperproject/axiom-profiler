@@ -30,8 +30,8 @@ namespace AxiomProfiler
         {
             var basePath = Path.Combine(new string[] { Directory.GetCurrentDirectory(), tasks.OutputFilePrefix });
             var tasksMs = long.MaxValue;
-            var trueLoops = new List<List<Quantifier>>();
-            var falseLoops = new List<List<Quantifier>>();
+            var trueLoops = new Dictionary<List<Quantifier>, CycleDetection.CycleDetection>();
+            var falseLoops = new Dictionary<List<Quantifier>, CycleDetection.CycleDetection>();
             var error = "";
             var watch = new System.Diagnostics.Stopwatch();
             try
@@ -83,12 +83,12 @@ namespace AxiomProfiler
                                 writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", quantifiers.Select(quant => quant.PrintName)) + "," + gen.TrueLoop);
                                 watch.Start();
                                 if (gen.TrueLoop) {
-                                    if (!trueLoops.Contains(quantifiers))
-                                        trueLoops.Add(quantifiers);
+                                    if (!trueLoops.ContainsKey(quantifiers))
+                                        trueLoops.Add(quantifiers, cycleDetection);
                                 }
                                 else {
-                                    if (!falseLoops.Contains(quantifiers))
-                                        falseLoops.Add(quantifiers);
+                                    if (!falseLoops.ContainsKey(quantifiers))
+                                        falseLoops.Add(quantifiers, cycleDetection);
                                 }
                             }
                             if (watch.ElapsedMilliseconds >= tasks.SearchTimeoutMs)
@@ -141,6 +141,14 @@ namespace AxiomProfiler
                 else
                     Console.WriteLine(tasksMs + "ms");
                 Console.WriteLine("[Loops] " + trueLoops.Count + " true, " + falseLoops.Count + " false");
+                foreach (var loop in trueLoops)
+                {
+                    Console.WriteLine("[OneLoop] " + loop.Value.GetNumRepetitions() + " repetitions, true-loop, " + string.Join(" -> ", loop.Key.Select(quant => quant.PrintName)));
+                }
+                foreach (var loop in falseLoops)
+                {
+                    Console.WriteLine("[OneLoop] " + loop.Value.GetNumRepetitions() + " repetitions, false-loop, " + string.Join(" -> ", loop.Key.Select(quant => quant.PrintName)));
+                }
             }
 
             return tasks.QuitOnCompletion;
