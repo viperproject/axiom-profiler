@@ -80,6 +80,7 @@ namespace AxiomProfiler
                             {
                                 var quantifiers = cycleDetection.getCycleQuantifiers();
                                 watch.Stop();
+                                Console.WriteLine("[OneLoop] " + cycleDetection.GetNumRepetitions() + " repetitions, " + gen.TrueLoop + " real, " + string.Join(" -> ", quantifiers.Select(quant => quant.PrintName)));
                                 writer.WriteLine(cycleDetection.GetNumRepetitions() + "," + string.Join(" -> ", quantifiers.Select(quant => quant.PrintName)) + "," + gen.TrueLoop);
                                 watch.Start();
                                 if (gen.TrueLoop) {
