@@ -197,6 +197,7 @@
       <DependentUpon>SearchTree.cs</DependentUpon>
     </Compile>
     <Compile Include="SuffixTree\SuffixTree.cs" />
+    <Compile Include="AxiomProfilerCore.cs" />
     <Compile Include="AxiomProfiler.cs">
       <SubType>Form</SubType>
     </Compile>
