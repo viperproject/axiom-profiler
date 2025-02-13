@@ -1,4 +1,5 @@
-A [new 2.0 version](https://github.com/viperproject/axiom-profiler-2) is available, we recommend switching over!
+> [!IMPORTANT]
+> Check out [S<b><sub><sup>MT</sup></sub></b>S<b><sub><sup>COPE</sup></sub></b>](https://github.com/viperproject/smt-scope), which supersedes this tool.
 
 # Axiom Profiler
 
